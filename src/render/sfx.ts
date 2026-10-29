@@ -2,6 +2,7 @@
 
 let ctx: AudioContext | null = null;
 let enabled = true;
+let unlocked = false;
 
 export function setSound(on: boolean) {
   enabled = on;
@@ -9,13 +10,14 @@ export function setSound(on: boolean) {
 }
 
 let crackleTimer: ReturnType<typeof setTimeout> | null = null;
-let unlocked = false;
 let wantAmbience = false;
 
 // Browsers only allow audio after a user gesture.
 for (const ev of ['pointerdown', 'keydown']) {
   addEventListener(ev, () => {
     unlocked = true;
+    // Create/resume the context inside the gesture so browsers allow it.
+    ac();
     if (wantAmbience && !crackleTimer) setAmbience(true);
   }, { passive: true });
 }
@@ -45,7 +47,8 @@ export function setAmbience(on: boolean) {
 }
 
 function ac(): AudioContext | null {
-  if (!enabled) return null;
+  // Before the first gesture browsers refuse audio anyway; stay silent.
+  if (!enabled || !unlocked) return null;
   try {
     ctx ??= new AudioContext();
     if (ctx.state === 'suspended') void ctx.resume();
