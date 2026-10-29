@@ -221,3 +221,19 @@ card screenshots. `tsc` and the build are clean.
   `index.html`).
 
 **Verified:** Status screenshot with seeded history and the og capture. `tsc` and the build are clean.
+
+---
+
+## 8. Offline play (service worker) + idle pack prefetch
+
+**What**
+- `public/sw.js` is a small hand-written service worker with no library:
+  - hashed `/assets/*` are served cache-first, since they never change
+  - pages are network-first with a cache fallback, so new deploys show up immediately
+  - old caches are deleted on activate
+- It is registered only in production builds.
+- After first paint, every content pack is loaded in `requestIdleCallback`. The daily
+  starts instantly, and the service worker has everything cached for offline play.
+
+**Verified:** Playwright with the context switched offline after one online
+visit. `#/daily` still renders its first prompt. `tsc` and the build are clean.
