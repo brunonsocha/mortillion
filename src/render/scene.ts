@@ -14,6 +14,9 @@ const DEEP = 2100;
 
 // Validated for adjacent-pair separation (normal + CVD) and 3:1 contrast on the
 // dark panels; the pale tiers are always shown with a text label.
+/** ZONES indices, for zone-specific decor. */
+const Z = { depths: 2, blight: 3, catacombs: 4, tomb: 5, abyss: 6, kiln: 7 };
+
 export const TIER_COLORS = ['#c83a3a', '#8a857b', '#d6d0b4', '#e8823e', '#c9284f', '#a66cf0', '#fff2b0'];
 
 interface Particle {
@@ -303,6 +306,13 @@ export class Scene {
         color: this.motes()[Math.random() < 0.7 ? 0 : 1], kind: 'ash',
       });
     }
+    // Kiln of the First Flame: big cinders drifting up through the shaft.
+    if (this.mode === 'descent' && this.zoneIndexAt(this.cam + this.H / 2) === Z.kiln && Math.random() < dt * 6) {
+      this.particles.push({
+        x: Math.random() * this.W, y: this.cam + this.H + 2, vx: (Math.random() - 0.5) * 6, vy: -10 - Math.random() * 14,
+        life: 0, max: 4 + Math.random() * 3, color: Math.random() < 0.5 ? '#ff8a3a' : '#ffcf5a', kind: 'ember',
+      });
+    }
     // Torch embers.
     for (const l of this.torchLights()) {
       if (Math.random() < dt * 3) {
@@ -404,6 +414,7 @@ export class Scene {
       g.globalCompositeOperation = 'source-over';
     }
 
+
     // Torches.
     const torch = bake(TORCH);
     for (const l of this.torchLights()) {
@@ -440,6 +451,8 @@ export class Scene {
       lights.push({ x: W / 2, y: -cam - 8, r: 78 * f * this.floorAlpha });
     }
     this.drawLighting(lights, this.dark);
+    // Zone details glow faintly through the dark (slime, wisps, water).
+    this.drawZoneDecor(cam, ww);
     g.restore();
 
     // Warm additive glow.
@@ -549,6 +562,68 @@ export class Scene {
     }
   }
 
+  /** Index into ZONES for a world y (pixels), so decor changes with depth. */
+  private zoneIndexAt(worldY: number): number {
+    return ZONES.indexOf(zoneAt(Math.max(0, worldY / PX_PER_M)));
+  }
+
+  /** Per-zone details drawn over the (already recoloured) stone. */
+  private drawZoneDecor(cam: number, ww: number) {
+    if (this.floorAlpha > 0.5) return;
+    const { g, W, H, t } = this;
+    const cells = (gap: number, fn: (k: number, y: number, n: number) => void) => {
+      const first = Math.floor((cam - gap) / gap);
+      for (let k = first; k < first + Math.ceil(H / gap) + 3; k++) fn(k, k * gap - cam, hash(k, gap));
+    };
+    const edge = (k: number, inset: number) => (hash(k, 5) < 0.5 ? ww - 1 - inset : W - ww + inset);
+
+    // The Depths: water drips down the inner walls.
+    cells(41, (k, y, n) => {
+      if (n > 0.55 || this.zoneIndexAt(k * 41) !== Z.depths) return;
+      const x = edge(k, 0) + (hash(k, 5) < 0.5 ? 2 : -2);
+      const fall = (t * 55 + n * 300) % 70;
+      g.fillStyle = 'rgba(140,200,220,0.85)';
+      g.fillRect(x, Math.round(y + fall), 1, 2);
+      if (fall > 64) g.fillRect(x - 1, Math.round(y + 70), 3, 1);
+    });
+
+    // Blightpit: slime trails on the stone, each with a swelling drop.
+    cells(29, (k, y, n) => {
+      if (n > 0.65 || this.zoneIndexAt(k * 29) !== Z.blight) return;
+      const x = edge(k, Math.floor(hash(k, 7) * 6));
+      const len = 4 + Math.floor(hash(k, 8) * 16);
+      g.fillStyle = '#5c8a22';
+      g.fillRect(x, y, 1, len);
+      g.fillStyle = '#9fd23a';
+      g.fillRect(x, y + len + (Math.sin(t * 2 + k) > 0.6 ? 1 : 0), 1, 1);
+    });
+
+    // Tomb of Giants: huge skulls half-seen in the far dark.
+    const pc = cam * 0.6;
+    const giant = bake(SKULL, '#26262e');
+    const first = Math.floor((pc - 160) / 160);
+    for (let k = first; k < first + Math.ceil(H / 160) + 2; k++) {
+      if (hash(k, 91) > 0.5 || this.zoneIndexAt(k * 160 / 0.6) !== Z.tomb) continue;
+      const x = Math.round(ww + 4 + hash(k, 92) * (W - ww * 2 - 40));
+      g.globalAlpha = 0.35;
+      g.drawImage(giant, x, Math.round(k * 160 - pc), giant.width * 4, giant.height * 4);
+      g.globalAlpha = 1;
+    }
+
+    // The Abyss: violet tendrils reaching out of the walls.
+    cells(47, (k, y, n) => {
+      if (n > 0.6 || this.zoneIndexAt(k * 47) !== Z.abyss) return;
+      const left = hash(k, 5) < 0.5;
+      const len = 6 + Math.floor(hash(k, 9) * 14);
+      for (let i = 0; i < len; i++) {
+        const x = left ? ww + i : W - ww - 1 - i;
+        const yy = Math.round(y + Math.sin(t * 1.6 + i * 0.45 + k) * (1 + i * 0.25));
+        g.fillStyle = i === len - 1 ? '#c99bff' : i > len - 4 ? '#8a4ad8' : '#4a1f78';
+        g.fillRect(x, yy, 1, i < 3 ? 2 : 1);
+      }
+    });
+  }
+
   private drawWallDecor(cam: number, ww: number) {
     const { g, W, H } = this;
     const skull = bake(SKULL);
@@ -559,7 +634,9 @@ export class Scene {
       const n = hash(k, 21);
       const y = k * gap - cam;
       const left = hash(k, 22) < 0.5;
-      if (n < 0.28 && ww >= 12) {
+      // The catacombs are lined with the dead.
+      const skulls = this.zoneIndexAt(k * gap) === Z.catacombs ? 0.62 : 0.28;
+      if (n < skulls && ww >= 12) {
         const x = left ? Math.floor(ww / 2 - 4) : Math.floor(W - ww / 2 - 5);
         g.drawImage(skull, x, y);
       } else if (n > 0.85) {

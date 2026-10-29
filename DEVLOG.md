@@ -486,3 +486,25 @@ build (no keys) is unchanged, `tsc` is clean, and 12/12 tests pass. The Edge Fun
   `--ink-dim`.
 
 **Verified:** contrast ratios computed with the WCAG formula. The build is clean.
+
+---
+
+## 21. Each depth zone gets its own details
+
+**What** (in `drawZoneDecor` in `src/render/scene.ts`; placement follows each item's own world depth,
+so zones blend spatially as the knight sinks past a boundary)
+
+| Zone | Detail |
+|---|---|
+| The Depths | water drips running down the inner walls, splashing at the bottom |
+| Blightpit | glowing green slime trails, each with a swelling drop |
+| Catacombs of the Hollow | skull niches about twice as common |
+| Tomb of Giants | huge faint skull silhouettes in the far (parallax) wall |
+| The Abyss | writhing violet tendrils reaching out of the walls |
+| Kiln of the First Flame | large cinders drifting up through the whole shaft |
+
+The details are drawn after the lighting pass, so they glow faintly through the dark
+instead of being swallowed by it.
+
+**Verified:** screenshots at 2,000 / 3,000 / 5,000 / 6,000 m with the dev scene hook.
+`tsc` and the build are clean.
