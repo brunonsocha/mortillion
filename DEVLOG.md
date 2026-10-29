@@ -310,3 +310,22 @@ reveal → final). `tsc` and the build are clean.
   fits on a 390×844 screen.
 
 **Verified:** desktop and mobile screenshots.
+
+---
+
+## 13. Shareable image card
+
+**What**
+- Results gain a **Save image** button (EN/PL/UK) next to Share.
+- `src/ui/card.ts` renders a 1080×1080 pixel-art PNG on a canvas:
+  - a lit brick backdrop with the glowing MORTILLION title and the run label (day,
+    theme or Endless)
+  - the knight beside a burning bonfire, scaled 9× with crisp pixels
+  - the final depth and rank
+  - one tier-coloured block per prompt, which shrink to fit long Endless runs
+  - the site host
+- On touch devices that support file sharing, it opens the native share sheet with the
+  image. Elsewhere it downloads `mortillion-<mode>-<id>.png`.
+
+**Verified:** downloaded cards from a 7-prompt theme run (every tier plus a death)
+and an Endless run, inspected visually. `tsc` and the build are clean.

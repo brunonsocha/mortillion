@@ -4,6 +4,7 @@ import { MAX_SCORE, METRES_PER_POINT, dayNumber, totalPoints, type Turn } from '
 import { load } from '../engine/storage.ts';
 import { VICTORY } from '../eggs.ts';
 import { PACK_NAMES } from '../i18n/strings.ts';
+import { shareCard } from './card.ts';
 import { TIER_COLORS } from '../render/scene.ts';
 import { sfx } from '../render/sfx.ts';
 import { app, go, route, tierBadge } from './app.ts';
@@ -83,7 +84,26 @@ route('results', async ([kind, id]) => {
     }
   };
 
-  const actions = [shareBtn];
+  const imageBtn = h('button', { class: 'btn' }, t.saveImage);
+  imageBtn.onclick = async () => {
+    sfx.click();
+    const label = kind === 'pack' || kind === 'endless' ? PACK_NAMES[id][lang] : `${t.day} #${id}`;
+    try {
+      await shareCard(
+        {
+          label,
+          depth: `${fmt(pts * METRES_PER_POINT, lang)} ${t.metres}`,
+          rank: rankOf(pts, lang),
+          turns: turns!,
+          url: location.host,
+        },
+        `mortillion-${kind}-${id}.png`,
+      );
+    } catch {
+      // Share sheet dismissed.
+    }
+  };
+  const actions = [shareBtn, imageBtn];
   if (kind === 'pack') actions.push(h('button', { class: 'btn', onclick: () => (sfx.kindle(), go(`pack/${id}`)) }, t.again));
   if (kind === 'endless') actions.push(h('button', { class: 'btn', onclick: () => (sfx.kindle(), go('endless')) }, t.again));
   actions.push(h('button', { class: 'btn ghost', onclick: () => go('') }, t.home));
