@@ -352,7 +352,7 @@ body:not(:has(.home)) .brand {
 .fire-gap {
   position: relative;
   flex: 1;
-  min-height: clamp(120px, 26vh, 300px);
+  min-height: clamp(110px, 19vh, 260px);
 }
 
 .menu {
@@ -1155,7 +1155,22 @@ body:not(:has(.home)) .brand {
   }
 
   .row2 {
-    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .row2 .card {
+    padding: 10px 8px;
+    align-items: center;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .row2 .card-title.sm {
+    font-size: 14px;
+  }
+
+  .row2 .card-sub {
+    display: none;
   }
 
   .hud {

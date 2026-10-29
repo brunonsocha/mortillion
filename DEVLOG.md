@@ -297,3 +297,16 @@ console errors. `tsc` and the build are clean.
 
 **Verified:** a full two-player, five-round game in Playwright (setup → hand-offs →
 reveal → final). `tsc` and the build are clean.
+
+---
+
+## 12. Home layout: everything above the fold
+
+**What**
+- The bonfire gap is a little shorter (`clamp(110px, 19vh, 260px)`), so the stats row is
+  visible on a 1280×900 desktop without scrolling.
+- On phones, Themes, Summon Signs and Archive sit in one compact row of three
+  title-only buttons instead of three stacked cards. The whole home screen
+  fits on a 390×844 screen.
+
+**Verified:** desktop and mobile screenshots.
