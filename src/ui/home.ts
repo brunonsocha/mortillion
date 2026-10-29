@@ -84,6 +84,7 @@ route('', () => {
         'div',
         { class: 'row2' },
         h('button', { class: 'card', onclick: () => (sfx.click(), go('themes')) }, h('span', { class: 'card-title sm' }, t.themes), h('span', { class: 'card-sub' }, t.themesSub)),
+        h('button', { class: 'card', onclick: () => (sfx.click(), go('party')) }, h('span', { class: 'card-title sm' }, t.party), h('span', { class: 'card-sub' }, t.partySub)),
         h('button', { class: 'card', onclick: () => (sfx.click(), go('archive')) }, h('span', { class: 'card-title sm' }, t.archive), h('span', { class: 'card-sub' }, t.archiveSub)),
       ),
       h(

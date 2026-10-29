@@ -7,6 +7,7 @@ import { initApp, render } from './ui/app.ts';
 import './ui/home.ts';
 import './ui/game.ts';
 import './ui/results.ts';
+import './ui/party.ts';
 
 if (new URLSearchParams(location.search).has('og')) document.documentElement.classList.add('og');
 

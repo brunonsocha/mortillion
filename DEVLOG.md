@@ -273,3 +273,27 @@ console errors. `tsc` and the build are clean.
 - Playwright with no service worker and the sports chunk blocked: the error screen
   appears, and after unblocking, Rekindle loads the prompt.
 - A sound-on run shows no autoplay warnings.
+
+---
+
+## 11. New mode: Summon Signs (local pass-and-play party)
+
+**What**
+- **Summon Signs** (`#/party`, a home card next to Themes and Archive) is for 2–6 players on
+  one device, like Krillion's party mode but with no server.
+- **Setup:** name your phantoms, each with a summon-sign rune in a phantom colour (white,
+  sunbro gold, blue, red invader, green, violet), and pick a theme or "All themes".
+- **Play:**
+  - Five prompts, ordered easy → hard.
+  - For each prompt, every phantom gets a "the sign glows for you / others look away"
+    hand-off screen, then answers privately with the usual 25 s stamina bar.
+  - A round reveal shows everyone's answer, tier and points.
+- **Echoes:** an answer given by more than one phantom scores half (½), so the rarest
+  offering wins, in the spirit of the game.
+- The knight sinks to the leader's depth, and rewards and deaths animate per round.
+- The final standings rank by depth, with a "‹name› STANDS VICTORIOUS" banner. "Descend
+  again" keeps the same names and theme.
+- Everything is in EN/PL/UK. `select` elements now use the pixel font.
+
+**Verified:** a full two-player, five-round game in Playwright (setup → hand-offs →
+reveal → final). `tsc` and the build are clean.

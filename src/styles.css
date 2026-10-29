@@ -52,9 +52,14 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
   color: inherit;
+}
+
+select option {
+  background: #0b0a0d;
 }
 
 button {
@@ -412,7 +417,7 @@ body:not(:has(.home)) .brand {
 
 .row2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 14px;
 }
 
@@ -1488,4 +1493,140 @@ body:not(:has(.home)) .brand {
 
 .og .blurb {
   font-size: 22px;
+}
+
+/* ───────────── summon signs (party) ───────────── */
+
+.party-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.party-setup .note {
+  text-align: left;
+  margin: 0;
+}
+
+.party-players {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.party-players li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.party-players .answer {
+  font-size: 17px;
+  padding: 8px 12px;
+  color: var(--pc);
+}
+
+/* A summon sign: a glowing rune in the phantom's colour. */
+.sign {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  background: var(--pc);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  filter: drop-shadow(0 0 6px var(--pc));
+  animation: rune 2.4s ease-in-out infinite;
+}
+
+.party-pack {
+  font-size: 16px;
+  padding: 6px 10px;
+  max-width: 60%;
+}
+
+.party-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.handoff {
+  margin: 8px 0 0;
+  font-size: clamp(20px, 5vw, 28px);
+  color: var(--pc);
+  text-shadow: 0 0 14px var(--pc), 0 3px 0 #000;
+}
+
+.party-scores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  justify-content: flex-end;
+}
+
+.party-reveal,
+.party-final {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.party-reveal li {
+  display: grid;
+  grid-template-columns: 8em 1fr auto;
+  gap: 4px 12px;
+  align-items: baseline;
+  padding: 6px 0 6px 12px;
+  border-left: 4px solid var(--tc);
+}
+
+.party-reveal .ta s {
+  color: #a05050;
+}
+
+.party-reveal .tt {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.pname {
+  color: var(--pc);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.echo {
+  color: var(--ink-faint);
+  font-style: normal;
+}
+
+.party-final li {
+  display: grid;
+  grid-template-columns: 2.5ch 1fr auto;
+  gap: 12px;
+  font-size: 20px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.party-final li:first-child {
+  font-size: 24px;
+  box-shadow: inset 0 0 0 2px var(--pc), 0 0 18px color-mix(in srgb, var(--pc) 35%, transparent);
+}
+
+@media (max-width: 520px) {
+  .party-reveal li {
+    grid-template-columns: 1fr auto;
+  }
+
+  .party-reveal .pname {
+    grid-column: 1 / -1;
+  }
 }
