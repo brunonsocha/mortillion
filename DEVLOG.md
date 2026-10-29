@@ -191,3 +191,33 @@ depth through the dev hook). `tsc` and the build are clean.
 
 **Verified:** played three deaths in Endless (flasks drain → results), plus home
 card screenshots. `tsc` and the build are clean.
+
+---
+
+## 7. Status screen, validated tier colours, 30 fps cap, share image
+
+**What**
+- **Status** modal: tap the stats row on the home screen to open it. It shows:
+  - descents, current and best streak, best and average depth, and the Endless best
+  - a histogram of every daily answer by tier, rarest first and deaths last, with a
+    direct text label, count and tooltip on each bar
+  - a list of the "one-in-a-mortillion" answers you have found, in your language
+- **Tier colours re-tuned with the dataviz palette validator.** The old Unkindled
+  orange and Ashen red were hard to tell apart even with normal vision, and the
+  "YOU DIED" red failed 3:1 contrast on the dark panels. New set:
+  - died `#c83a3a`
+  - Pretender `#d6d0b4`
+  - Ashen `#c9284f` (crimson)
+
+  These now pass adjacent-pair separation (normal and CVD) and contrast. The remaining
+  lightness/chroma flags come from the pale bone and gold tiers, which are deliberate and
+  always shown with a text label. This affects pips, badges and bars everywhere.
+- The canvas scene is capped at 30 fps. The pixel art doesn't benefit from 60, and it halves the
+  battery cost on phones.
+- Modal panels are now opaque.
+- **Share preview image** `public/og.png` (1200×630) was captured from the game itself with
+  a hidden `?og` mode that shows only the title over the bonfire. The `og:image` and
+  `twitter:card` tags are added. The image URL must be made absolute on deploy (comment in
+  `index.html`).
+
+**Verified:** Status screenshot with seeded history and the og capture. `tsc` and the build are clean.

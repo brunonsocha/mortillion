@@ -11,7 +11,9 @@ const PX_PER_M = 0.3;
 const TORCH_GAP = 70;
 const DEEP = 2100;
 
-export const TIER_COLORS = ['#a01818', '#8a857b', '#cbb98a', '#e8823e', '#e0473d', '#a66cf0', '#fff2b0'];
+// Validated for adjacent-pair separation (normal + CVD) and 3:1 contrast on the
+// dark panels; the pale tiers are always shown with a text label.
+export const TIER_COLORS = ['#c83a3a', '#8a857b', '#d6d0b4', '#e8823e', '#c9284f', '#a66cf0', '#fff2b0'];
 
 interface Particle {
   x: number;
@@ -237,12 +239,15 @@ export class Scene {
   }
 
   private frame(now: number) {
-    const dt = Math.min(0.05, (now - this.last) / 1000 || 0.016);
+    requestAnimationFrame((t) => this.frame(t));
+    // Pixel art at 3–6× scale gains nothing from 60 fps; 30 halves the
+    // battery cost on phones. The small margin tolerates rAF jitter.
+    if (now - this.last < 1000 / 30 - 4) return;
+    const dt = Math.min(0.05, (now - this.last) / 1000 || 0.033);
     this.last = now;
     this.t += dt;
     this.update(dt);
     this.draw();
-    requestAnimationFrame((t) => this.frame(t));
   }
 
   private update(dt: number) {

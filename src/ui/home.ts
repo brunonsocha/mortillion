@@ -1,10 +1,11 @@
-import { SEALED, THEMES } from '../data/packs/index.ts';
+import { SEALED, THEMES, loadAll } from '../data/packs/index.ts';
 import { METRES_PER_POINT, dateOfDay, dayNumber, msUntilNextDay } from '../engine/game.ts';
 import { currentStreak, load } from '../engine/storage.ts';
-import { PACK_NAMES, PACK_SUBS } from '../i18n/strings.ts';
+import { PACK_NAMES, PACK_SUBS, TIER_NAMES } from '../i18n/strings.ts';
+import { TIER_COLORS } from '../render/scene.ts';
 import { sfx } from '../render/sfx.ts';
 import { FIRE_KEEPER, SECRET_TEXT, SOAPSTONE } from '../eggs.ts';
-import { app, banner, go, onLeave, route, showHelp } from './app.ts';
+import { app, banner, go, modal, onLeave, route, showHelp } from './app.ts';
 import { fmt, h } from './dom.ts';
 import { icon } from './icons.ts';
 
@@ -86,8 +87,8 @@ route('', () => {
         h('button', { class: 'card', onclick: () => (sfx.click(), go('archive')) }, h('span', { class: 'card-title sm' }, t.archive), h('span', { class: 'card-sub' }, t.archiveSub)),
       ),
       h(
-        'div',
-        { class: 'stats' },
+        'button',
+        { class: 'stats', title: t.status, 'aria-label': t.status, onclick: () => showStatus() },
         stat(t.streak, String(currentStreak(today))),
         stat(t.best, `${fmt(best * METRES_PER_POINT, app.lang)} ${t.metres}`),
         stat(t.plays, String(s.days.length)),
@@ -135,6 +136,63 @@ addEventListener('keydown', (e) => {
     void banner(SECRET_TEXT.sun[app.lang], 'sun', 2400);
   }
 });
+
+/** Lifetime records, a histogram of answer tiers, and rare finds. */
+function showStatus() {
+  const t = app.t;
+  const s = load();
+  const today = dayNumber();
+  const turns = s.days.flatMap((d) => d.turns);
+  const counts = [0, 1, 2, 3, 4, 5, 6].map((tier) => turns.filter((x) => x.tier === tier).length);
+  const max = Math.max(1, ...counts);
+  const avg = s.days.length ? s.days.reduce((a, d) => a + d.points, 0) / s.days.length : 0;
+  const m = (pts: number) => `${fmt(Math.round(pts * METRES_PER_POINT), app.lang)} ${t.metres}`;
+
+  // Rarest tier first, deaths last: the bars read as a descent.
+  const rows = [6, 5, 4, 3, 2, 1, 0].map((tier) => {
+    const n = counts[tier];
+    const pct = turns.length ? Math.round((n / turns.length) * 100) : 0;
+    const label = tier ? TIER_NAMES[app.lang][tier] : t.youDied;
+    return h(
+      'li',
+      { title: `${label}: ${n} (${pct}%)` },
+      h('span', { class: 'bar-label' }, label),
+      h('span', { class: 'bar-track' }, h('span', { class: 'bar', style: { width: `${(n / max) * 100}%`, '--tc': TIER_COLORS[tier] } })),
+      h('b', { class: 'bar-value' }, String(n)),
+    );
+  });
+
+  const souls = h('ul', { class: 'souls' }, h('li', { class: 'muted' }, t.loading));
+  void loadAll().then((pool) => {
+    const byId = new Map(pool.map((p) => [p.id, p]));
+    const found = turns
+      .filter((x) => x.tier === 6 && x.answer)
+      .map((x) => byId.get(x.promptId)?.answers.find((a) => a.names.en === x.answer)?.names[app.lang] ?? x.answer!);
+    souls.replaceChildren(...(found.length ? [...new Set(found)].map((n) => h('li', null, n)) : [h('li', { class: 'muted' }, t.noneYet)]));
+  });
+
+  modal(
+    t.status,
+    h(
+      'div',
+      { class: 'status' },
+      h(
+        'div',
+        { class: 'status-grid' },
+        stat(t.plays, String(s.days.length)),
+        stat(t.streak, String(currentStreak(today))),
+        stat(t.bestStreak, String(s.bestStreak)),
+        stat(t.best, m(Math.max(0, ...s.days.map((d) => d.points)))),
+        stat(t.avgDepth, m(avg)),
+        stat(t.endlessBest, m(s.packs.endless?.best ?? 0)),
+      ),
+      h('h3', null, t.tierSpread),
+      h('ol', { class: 'bars' }, rows),
+      h('h3', null, t.collected),
+      souls,
+    ),
+  );
+}
 
 function stat(label: string, value: string) {
   return h('div', { class: 'stat' }, h('b', null, value), h('span', null, label));
