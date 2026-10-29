@@ -379,3 +379,37 @@ and an Endless run, inspected visually. `tsc` and the build are clean.
   - easter-egg phrase detection (and a plain "t" is *not* the sun) and the zone thresholds
 
 **Verified:** 12/12 pass. `tsc` is clean.
+
+---
+
+## 17. Content: History pack, "Crypt of Ages" (agent-written)
+
+**What**
+- New theme `history`, which unlocks the sealed *Crypt of Ages* card automatically: 32 prompts and
+  1,890 answers. Difficulty split: 9 easy, 14 medium, 9 hard.
+  - **Easy:** US presidents, ancient civilizations, explorers, empires, inventors,
+    historic ships, WWII battles, ruined ancient cities, 20th-century dictators.
+  - **Medium:** English/British monarchs, French kings, Russian tsars, pharaohs, Polish
+    rulers (before 1795), Kyivan Rus' rulers, hetmans of Ukraine, Polish and Ukrainian
+    historical figures, medieval battles, popes since 1800, Nobel Peace laureates,
+    medieval castles, Soviet leaders.
+  - **Hard:** Holy Roman emperors, Mongol khans, Crusades figures, Ottoman sultans,
+    ancient battles, Vikings, Polish uprisings, Chinese dynasties, Napoleonic battles.
+- Numbered rulers have `reject` entries (e.g. Pius VI, Leo XI, Mehmed VII), so a
+  wrong number can't fuzzy-match a real ruler.
+
+**Please review (judgement calls by the agent):**
+- **Sensitive figures.** Stepan Bandera (tier 2) and Roman Shukhevych (tier 4) are
+  accepted for "Name a figure from Ukrainian history", as plain historical facts with
+  no commentary. Reveals only list tiers 1 and 6, so these never appear unless a
+  player types them. Bear in mind how a Polish audience may react, since both figures are tied to the
+  Volhynia massacres.
+- **Contested calls:**
+  - Nefertiti is rejected as a pharaoh (she was a queen consort).
+  - Mieszko I is accepted as a Polish ruler.
+  - Gandhi and Trump are rejected as Nobel Peace laureates.
+  - Neuschwanstein is rejected as a medieval castle.
+- **Qin / Qing:** both are valid. Their Ukrainian names fold to the same key, so Qin has no
+  Ukrainian name ("Цінь" scores as Qing; only the tier differs).
+
+**Verified:** `npm run validate -- history` reports 0 errors, 12/12 engine tests pass, and the build is clean.
