@@ -48,7 +48,19 @@ export async function render() {
   cleanup = null;
   const [name, ...params] = location.hash.replace(/^#\/?/, '').split('/');
   const screen = routes[name] ?? routes[''];
-  const el = await screen(params);
+  let el: HTMLElement;
+  try {
+    el = await screen(params);
+  } catch {
+    // Usually a content chunk that failed to load: offline, or a new deploy
+    // replaced the files this tab knows about. A reload fixes both.
+    el = h(
+      'main',
+      { class: 'screen center' },
+      h('p', { class: 'empty' }, app.t.loadFailed),
+      h('button', { class: 'btn primary', onclick: () => location.reload() }, app.t.reload),
+    );
+  }
   if (id !== renderId) return;
   app.root.replaceChildren(header(), el);
   scrollTo(0, 0);

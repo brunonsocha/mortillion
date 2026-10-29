@@ -22,7 +22,14 @@ export function loadPack(id: string): Promise<Prompt[]> {
   if (!mod) return Promise.resolve([]);
   let p = loaded.get(id);
   if (!p) {
-    p = mod().then((m) => buildPack(m.default));
+    p = mod()
+      .then((m) => buildPack(m.default))
+      .catch((e: unknown) => {
+        // Forget the failure (offline, or a stale tab after a deploy) so a
+        // later attempt can succeed.
+        loaded.delete(id);
+        throw e;
+      });
     loaded.set(id, p);
   }
   return p;

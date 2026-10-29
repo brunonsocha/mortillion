@@ -251,3 +251,25 @@ visit. `#/daily` still renders its first prompt. `tsc` and the build are clean.
 
 **Verified:** a Playwright run with sound on and navigation between screens shows no
 console errors. `tsc` and the build are clean.
+
+---
+
+## 10. Audio only after a gesture; resilient content loading
+
+**What**
+- Audio: no `AudioContext` is created until the first pointer or key gesture, and it is
+  created inside that gesture. This removes the browser's autoplay warnings, for example on
+  a first visit when How-to-play opens automatically and its click sound fired.
+- Content loading:
+  - A pack chunk that fails to load (offline, or a tab left open across a deploy so its
+    hashed chunks are gone) used to stay cached as a rejected promise, so that pack could
+    never load again in that tab. Failed loads are now evicted, so they retry.
+  - The idle prefetch swallows its errors.
+  - If a screen can't be built, the router shows "The path is blocked. The
+    tome could not be fetched." with a **Rekindle (reload)** button (EN/PL/UK),
+    instead of silently staying on the old screen.
+
+**Verified:**
+- Playwright with no service worker and the sports chunk blocked: the error screen
+  appears, and after unblocking, Rekindle loads the prompt.
+- A sound-on run shows no autoplay warnings.
