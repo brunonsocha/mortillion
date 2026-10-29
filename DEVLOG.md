@@ -413,3 +413,27 @@ and an Endless run, inspected visually. `tsc` and the build are clean.
   Ukrainian name ("Цінь" scores as Qing; only the tier differs).
 
 **Verified:** `npm run validate -- history` reports 0 errors, 12/12 engine tests pass, and the build is clean.
+
+---
+
+## 18. Content: Music pack, "Choir of Bells" (agent-written)
+
+**What**
+- New theme `music`, which unlocks *Choir of Bells*: 30 prompts and 4,190 answers. Difficulty
+  split: 9 easy, 12 medium, 9 hard.
+  - **Easy:** songs by the Beatles, Queen, Michael Jackson and ABBA; rock bands; music genres;
+    female pop singers; rappers; boy bands.
+  - **Medium:** metal bands, Eurovision-winning countries, guitar brands, festivals,
+    K-pop groups, DJs, Polish musicians, Ukrainian musicians, Metallica and Elvis
+    songs, jazz musicians, Beatles albums.
+  - **Hard:** Grammy Album of the Year (1959–2025, complete), Eurovision-winning songs
+    (complete, including the four-way 1969 tie), Pink Floyd albums, guitar models, Polish and
+    Ukrainian Eurovision entrants (complete; songs are accepted as aliases; Maruv and Alina Pash,
+    who withdrew, are rejected), record labels, Led Zeppelin songs, Bowie albums.
+- Several open sets are very large (rock bands 278, Polish musicians 281, DJs 269),
+  in line with "bigger banks are better".
+
+**Please review:** the agent suggests a native or fan check of the obscure tiers 5–6 in
+the Polish, Ukrainian, K-pop and record-label prompts.
+
+**Verified:** the validator reports 0 errors and the build is clean (the music chunk is lazy-loaded).
