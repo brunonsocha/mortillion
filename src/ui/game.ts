@@ -256,12 +256,25 @@ function play(run: Run): HTMLElement {
 
   function countdown(prompt: Prompt): Promise<string | null> {
     return new Promise((resolve) => {
-      const start = performance.now();
+      let start = performance.now();
       let lastSec = SECONDS_PER_PROMPT;
+      // Practice modes pause while the tab is hidden; the daily keeps running
+      // so it can't be used to look answers up.
+      let hiddenAt = 0;
+      const onVisibility = () => {
+        if (run.kind === 'daily') return;
+        if (document.hidden) hiddenAt = performance.now();
+        else if (hiddenAt) {
+          start += performance.now() - hiddenAt;
+          hiddenAt = 0;
+        }
+      };
+      document.addEventListener('visibilitychange', onVisibility);
       let done = false;
       const end = (v: string | null) => {
         if (done) return;
         done = true;
+        document.removeEventListener('visibilitychange', onVisibility);
         form.onsubmit = null;
         giveUp.onclick = null;
         resolve(v);
@@ -292,6 +305,7 @@ function play(run: Run): HTMLElement {
       giveUp.onclick = () => end(null);
       const tick = (now: number) => {
         if (done || !alive) return;
+        if (hiddenAt) return void requestAnimationFrame(tick);
         const left = Math.max(0, SECONDS_PER_PROMPT - (now - start) / 1000);
         bar.style.width = `${(left / SECONDS_PER_PROMPT) * 100}%`;
         bar.classList.toggle('low', left < 6);

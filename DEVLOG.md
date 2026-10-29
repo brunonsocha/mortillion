@@ -343,3 +343,17 @@ and an Endless run, inspected visually. `tsc` and the build are clean.
   the top.
 
 **Verified:** mobile screenshot of the help modal. The build is clean.
+
+---
+
+## 15. Learn from your runs; fair pauses in practice
+
+**What**
+- Each prompt in the results list is now a `<details>` row: tap it (`+`/`−`) to see
+  that prompt's most common answers and deepest cuts. You can study what you could have
+  said after the run, not only on the reveal screen.
+- In practice modes (themes, Endless, archive), the 25 s timer pauses while the tab is
+  hidden, for example when you take a call or switch apps. The Daily Descent keeps running
+  while hidden, so it can't be used to look answers up.
+
+**Verified:** results screenshot with a row expanded. `tsc` and the build are clean.

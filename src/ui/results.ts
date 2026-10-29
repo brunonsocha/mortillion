@@ -143,12 +143,28 @@ route('results', async ([kind, id]) => {
         turns.map((tn) => {
           const p = byId.get(tn.promptId);
           const ans = tn.answer && p?.answers.find((a) => a.names.en === tn.answer);
+          const common = p?.answers.filter((a) => a.tier === 1).slice(0, 3) ?? [];
+          const rare = p?.answers.filter((a) => a.tier === 6).slice(0, 3) ?? [];
           return h(
             'li',
             { style: { '--tc': TIER_COLORS[tn.tier] } },
-            h('span', { class: 'tq' }, p?.q[lang] ?? tn.promptId),
-            h('span', { class: 'ta' }, ans ? ans.names[lang] : tn.guess ? h('s', null, tn.guess) : '—'),
-            h('span', { class: 'tt' }, tierBadge(tn.tier), h('b', null, tn.points ? `+${tn.points}` : '0')),
+            h(
+              'details',
+              null,
+              h(
+                'summary',
+                null,
+                h('span', { class: 'tq' }, p?.q[lang] ?? tn.promptId),
+                h('span', { class: 'ta' }, ans ? ans.names[lang] : tn.guess ? h('s', null, tn.guess) : '—'),
+                h('span', { class: 'tt' }, tierBadge(tn.tier), h('b', null, tn.points ? `+${tn.points}` : '0')),
+              ),
+              h(
+                'div',
+                { class: 'answer-lists' },
+                h('div', null, h('h4', null, t.commonest), h('ul', null, common.map((a) => h('li', null, a.names[lang])))),
+                h('div', null, h('h4', null, t.rarest), h('ul', null, rare.map((a) => h('li', { class: 'rare' }, a.names[lang])))),
+              ),
+            ),
           );
         }),
       ),

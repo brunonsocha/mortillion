@@ -1010,17 +1010,47 @@ body:not(:has(.home)) .brand {
   gap: 10px;
 }
 
-.turns li {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 2px 12px;
+.turns > ol > li {
   padding: 8px 0 8px 12px;
   border-left: 4px solid var(--tc);
   background: linear-gradient(90deg, rgba(255, 255, 255, 0.03), transparent);
 }
 
+.turns summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.turns summary::-webkit-details-marker {
+  display: none;
+}
+
+.turns summary::after {
+  content: '+';
+  position: absolute;
+  right: 0;
+  color: var(--ink-faint);
+  font-size: 12px;
+}
+
+.turns details[open] summary::after {
+  content: '−';
+}
+
+.turns details .answer-lists {
+  margin: 10px 12px 4px 0;
+}
+
+.turns > ol > li {
+  position: relative;
+}
+
 .turns .tq {
   grid-column: 1 / -1;
+  padding-right: 18px;
   color: var(--ink-dim);
   font-size: 14px;
 }
