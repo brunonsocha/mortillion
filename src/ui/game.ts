@@ -1,7 +1,7 @@
 import { THEMES, loadAll, loadPack } from '../data/packs/index.ts';
 import type { Prompt } from '../data/types.ts';
 import {
-  METRES_PER_POINT, PROMPTS_PER_RUN, SECONDS_PER_PROMPT, TIER_POINTS, dailyPrompts, dayNumber, shuffle, totalPoints, type Turn,
+  METRES_PER_POINT, PROMPTS_PER_RUN, SECONDS_PER_PROMPT, TIER_POINTS, byDifficulty, dailyPrompts, dayNumber, shuffle, totalPoints, type Turn,
 } from '../engine/game.ts';
 import { findAnswer } from '../engine/match.ts';
 import { load, recordDay, recordPack, save } from '../engine/storage.ts';
@@ -10,6 +10,7 @@ import { TIER_COLORS } from '../render/scene.ts';
 import { sfx } from '../render/sfx.ts';
 import { app, go, onLeave, route, tierBadge } from './app.ts';
 import { countUp, fmt, h, wait } from './dom.ts';
+import { icon } from './icons.ts';
 
 export type RunKind = 'daily' | 'pack' | 'archive';
 
@@ -31,7 +32,7 @@ function drawFromPack(pack: string, prompts: Prompt[]): Prompt[] {
   const recent = recentPackPrompts.get(pack) ?? [];
   const fresh = shuffle(prompts.filter((p) => !recent.includes(p.id)));
   const rest = shuffle(prompts.filter((p) => recent.includes(p.id)));
-  const picked = [...fresh, ...rest].slice(0, PROMPTS_PER_RUN);
+  const picked = byDifficulty([...fresh, ...rest].slice(0, PROMPTS_PER_RUN));
   recentPackPrompts.set(pack, [...recent, ...picked.map((p) => p.id)].slice(-Math.max(0, prompts.length - PROMPTS_PER_RUN)));
   return picked;
 }
@@ -76,6 +77,16 @@ route('pack', async ([id]) => {
   if (!prompts.length) return empty();
   return play({ kind: 'pack', id, prompts: drawFromPack(id, prompts), turns: [] });
 });
+
+function difficultyBadge(d: number): HTMLElement {
+  const label = app.t.difficulty[d];
+  return h(
+    'span',
+    { class: `diff d${d}`, title: label, 'aria-label': label },
+    Array.from({ length: d }, () => h('img', { src: icon('skull'), alt: '' })),
+    h('span', null, label),
+  );
+}
 
 function runLabel(run: Run): string {
   if (run.kind === 'pack') return PACK_NAMES[run.id][app.lang];
@@ -170,7 +181,7 @@ function play(run: Run): HTMLElement {
     // Count the prompt as lost until answered, so reloading can't reroll it.
     persistPending([{ promptId: prompt.id, guess: '', answer: null, tier: 0, points: 0 }]);
 
-    kicker.textContent = `${t.prompt} ${i + 1} / ${run.prompts.length}`;
+    kicker.replaceChildren(`${t.prompt} ${i + 1} / ${run.prompts.length}`, difficultyBadge(prompt.d));
     question.textContent = prompt.q[lang];
     input.value = '';
     input.disabled = false;

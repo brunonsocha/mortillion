@@ -63,12 +63,14 @@ const en = {
     'Each descent brings seven prompts, like “Name a mammal”.',
     'You have 25 seconds to offer a single answer. Small typos are forgiven.',
     'Obvious answers barely count. Rare answers send you deeper into the abyss.',
+    'Prompts grow harder as you descend: Shallow, then Deep, then Abyssal.',
     'A wrong answer, or silence, and you die. No points for that prompt.',
     'The Daily Descent is the same for everyone and can be attempted once a day.',
   ],
   tiersTitle: 'The six depths',
   enter: 'Enter',
   close: 'Close',
+  difficulty: ['', 'Shallow', 'Deep', 'Abyssal'],
 };
 
 export type Strings = typeof en;
@@ -136,12 +138,14 @@ const pl: Strings = {
     'Każde zejście to siedem pytań, np. „Podaj ssaka”.',
     'Masz 25 sekund na jedną odpowiedź. Drobne literówki są wybaczane.',
     'Oczywiste odpowiedzi ledwo się liczą. Rzadkie posyłają cię głębiej w otchłań.',
+    'Im głębiej, tym trudniej: najpierw Płytko, potem Głęboko, na końcu Otchłań.',
     'Błędna odpowiedź lub milczenie — i giniesz. Zero punktów za to pytanie.',
     'Codzienne Zejście jest takie samo dla wszystkich i można je podjąć raz dziennie.',
   ],
   tiersTitle: 'Sześć głębin',
   enter: 'Enter',
   close: 'Zamknij',
+  difficulty: ['', 'Płytko', 'Głęboko', 'Otchłań'],
 };
 
 const uk: Strings = {
@@ -207,12 +211,14 @@ const uk: Strings = {
     'Кожен спуск — це сім запитань, наприклад «Назвіть ссавця».',
     'У вас 25 секунд на одну відповідь. Дрібні помилки пробачаються.',
     'Очевидні відповіді майже нічого не варті. Рідкісні — опускають вас глибше в безодню.',
+    'Що глибше, то важче: спершу Мілко, потім Глибоко, наприкінці Безодня.',
     'Хибна відповідь або мовчання — і ви гинете. Нуль очок за це запитання.',
     'Щоденний Спуск однаковий для всіх, і його можна пройти раз на день.',
   ],
   tiersTitle: 'Шість глибин',
   enter: 'Enter',
   close: 'Закрити',
+  difficulty: ['', 'Мілко', 'Глибоко', 'Безодня'],
 };
 
 export const STRINGS: Record<Lang, Strings> = { en, pl, uk };

@@ -46,6 +46,11 @@ export function shuffle<T>(list: T[], rand: () => number = Math.random): T[] {
   return a;
 }
 
+/** Easy first, hard last: the deeper you descend, the harder it gets. Stable. */
+export function byDifficulty(prompts: Prompt[]): Prompt[] {
+  return prompts.map((p, i) => [p, i] as const).sort((a, b) => a[0].d - b[0].d || a[1] - b[1]).map(([p]) => p);
+}
+
 /** How often each pack appears in the daily rotation (default 1). */
 const DAILY_WEIGHT: Record<string, number> = {};
 
@@ -100,7 +105,7 @@ export function dailyPrompts(pool: Prompt[], day: number): Prompt[] {
     const n = usesBefore(pack, slot);
     out.push(packDeck(pack, list, Math.floor(n / list.length))[n % list.length]);
   }
-  return shuffle(out, rng(day * 2654435761));
+  return byDifficulty(shuffle(out, rng(day * 2654435761)));
 }
 
 export interface Turn {

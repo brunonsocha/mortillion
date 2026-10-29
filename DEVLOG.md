@@ -64,3 +64,18 @@ Overnight session started 2026-10-29 22:15 CET.
   packs: schema, tiers, difficulty, wording rules, validation.
 
 **Verified:** the validator reports 0 errors and `tsc` is clean.
+
+---
+
+## 3. Difficulty in play: easy → hard descent, skull badges
+
+**What**
+- `byDifficulty()` (stable sort) orders every run's seven prompts from easy to
+  hard. This covers the Daily Descent (after the seeded deal) and themed runs.
+  The descent literally gets harder as the knight sinks.
+- Each prompt shows 1–3 pixel skulls plus a depth name beside the counter:
+  Shallow / Deep / Abyssal (PL Płytko / Głęboko / Otchłań, UK Мілко / Глибоко / Безодня).
+  Abyssal skulls glow red.
+- The How-to-play rules mention the rising difficulty in all three languages.
+
+**Verified:** `tsc` and the build are clean. A daily screenshot shows the badge, and prompt 1 is a Shallow one.

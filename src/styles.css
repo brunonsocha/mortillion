@@ -595,6 +595,42 @@ body:not(:has(.home)) .brand {
   text-transform: uppercase;
 }
 
+.prompt-kicker:has(.diff) {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.diff {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.diff img {
+  width: 13px;
+  image-rendering: pixelated;
+}
+
+.diff span {
+  margin-left: 4px;
+}
+
+.diff.d2 span {
+  color: #c98a52;
+}
+
+.diff.d3 span {
+  color: #d04a4a;
+}
+
+.diff.d3 img {
+  filter: drop-shadow(0 0 3px rgba(208, 74, 74, 0.8));
+}
+
 .question {
   margin: 0;
   font-size: clamp(24px, 6vw, 34px);
