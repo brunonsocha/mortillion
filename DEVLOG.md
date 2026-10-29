@@ -357,3 +357,25 @@ and an Endless run, inspected visually. `tsc` and the build are clean.
   while hidden, so it can't be used to look answers up.
 
 **Verified:** results screenshot with a row expanded. `tsc` and the build are clean.
+
+---
+
+## 16. Engine test suite
+
+**What**
+- `npm test` runs `scripts/engine.test.ts` with Node's built-in test runner, so there is no new
+  dependency. There are 12 tests covering:
+  - normalization (case, diacritics, punctuation, articles, Roman numerals; unsupported
+    scripts fold to an empty key, which means no answer)
+  - Cyrillic ↔ Latin matching, and Polish ↔ English ↔ Ukrainian forms
+  - кіт/кит: identical after folding, kept apart by the exact-spelling level
+  - typo tolerance by length; gibberish, reject-list near-misses and wrong first letters
+    don't match
+  - "FF8" ≠ "FF7", "Dark Souls 3" = "Dark Souls III", "Rocky 4" = "Rocky IV", and the doubled `i` survives folding
+  - phonetic bridging: "Szwarceneger" / "шварценегер" → Schwarzenegger
+  - the daily deal is independent of pool order, has 7 unique prompts, is sorted
+    easy→hard, and never repeats a prompt on a following day (200 simulated days)
+  - `byDifficulty` is stable
+  - easter-egg phrase detection (and a plain "t" is *not* the sun) and the zone thresholds
+
+**Verified:** 12/12 pass. `tsc` is clean.
