@@ -73,7 +73,7 @@ route('archive-run', async ([d]) => {
 });
 
 route('pack', async ([id]) => {
-  if (!(THEMES as readonly string[]).includes(id)) return empty();
+  if (!THEMES.includes(id)) return empty();
   const prompts = await loadPack(id);
   if (!prompts.length) return empty();
   return play({ kind: 'pack', id, prompts: drawFromPack(id, prompts), turns: [] });

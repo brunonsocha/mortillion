@@ -1,12 +1,16 @@
 import { buildPack } from '../../engine/match.ts';
 import type { PackSpec, Prompt } from '../types.ts';
 
-/** Themed packs shown in the catacombs, in display order. */
-export const THEMES = ['sports', 'movies', 'geography', 'videogames'] as const;
-/** Teased on the themes screen until their content exists. */
-export const SEALED = ['music', 'history', 'science'] as const;
+/**
+ * Themes in display order. A theme is playable as soon as its pack file
+ * exists; the rest are teased as sealed. `general` only feeds the daily.
+ */
+const THEME_ORDER = ['sports', 'movies', 'geography', 'videogames', 'music', 'history', 'science', 'literature', 'art', 'food'];
 
 const modules = import.meta.glob<{ default: PackSpec }>(['./*.ts', '!./index.ts']);
+
+export const THEMES = THEME_ORDER.filter((id) => `./${id}.ts` in modules);
+export const SEALED = THEME_ORDER.filter((id) => !(`./${id}.ts` in modules));
 const loaded = new Map<string, Promise<Prompt[]>>();
 
 export function packIds(): string[] {

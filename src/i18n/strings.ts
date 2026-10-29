@@ -250,6 +250,9 @@ export const PACK_NAMES: Record<string, Record<Lang, string>> = {
   music: { en: 'Choir of Bells', pl: 'Chór Dzwonów', uk: 'Хор Дзвонів' },
   history: { en: 'Crypt of Ages', pl: 'Krypta Wieków', uk: 'Крипта Віків' },
   science: { en: 'Alchemist’s Vault', pl: 'Skarbiec Alchemika', uk: 'Сховище Алхіміка' },
+  literature: { en: 'The Duke’s Archives', pl: 'Archiwa Księcia', uk: 'Архіви Герцога' },
+  art: { en: 'Painted World', pl: 'Malowany Świat', uk: 'Намальований Світ' },
+  food: { en: 'Feast of the Hollow', pl: 'Uczta Pustych', uk: 'Бенкет Порожніх' },
 };
 
 export const PACK_SUBS: Record<string, Record<Lang, string>> = {
@@ -260,6 +263,9 @@ export const PACK_SUBS: Record<string, Record<Lang, string>> = {
   music: { en: 'Music', pl: 'Muzyka', uk: 'Музика' },
   history: { en: 'History', pl: 'Historia', uk: 'Історія' },
   science: { en: 'Science', pl: 'Nauka', uk: 'Наука' },
+  literature: { en: 'Literature', pl: 'Literatura', uk: 'Література' },
+  art: { en: 'Art & design', pl: 'Sztuka i design', uk: 'Мистецтво й дизайн' },
+  food: { en: 'Food & drink', pl: 'Jedzenie i napoje', uk: 'Їжа та напої' },
 };
 
 export const LANG_LABELS: Record<Lang, string> = { en: 'English', pl: 'Polski', uk: 'Українська' };

@@ -143,3 +143,24 @@ Seven deaths gives a red "YOU DIED".
 
 **Verified:** Playwright screenshots of each egg and of all eight zones (forced
 depth through the dev hook). `tsc` and the build are clean.
+
+---
+
+## 5. Themes appear automatically; new icons and sealed teasers
+
+**What**
+- `THEMES` / `SEALED` are now derived from which pack files exist, following one
+  ordered list (`THEME_ORDER` in `src/data/packs/index.ts`). Dropping in
+  `music.ts`, `history.ts` or `science.ts` makes that theme playable without
+  other code changes.
+- Pixel icons for music (lute), history (crown) and science (alembic).
+- New sealed teasers with series-flavoured names:
+  - *The Duke's Archives* (literature)
+  - *Painted World* (art & design)
+  - *Feast of the Hollow* (food & drink)
+- On list screens (themes, archive) the bonfire chamber floor now sits at the bottom
+  edge, so the fire peeks up instead of hiding behind cards.
+- Sealed cards dim only their contents, so their frames stay crisp and the scene doesn't
+  bleed through.
+
+**Verified:** themes screenshot. `tsc` and the build are clean.

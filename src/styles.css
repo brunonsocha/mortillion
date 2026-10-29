@@ -476,8 +476,11 @@ body:not(:has(.home)) .brand {
 }
 
 .card.sealed {
-  opacity: 0.5;
   cursor: not-allowed;
+}
+
+.card.sealed > * {
+  opacity: 0.42;
   filter: grayscale(0.7);
 }
 

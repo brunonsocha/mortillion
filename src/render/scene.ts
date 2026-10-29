@@ -229,7 +229,9 @@ export class Scene {
 
   private camTarget(): number {
     const a = this.anchor;
-    if (this.mode === 'bonfire') return -Math.round(a ? a.bottom / this.scale : this.H * 0.82);
+    // Without an anchor the chamber floor sits just below the screen, so only
+    // the bonfire's glow rises behind the content.
+    if (this.mode === 'bonfire') return -Math.round(a ? a.bottom / this.scale : this.H + 4);
     const centre = a ? (a.top + a.bottom) / 2 / this.scale : this.H * 0.3;
     return this.knightY - Math.round(centre - KNIGHT.length / 2);
   }
