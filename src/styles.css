@@ -1645,3 +1645,25 @@ body:not(:has(.home)) .brand {
     grid-column: 1 / -1;
   }
 }
+
+.modes {
+  margin: 0;
+  padding-left: 1.1em;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--ink-dim);
+  font-size: 15px;
+}
+
+.modes b {
+  color: var(--gold-hi);
+  font-weight: 400;
+}
+
+.secret-hint {
+  margin: 0;
+  font-size: 13px;
+  font-style: italic;
+  color: #b57a3c;
+}

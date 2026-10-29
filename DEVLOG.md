@@ -329,3 +329,17 @@ reveal → final). `tsc` and the build are clean.
 
 **Verified:** downloaded cards from a 7-prompt theme run (every tier plus a death)
 and an Endless run, inspected visually. `tsc` and the build are clean.
+
+---
+
+## 14. How-to-play covers every mode, plus a secret hint
+
+**What**
+- A "Ways to descend" list was added to How-to-play: Daily, Endless Abyss, Themed Catacombs and
+  Summon Signs, each with its one-line description.
+- It ends with a cryptic italic hint: "Some say the knight still praises the sun, if asked
+  the right way…" (EN/PL/UK).
+- Modals now focus their Close button without scrolling, so long modals open at
+  the top.
+
+**Verified:** mobile screenshot of the help modal. The build is clean.

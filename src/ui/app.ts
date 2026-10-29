@@ -136,7 +136,7 @@ export function modal(title: string, body: HTMLElement): void {
   };
   addEventListener('keydown', onKey);
   document.body.appendChild(dlg);
-  dlg.querySelector<HTMLButtonElement>('.btn')?.focus();
+  dlg.querySelector<HTMLButtonElement>('.modal-panel > .btn')?.focus({ preventScroll: true });
 }
 
 export type BannerKind = 'zone' | 'lit' | 'sun' | 'quote' | 'victory';
@@ -166,6 +166,16 @@ export function showHelp() {
       'div',
       { class: 'help' },
       h('ol', null, t.rules.map((r) => h('li', null, r))),
+      h('h3', null, t.modesTitle),
+      h(
+        'ul',
+        { class: 'modes' },
+        h('li', null, h('b', null, t.daily), ' · ', t.dailySub),
+        h('li', null, h('b', null, t.endless), ' · ', t.endlessSub),
+        h('li', null, h('b', null, t.themes), ' · ', t.themesSub),
+        h('li', null, h('b', null, t.party), ' · ', t.partySub),
+      ),
+      h('p', { class: 'secret-hint' }, t.secretHint),
       h('h3', null, t.tiersTitle),
       h(
         'ul',
