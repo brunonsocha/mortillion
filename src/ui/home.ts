@@ -68,6 +68,18 @@ route('', () => {
       { class: 'menu' },
       dailyCard,
       h(
+        'button',
+        { class: 'card endless', onclick: () => (sfx.kindle(), go('endless')) },
+        h('img', { class: 'pix', src: icon('estus'), alt: '' }),
+        h(
+          'span',
+          { class: 'endless-text' },
+          h('span', { class: 'card-title sm' }, t.endless),
+          h('span', { class: 'card-sub' }, t.endlessSub),
+        ),
+        s.packs.endless ? h('span', { class: 'card-kicker' }, `${t.bestDepth}: ${fmt(s.packs.endless.best * METRES_PER_POINT, app.lang)} ${t.metres}`) : null,
+      ),
+      h(
         'div',
         { class: 'row2' },
         h('button', { class: 'card', onclick: () => (sfx.click(), go('themes')) }, h('span', { class: 'card-title sm' }, t.themes), h('span', { class: 'card-sub' }, t.themesSub)),

@@ -13,14 +13,45 @@ import { app, banner, go, onLeave, route, tierBadge } from './app.ts';
 import { countUp, fmt, h, wait } from './dom.ts';
 import { icon } from './icons.ts';
 
-export type RunKind = 'daily' | 'pack' | 'archive';
+export type RunKind = 'daily' | 'pack' | 'archive' | 'endless';
 
 export interface Run {
   kind: RunKind;
-  /** Day number for daily/archive runs, pack id for pack runs. */
+  /** Day number for daily/archive runs, pack id for pack runs, 'endless'. */
   id: string;
   prompts: Prompt[];
   turns: Turn[];
+  /** Endless only: remaining Estus flasks and the source of further prompts. */
+  lives?: number;
+  draw?: () => Prompt;
+}
+
+/** Estus flasks at the start of an Endless Abyss run. */
+export const ENDLESS_LIVES = 3;
+
+/**
+ * Deals prompts for the Endless Abyss: easy ones first, then mostly medium,
+ * then mostly hard, never repeating a prompt until every prompt of that
+ * difficulty has been seen.
+ */
+function endlessDealer(pool: Prompt[]): () => Prompt {
+  const decks = new Map<number, Prompt[]>();
+  const take = (d: number): Prompt => {
+    let deck = decks.get(d);
+    if (!deck?.length) {
+      deck = shuffle(pool.filter((p) => p.d === d));
+      if (!deck.length) deck = shuffle(pool);
+      decks.set(d, deck);
+    }
+    return deck.pop()!;
+  };
+  let n = 0;
+  return () => {
+    const r = Math.random();
+    const d = n < 3 ? 1 : n < 8 ? (r < 0.25 ? 1 : 2) : n < 14 ? (r < 0.6 ? 2 : 3) : r < 0.35 ? 2 : 3;
+    n++;
+    return take(d);
+  };
 }
 
 /** The most recent finished run, for the results screen. */
@@ -72,6 +103,13 @@ route('archive-run', async ([d]) => {
   return play({ kind: 'archive', id: String(day), prompts: dailyPrompts(pool, day), turns: [] });
 });
 
+route('endless', async () => {
+  const pool = await loadAll();
+  if (!pool.length) return empty();
+  const draw = endlessDealer(pool);
+  return play({ kind: 'endless', id: 'endless', prompts: [], turns: [], lives: ENDLESS_LIVES, draw });
+});
+
 route('pack', async ([id]) => {
   if (!THEMES.includes(id)) return empty();
   const prompts = await loadPack(id);
@@ -90,7 +128,7 @@ function difficultyBadge(d: number): HTMLElement {
 }
 
 function runLabel(run: Run): string {
-  if (run.kind === 'pack') return PACK_NAMES[run.id][app.lang];
+  if (run.kind === 'pack' || run.kind === 'endless') return PACK_NAMES[run.id][app.lang];
   return `${app.t.day} #${run.id}${run.kind === 'archive' ? ' · ' + app.t.archive : ''}`;
 }
 
@@ -103,11 +141,18 @@ function play(run: Run): HTMLElement {
   app.scene.setMode('descent');
   app.scene.setDepth(totalPoints(run.turns) * METRES_PER_POINT, run.turns.length > 0);
 
-  const pips = h(
-    'ol',
-    { class: 'pips', 'aria-label': t.prompt },
-    run.prompts.map(() => h('li', { class: 'pip' })),
-  );
+  const endless = run.kind === 'endless';
+  const pips = endless
+    ? h(
+        'ol',
+        { class: 'flasks', 'aria-label': t.estus },
+        Array.from({ length: ENDLESS_LIVES }, () => h('li', null, h('img', { src: icon('estus'), alt: '' }))),
+      )
+    : h(
+        'ol',
+        { class: 'pips', 'aria-label': t.prompt },
+        run.prompts.map(() => h('li', { class: 'pip' })),
+      );
   const depthEl = h('b', { class: 'depth-num' }, `0 ${t.metres}`);
   const kicker = h('span', { class: 'prompt-kicker' });
   const question = h('h2', { class: 'question' });
@@ -151,6 +196,11 @@ function play(run: Run): HTMLElement {
 
   const points = () => totalPoints(run.turns);
   const paintPips = () => {
+    if (endless) {
+      pips.querySelectorAll('li').forEach((li, i) => li.classList.toggle('empty', i >= run.lives!));
+      pips.setAttribute('title', `${t.estus}: ${run.lives}`);
+      return;
+    }
     pips.querySelectorAll('.pip').forEach((p, i) => {
       const turn = run.turns[i];
       p.className = 'pip' + (i === run.turns.length ? ' current' : '');
@@ -176,13 +226,17 @@ function play(run: Run): HTMLElement {
   async function next() {
     if (!alive) return;
     const i = run.turns.length;
+    if (endless) {
+      if (run.lives! <= 0) return finish();
+      if (i >= run.prompts.length) run.prompts.push(run.draw!());
+    }
     if (i >= run.prompts.length) return finish();
     const prompt = run.prompts[i];
 
     // Count the prompt as lost until answered, so reloading can't reroll it.
     persistPending([{ promptId: prompt.id, guess: '', answer: null, tier: 0, points: 0 }]);
 
-    kicker.replaceChildren(`${t.prompt} ${i + 1} / ${run.prompts.length}`, difficultyBadge(prompt.d));
+    kicker.replaceChildren(endless ? `${t.prompt} ${i + 1}` : `${t.prompt} ${i + 1} / ${run.prompts.length}`, difficultyBadge(prompt.d));
     question.textContent = prompt.q[lang];
     input.value = '';
     input.disabled = false;
@@ -276,6 +330,8 @@ function play(run: Run): HTMLElement {
       const to = zoneAt(points() * METRES_PER_POINT);
       if (to !== from) void wait(700).then(() => { if (alive) void banner(to.name[lang], 'zone', 3000); });
     } else {
+      if (endless) run.lives! -= 1;
+      paintPips();
       reason = guess ? quipFor(guess, lang) ?? (Math.random() < 0.04 ? PATCHES[lang] : null) : null;
       app.scene.setHollow(run.turns.filter((x) => !x.tier).length >= 3);
       sfx.death();
@@ -293,7 +349,7 @@ function play(run: Run): HTMLElement {
   }
 
   function showReveal(prompt: Prompt, turn: Turn, acceptedAs: string | null, reason: string | null) {
-    const last = run.turns.length >= run.prompts.length;
+    const last = endless ? run.lives! <= 0 : run.turns.length >= run.prompts.length;
     const common = prompt.answers.filter((a) => a.tier === 1).slice(0, 4);
     const rare = shuffle(prompt.answers.filter((a) => a.tier === 6)).slice(0, 4);
     const cont = h('button', { class: 'btn primary' }, last ? t.finish : t.next);
@@ -348,7 +404,7 @@ function play(run: Run): HTMLElement {
   function finish() {
     const pts = points();
     if (run.kind === 'daily') recordDay(Number(run.id), run.turns, pts);
-    if (run.kind === 'pack') recordPack(run.id, pts);
+    if (run.kind === 'pack' || endless) recordPack(run.id, pts);
     lastRun = run;
     sfx.complete();
     go(`results/${run.kind}/${run.id}`);

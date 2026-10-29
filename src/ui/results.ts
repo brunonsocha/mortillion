@@ -29,7 +29,7 @@ function rankOf(points: number, lang: Lang): string {
 
 export function shareText(kind: RunKind, id: string, turns: Turn[], lang: Lang): string {
   const pts = totalPoints(turns);
-  const label = kind === 'pack' ? PACK_NAMES[id][lang] : `#${id}`;
+  const label = kind === 'pack' || kind === 'endless' ? PACK_NAMES[id][lang] : `#${id}`;
   return [
     `MORTILLION ${label} · ${fmt(pts * METRES_PER_POINT, lang)} ${app.t.metres}`,
     turns.map((t) => TIER_EMOJI[t.tier]).join(''),
@@ -58,7 +58,7 @@ route('results', async ([kind, id]) => {
   }
 
   const pts = totalPoints(turns);
-  const allDead = turns.every((tn) => !tn.tier);
+  const allDead = kind !== 'endless' && turns.every((tn) => !tn.tier);
   app.scene.setMode('descent');
   app.scene.setDepth(pts * METRES_PER_POINT);
 
@@ -85,6 +85,7 @@ route('results', async ([kind, id]) => {
 
   const actions = [shareBtn];
   if (kind === 'pack') actions.push(h('button', { class: 'btn', onclick: () => (sfx.kindle(), go(`pack/${id}`)) }, t.again));
+  if (kind === 'endless') actions.push(h('button', { class: 'btn', onclick: () => (sfx.kindle(), go('endless')) }, t.again));
   actions.push(h('button', { class: 'btn ghost', onclick: () => go('') }, t.home));
 
   const next = kind === 'daily' && Number(id) === dayNumber() ? h('p', { class: 'next-in' }, t.nextIn, ' ', countdown()) : null;
@@ -95,16 +96,18 @@ route('results', async ([kind, id]) => {
     h(
       'div',
       { class: `victory${allDead ? ' fallen' : ''}` },
-      h('span', null, pts >= VICTORY_POINTS ? VICTORY[lang] : allDead ? t.youDied : t.descentComplete),
+      h('span', null, kind !== 'endless' && pts >= VICTORY_POINTS ? VICTORY[lang] : allDead ? t.youDied : t.descentComplete),
     ),
     h('div', { class: 'anchor knight-gap', 'aria-hidden': 'true' }),
     h(
       'section',
       { class: 'panel summary enter' },
-      h('p', { class: 'prompt-kicker' }, kind === 'pack' ? PACK_NAMES[id][lang] : `${t.day} #${id}${kind === 'archive' ? ' · ' + t.practice : ''}`),
+      h('p', { class: 'prompt-kicker' }, kind === 'pack' || kind === 'endless' ? PACK_NAMES[id][lang] : `${t.day} #${id}${kind === 'archive' ? ' · ' + t.practice : ''}`),
       h('p', { class: 'label' }, t.finalDepth),
       depthEl,
-      h('p', { class: 'of-max' }, `${t.ofMax} ${fmt(MAX_SCORE * METRES_PER_POINT, lang)} ${t.metres}`),
+      kind === 'endless'
+        ? h('p', { class: 'of-max' }, `${turns.length} ${t.promptsFaced}`)
+        : h('p', { class: 'of-max' }, `${t.ofMax} ${fmt(MAX_SCORE * METRES_PER_POINT, lang)} ${t.metres}`),
       h('p', { class: 'rank' }, rankOf(pts, lang)),
       h('div', { class: 'emoji-row', 'aria-hidden': 'true' }, turns.map((tn, i) => h('span', { style: { '--d': `${0.6 + i * 0.12}s`, '--tc': TIER_COLORS[tn.tier] } }, TIER_EMOJI[tn.tier]))),
       h('div', { class: 'actions' }, actions, toast),

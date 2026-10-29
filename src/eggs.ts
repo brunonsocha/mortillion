@@ -25,6 +25,7 @@ export const ZONES: Zone[] = [
   { from: 4500, name: { en: 'Tomb of Giants', pl: 'Grobowiec Olbrzymów', uk: 'Гробниця Велетнів' }, tint: [8, 8, 11], dark: 0.95, wash: [40, 40, 60, 0.3], motes: ['#2a2a30', '#3c3c44'] },
   { from: 5500, name: { en: 'The Abyss', pl: 'Otchłań', uk: 'Безодня' }, tint: [18, 8, 28], dark: 0.91, wash: [122, 58, 208, 0.6], motes: ['#5a2a8a', '#a66cf0'] },
   { from: 6500, name: { en: 'Kiln of the First Flame', pl: 'Piec Pierwszego Płomienia', uk: 'Горнило Першого Полум’я' }, tint: [52, 48, 44], dark: 0.62, wash: [235, 225, 210, 0.7], motes: ['#cfc8bc', '#f2ece0'] },
+  { from: 9000, name: { en: 'The Age of Dark', pl: 'Era Mroku', uk: 'Епоха Темряви' }, tint: [6, 6, 8], dark: 0.96, wash: [20, 20, 24, 0.65], motes: ['#d8d8e0', '#8a8a96'] },
 ];
 
 export function zoneAt(metres: number): Zone {

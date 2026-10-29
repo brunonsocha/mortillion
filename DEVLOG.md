@@ -164,3 +164,30 @@ depth through the dev hook). `tsc` and the build are clean.
   bleed through.
 
 **Verified:** themes screenshot. `tsc` and the build are clean.
+
+---
+
+## 6. New mode: Endless Abyss (Estus flasks as lives)
+
+**What**
+- **Endless Abyss** (`#/endless`) is a new home card under the Daily Descent.
+  - You get three Estus flasks. Each wrong answer or timeout drains one; when the last is gone the run ends.
+  - The depth is unbounded.
+- Prompts come from every pack, with difficulty rising over the run:
+  - the first 3 are easy
+  - then mostly medium
+  - from the 15th onward, mostly hard
+  - each difficulty deals from its own deck, so nothing repeats until that deck is exhausted
+- HUD: three pixel Estus flasks replace the 7 pips, and they grey out with a little
+  pop when drained. The kicker shows "Prompt N" without a total.
+- Results show "N prompts faced" instead of "of 7,000 m", and "Descend again" restarts.
+  The best depth and play count are stored like a pack (`packs.endless`), and the home card shows the
+  best depth.
+- New deepest zone, only reachable in Endless: **The Age of Dark** at 9,000 m. It's
+  pitch black, with pale motes.
+- New pixel icon: an Estus flask.
+- Wording: Themed Catacombs' subtitle is now "Seven prompts from a single theme",
+  to avoid confusion with Endless.
+
+**Verified:** played three deaths in Endless (flasks drain → results), plus home
+card screenshots. `tsc` and the build are clean.

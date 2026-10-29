@@ -1322,3 +1322,67 @@ body:not(:has(.home)) .brand {
   color: #9c1414;
   text-shadow: 0 0 24px rgba(160, 20, 20, 0.6), 0 4px 0 #1a0000;
 }
+
+/* ───────────── endless abyss ───────────── */
+
+.card.endless {
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(100deg, rgba(40, 18, 60, 0.9), rgba(12, 8, 16, 0.9) 70%);
+}
+
+.card.endless .pix {
+  width: 34px;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 8px rgba(255, 140, 40, 0.5));
+}
+
+.endless-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.card.endless .card-kicker {
+  white-space: nowrap;
+}
+
+.flasks {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flasks img {
+  width: 18px;
+  image-rendering: pixelated;
+  display: block;
+  filter: drop-shadow(0 0 6px rgba(255, 140, 40, 0.6));
+  transition: filter 0.3s, opacity 0.3s;
+}
+
+.flasks li.empty img {
+  opacity: 0.3;
+  filter: grayscale(1);
+  animation: drained 0.6s steps(4);
+}
+
+@keyframes drained {
+  0% { transform: scale(1.6); opacity: 1; filter: none; }
+}
+
+@media (max-width: 520px) {
+  .flasks {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .card.endless .card-kicker {
+    display: none;
+  }
+}

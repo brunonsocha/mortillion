@@ -9,7 +9,7 @@ const en = {
   dailyResume: 'Resume descent',
   nextIn: 'Next descent in',
   themes: 'Themed Catacombs',
-  themesSub: 'Endless descents by theme',
+  themesSub: 'Seven prompts from a single theme',
   archive: 'Archive',
   archiveSub: 'Revisit past descents',
   howTo: 'How to play',
@@ -72,6 +72,10 @@ const en = {
   close: 'Close',
   difficulty: ['', 'Shallow', 'Deep', 'Abyssal'],
   appraised: 'Appraised',
+  endless: 'Endless Abyss',
+  endlessSub: 'Three Estus flasks. Descend until the last is gone.',
+  estus: 'Estus flasks',
+  promptsFaced: 'prompts faced',
   readMessage: 'Read message',
 };
 
@@ -86,7 +90,7 @@ const pl: Strings = {
   dailyResume: 'Wznów zejście',
   nextIn: 'Następne zejście za',
   themes: 'Katakumby Tematyczne',
-  themesSub: 'Nieskończone zejścia według tematu',
+  themesSub: 'Siedem pytań z jednego tematu',
   archive: 'Archiwum',
   archiveSub: 'Wróć do dawnych zejść',
   howTo: 'Jak grać',
@@ -149,6 +153,10 @@ const pl: Strings = {
   close: 'Zamknij',
   difficulty: ['', 'Płytko', 'Głęboko', 'Otchłań'],
   appraised: 'Doceniono',
+  endless: 'Bezdenna Otchłań',
+  endlessSub: 'Trzy flakony Estusa. Schodź, póki ostatni nie zniknie.',
+  estus: 'Flakony Estusa',
+  promptsFaced: 'pytań za tobą',
   readMessage: 'Przeczytaj wiadomość',
 };
 
@@ -161,7 +169,7 @@ const uk: Strings = {
   dailyResume: 'Продовжити спуск',
   nextIn: 'Наступний спуск через',
   themes: 'Тематичні Катакомби',
-  themesSub: 'Нескінченні спуски за темами',
+  themesSub: 'Сім запитань з однієї теми',
   archive: 'Архів',
   archiveSub: 'Повернутися до минулих спусків',
   howTo: 'Як грати',
@@ -224,6 +232,10 @@ const uk: Strings = {
   close: 'Закрити',
   difficulty: ['', 'Мілко', 'Глибоко', 'Безодня'],
   appraised: 'Оцінено',
+  endless: 'Нескінченна Безодня',
+  endlessSub: 'Три фляги Естусу. Спускайся, доки не скінчиться остання.',
+  estus: 'Фляги Естусу',
+  promptsFaced: 'запитань позаду',
   readMessage: 'Прочитати повідомлення',
 };
 
@@ -247,6 +259,7 @@ export const PACK_NAMES: Record<string, Record<Lang, string>> = {
   geography: { en: 'Atlas of the Lost', pl: 'Atlas Zaginionych', uk: 'Атлас Загублених' },
   videogames: { en: 'Halls of Respawn', pl: 'Sale Odrodzenia', uk: 'Зали Відродження' },
   general: { en: 'Daily mixture', pl: 'Mieszanka', uk: 'Суміш' },
+  endless: { en: 'Endless Abyss', pl: 'Bezdenna Otchłań', uk: 'Нескінченна Безодня' },
   music: { en: 'Choir of Bells', pl: 'Chór Dzwonów', uk: 'Хор Дзвонів' },
   history: { en: 'Crypt of Ages', pl: 'Krypta Wieków', uk: 'Крипта Віків' },
   science: { en: 'Alchemist’s Vault', pl: 'Skarbiec Alchemika', uk: 'Сховище Алхіміка' },
