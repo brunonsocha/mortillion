@@ -74,6 +74,11 @@ export const sfx = {
     for (let i = 0; i < n; i++) tone(notes[i % notes.length] * (i >= notes.length ? 2 : 1), i * 0.07, 0.35, 'triangle', 0.07);
     if (tier >= 5) tone(1046.5, n * 0.07, 0.9, 'sine', 0.06);
   },
+  praise() {
+    // A bright major chord swelling upward.
+    [392, 493.9, 587.3, 784].forEach((f, i) => tone(f, i * 0.05, 1.4, 'triangle', 0.06));
+    tone(1568, 0.25, 1.2, 'sine', 0.03);
+  },
   death() {
     tone(98, 0, 1.6, 'sawtooth', 0.09, 41);
     tone(146.8, 0, 1.4, 'triangle', 0.06, 61);

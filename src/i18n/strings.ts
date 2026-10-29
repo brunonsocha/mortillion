@@ -71,6 +71,8 @@ const en = {
   enter: 'Enter',
   close: 'Close',
   difficulty: ['', 'Shallow', 'Deep', 'Abyssal'],
+  appraised: 'Appraised',
+  readMessage: 'Read message',
 };
 
 export type Strings = typeof en;
@@ -146,6 +148,8 @@ const pl: Strings = {
   enter: 'Enter',
   close: 'Zamknij',
   difficulty: ['', 'Płytko', 'Głęboko', 'Otchłań'],
+  appraised: 'Doceniono',
+  readMessage: 'Przeczytaj wiadomość',
 };
 
 const uk: Strings = {
@@ -219,6 +223,8 @@ const uk: Strings = {
   enter: 'Enter',
   close: 'Закрити',
   difficulty: ['', 'Мілко', 'Глибоко', 'Безодня'],
+  appraised: 'Оцінено',
+  readMessage: 'Прочитати повідомлення',
 };
 
 export const STRINGS: Record<Lang, Strings> = { en, pl, uk };

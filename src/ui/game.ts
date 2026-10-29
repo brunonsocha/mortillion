@@ -8,7 +8,8 @@ import { load, recordDay, recordPack, save } from '../engine/storage.ts';
 import { PACK_NAMES } from '../i18n/strings.ts';
 import { TIER_COLORS } from '../render/scene.ts';
 import { sfx } from '../render/sfx.ts';
-import { app, go, onLeave, route, tierBadge } from './app.ts';
+import { BONFIRE_LIT, PATCHES, SECRET_TEXT, quipFor, secretOf, zoneAt } from '../eggs.ts';
+import { app, banner, go, onLeave, route, tierBadge } from './app.ts';
 import { countUp, fmt, h, wait } from './dom.ts';
 import { icon } from './icons.ts';
 
@@ -128,7 +129,7 @@ function play(run: Run): HTMLElement {
   const giveUp = h('button', { class: 'linkbtn', type: 'button' }, t.skip);
   const ask = h(
     'section',
-    { class: 'ask panel' },
+    { class: 'ask panel', hidden: true },
     kicker,
     question,
     form,
@@ -194,12 +195,12 @@ function play(run: Run): HTMLElement {
     paintPips();
     input.focus();
 
-    const guess = await countdown();
+    const guess = await countdown(prompt);
     if (!alive) return;
     await answer(prompt, guess);
   }
 
-  function countdown(): Promise<string | null> {
+  function countdown(prompt: Prompt): Promise<string | null> {
     return new Promise((resolve) => {
       const start = performance.now();
       let lastSec = SECONDS_PER_PROMPT;
@@ -218,6 +219,18 @@ function play(run: Run): HTMLElement {
           input.classList.remove('shake');
           void input.offsetWidth;
           input.classList.add('shake');
+          return;
+        }
+        // Secret phrases trigger an easter egg instead of being offered,
+        // unless they happen to be a valid answer for this prompt.
+        const secret = secretOf(v);
+        if (secret && !findAnswer(prompt, v)) {
+          input.value = '';
+          if (secret === 'sun') {
+            app.scene.praise();
+            sfx.praise();
+          }
+          void banner(SECRET_TEXT[secret][lang], secret === 'sun' ? 'sun' : 'quote', 2400);
           return;
         }
         end(v);
@@ -253,12 +266,18 @@ function play(run: Run): HTMLElement {
     persistPending();
     paintPips();
 
+    let reason: string | null = null;
     if (match) {
       sfx.reward(match.answer.tier);
       app.scene.reward(match.answer.tier);
       app.scene.setDepth(points() * METRES_PER_POINT);
       paintDepth(before);
+      const from = zoneAt(before * METRES_PER_POINT);
+      const to = zoneAt(points() * METRES_PER_POINT);
+      if (to !== from) void wait(700).then(() => { if (alive) void banner(to.name[lang], 'zone', 3000); });
     } else {
+      reason = guess ? quipFor(guess, lang) ?? (Math.random() < 0.04 ? PATCHES[lang] : null) : null;
+      app.scene.setHollow(run.turns.filter((x) => !x.tier).length >= 3);
       sfx.death();
       app.scene.die();
       died.hidden = false;
@@ -270,17 +289,17 @@ function play(run: Run): HTMLElement {
       died.hidden = true;
     }
 
-    showReveal(prompt, turn, match?.answer.names[lang] ?? null);
+    showReveal(prompt, turn, match?.answer.names[lang] ?? null, reason);
   }
 
-  function showReveal(prompt: Prompt, turn: Turn, acceptedAs: string | null) {
+  function showReveal(prompt: Prompt, turn: Turn, acceptedAs: string | null, reason: string | null) {
     const last = run.turns.length >= run.prompts.length;
     const common = prompt.answers.filter((a) => a.tier === 1).slice(0, 4);
     const rare = shuffle(prompt.answers.filter((a) => a.tier === 6)).slice(0, 4);
     const cont = h('button', { class: 'btn primary' }, last ? t.finish : t.next);
     const verdict = turn.tier
       ? h('div', { class: `verdict stamp t${turn.tier}` }, tierBadge(turn.tier), h('span', { class: 'gain' }, `+${turn.points} ${t.points}`))
-      : h('div', { class: 'verdict dead' }, h('span', { class: 'dead-reason' }, turn.guess ? t.notFound : t.timeUp));
+      : h('div', { class: 'verdict dead' }, h('span', { class: 'dead-reason' }, reason ?? (turn.guess ? t.notFound : t.timeUp)));
 
     reveal.replaceChildren(
       h('p', { class: 'prompt-kicker' }, prompt.q[lang]),
@@ -335,6 +354,10 @@ function play(run: Run): HTMLElement {
     go(`results/${run.kind}/${run.id}`);
   }
 
-  setTimeout(() => void next(), 350);
+  app.scene.setHollow(run.turns.filter((x) => !x.tier).length >= 3);
+  if (run.kind === 'daily' && run.turns.length === 0) {
+    sfx.kindle();
+    void banner(BONFIRE_LIT[lang], 'lit', 2000).then(() => alive && void next());
+  } else setTimeout(() => void next(), 350);
   return screen;
 }

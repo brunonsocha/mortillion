@@ -2,6 +2,7 @@ import { loadAll } from '../data/packs/index.ts';
 import type { Lang, Prompt } from '../data/types.ts';
 import { MAX_SCORE, METRES_PER_POINT, dayNumber, totalPoints, type Turn } from '../engine/game.ts';
 import { load } from '../engine/storage.ts';
+import { VICTORY } from '../eggs.ts';
 import { PACK_NAMES } from '../i18n/strings.ts';
 import { TIER_COLORS } from '../render/scene.ts';
 import { sfx } from '../render/sfx.ts';
@@ -9,6 +10,9 @@ import { app, go, route, tierBadge } from './app.ts';
 import { countdown } from './home.ts';
 import { countUp, fmt, h } from './dom.ts';
 import { lastRun, type RunKind } from './game.ts';
+
+/** A score worthy of the Kiln: an average of Lord of Cinder or better. */
+const VICTORY_POINTS = 600;
 
 const TIER_EMOJI = ['💀', '🦴', '🎭', '🕯️', '🔥', '👑', '🌑'];
 
@@ -54,6 +58,7 @@ route('results', async ([kind, id]) => {
   }
 
   const pts = totalPoints(turns);
+  const allDead = turns.every((tn) => !tn.tier);
   app.scene.setMode('descent');
   app.scene.setDepth(pts * METRES_PER_POINT);
 
@@ -87,7 +92,11 @@ route('results', async ([kind, id]) => {
   return h(
     'main',
     { class: 'screen results' },
-    h('div', { class: 'victory' }, h('span', null, t.descentComplete)),
+    h(
+      'div',
+      { class: `victory${allDead ? ' fallen' : ''}` },
+      h('span', null, pts >= VICTORY_POINTS ? VICTORY[lang] : allDead ? t.youDied : t.descentComplete),
+    ),
     h('div', { class: 'anchor knight-gap', 'aria-hidden': 'true' }),
     h(
       'section',

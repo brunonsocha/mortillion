@@ -1,7 +1,8 @@
 // The animated abyss behind the UI. Everything is drawn at a low internal
 // resolution and scaled up with nearest-neighbour filtering.
 
-import { BONES, BONFIRE, CHAIN, KNIGHT, KNIGHT_SIT, SKULL, TORCH, bake } from './sprites.ts';
+import { ZONES, zoneAt } from '../eggs.ts';
+import { BONES, BONFIRE, CHAIN, HOLLOW_PALETTE, KNIGHT, KNIGHT_PRAISE, KNIGHT_SIT, SKULL, TORCH, bake } from './sprites.ts';
 
 export type Mode = 'bonfire' | 'descent';
 
@@ -33,11 +34,6 @@ function hash(a: number, b: number): number {
   let h = (a * 374761393 + b * 668265263) | 0;
   h = Math.imul(h ^ (h >>> 13), 1274126177);
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
-}
-
-function mix(a: number[], b: number[], t: number): string {
-  const c = a.map((v, i) => Math.round(v + (b[i] - v) * t));
-  return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
 
 function brickTile(w: number, h: number, bw: number, bh: number, base: number[], seed: number) {
@@ -105,6 +101,12 @@ export class Scene {
   private glow = 0;
   private glowColor = '#fff';
   private dead = 0;
+  private praising = 0;
+  private hollow = false;
+  /** Current zone look, eased toward the zone the camera is in. */
+  private tint = [...ZONES[0].tint];
+  private dark = ZONES[0].dark;
+  private wash = [...ZONES[0].wash];
   private particles: Particle[] = [];
   /** Screen-space anchor (CSS px) for the floor or the knight's centre. */
   private anchor: { top: number; bottom: number } | null = null;
@@ -180,6 +182,31 @@ export class Scene {
     if (tier >= 5) this.flashOnce(TIER_COLORS[tier], 0.35);
   }
 
+  /** \\[T]/ */
+  praise() {
+    this.praising = 2.6;
+    this.glow = 1;
+    this.glowColor = '#ffd75a';
+    this.flashOnce('#ffe9a0', 0.3);
+    if (!this.motion) return;
+    const sitting = this.floorAlpha > 0.5;
+    const kx = sitting ? this.W / 2 - 17 : this.W / 2;
+    const ky = sitting ? -14 : this.knightY + 4;
+    for (let i = 0; i < 60; i++) {
+      const a = (i / 60) * Math.PI * 2;
+      const v = 30 + Math.random() * 30;
+      this.particles.push({
+        x: kx, y: ky, vx: Math.cos(a) * v, vy: Math.sin(a) * v,
+        life: 0, max: 0.9 + Math.random() * 0.6, color: i % 2 ? '#ffd75a' : '#fff2b0', kind: 'spark',
+      });
+    }
+  }
+
+  /** The knight's armour rusts after repeated deaths in one run. */
+  setHollow(on: boolean) {
+    this.hollow = on;
+  }
+
   die() {
     this.dead = 1.6;
     this.flashOnce('#7a0b0b', 0.8);
@@ -225,11 +252,18 @@ export class Scene {
     const follow = this.mode === 'descent' && this.floorAlpha < 0.05 ? 14 : 3.2;
     this.cam += (this.camTarget() - this.cam) * (1 - Math.exp(-dt * follow));
     const camDelta = this.cam - prevCam;
-    this.floorAlpha += ((this.mode === 'bonfire' ? 1 : 0) - this.floorAlpha) * (1 - Math.exp(-dt * 4));
+    // The chamber floor fades in gently but vanishes fast once the descent begins.
+    this.floorAlpha += ((this.mode === 'bonfire' ? 1 : 0) - this.floorAlpha) * (1 - Math.exp(-dt * (this.mode === 'bonfire' ? 4 : 12)));
     this.shake = Math.max(0, this.shake - dt);
     this.flash = Math.max(0, this.flash - dt * 1.4);
     this.glow = Math.max(0, this.glow - dt * 0.8);
     this.dead = Math.max(0, this.dead - dt);
+    this.praising = Math.max(0, this.praising - dt);
+    const zone = this.mode === 'bonfire' ? ZONES[0] : zoneAt(Math.max(0, this.cam / PX_PER_M));
+    const zk = 1 - Math.exp(-dt * 1.5);
+    this.tint = this.tint.map((v, i) => v + (zone.tint[i] - v) * zk);
+    this.dark += (zone.dark - this.dark) * zk;
+    this.wash = this.wash.map((v, i) => v + (zone.wash[i] - v) * zk);
 
     if (this.motion) this.spawn(dt, camDelta);
     for (const p of this.particles) {
@@ -257,7 +291,7 @@ export class Scene {
         x: Math.random() * this.W,
         y: fromBelow ? this.cam + this.H + 2 : this.cam - 2 + Math.random() * this.H * 0.2,
         vx: 0, vy: 4 + Math.random() * 6, life: 0, max: 6 + Math.random() * 6,
-        color: Math.random() < 0.7 ? '#4a4540' : '#77706a', kind: 'ash',
+        color: this.motes()[Math.random() < 0.7 ? 0 : 1], kind: 'ash',
       });
     }
     // Torch embers.
@@ -286,6 +320,10 @@ export class Scene {
         });
       }
     }
+  }
+
+  private motes(): string[] {
+    return this.mode === 'bonfire' ? ZONES[0].motes : zoneAt(Math.max(0, this.cam / PX_PER_M)).motes;
   }
 
   private wallWidth() {
@@ -319,7 +357,7 @@ export class Scene {
     g.translate(sx, 0);
 
     // Back wall with parallax.
-    g.fillStyle = mix([20, 20, 28], [26, 8, 10], depthT);
+    g.fillStyle = `rgb(${this.tint.map(Math.round).join(',')})`;
     g.fillRect(-4, 0, W + 8, H);
     g.save();
     const backOff = Math.round(cam * 0.6);
@@ -346,6 +384,16 @@ export class Scene {
     g.fillRect(W - ww - 3, 0, 2, H);
 
     this.drawWallDecor(cam, ww);
+
+    // Recolour the stonework for the current zone, keeping its shading.
+    if (this.wash[3] > 0.01) {
+      g.globalCompositeOperation = 'color';
+      g.globalAlpha = this.wash[3];
+      g.fillStyle = `rgb(${this.wash.slice(0, 3).map(Math.round).join(',')})`;
+      g.fillRect(-4, 0, W + 8, H);
+      g.globalAlpha = 1;
+      g.globalCompositeOperation = 'source-over';
+    }
 
     // Torches.
     const torch = bake(TORCH);
@@ -382,7 +430,7 @@ export class Scene {
       const f = 0.92 + Math.sin(this.t * 7) * 0.04 + Math.sin(this.t * 17) * 0.04;
       lights.push({ x: W / 2, y: -cam - 8, r: 78 * f * this.floorAlpha });
     }
-    this.drawLighting(lights, 0.8 + depthT * 0.12);
+    this.drawLighting(lights, this.dark);
     g.restore();
 
     // Warm additive glow.
@@ -524,12 +572,17 @@ export class Scene {
     const { g, W } = this;
     const sitting = this.floorAlpha > 0.5;
     const tint = this.dead > 0 && Math.floor(this.t * 12) % 2 === 0 ? '#8a1010' : undefined;
-    if (sitting) {
-      const k = bake(KNIGHT_SIT, tint);
+    if (sitting && this.praising > 0) {
+      const k = bake(KNIGHT_PRAISE, tint);
       g.drawImage(k, Math.round(W / 2 - 24), -cam - k.height);
       return;
     }
-    const k = bake(KNIGHT, tint);
+    if (sitting) {
+      const k = bake(KNIGHT_SIT, tint, this.hollow ? HOLLOW_PALETTE : undefined);
+      g.drawImage(k, Math.round(W / 2 - 24), -cam - k.height);
+      return;
+    }
+    const k = bake(this.praising > 0 ? KNIGHT_PRAISE : KNIGHT, tint, this.hollow ? HOLLOW_PALETTE : undefined);
     const bob = this.motion ? Math.round(Math.sin(this.t * 2.2) * 1) : 0;
     const x = Math.round(W / 2 - k.width / 2);
     const y = Math.round(this.knightY - cam) + bob;

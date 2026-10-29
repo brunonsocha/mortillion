@@ -79,3 +79,67 @@ Overnight session started 2026-10-29 22:15 CET.
 - The How-to-play rules mention the rising difficulty in all three languages.
 
 **Verified:** `tsc` and the build are clean. A daily screenshot shows the badge, and prompt 1 is a Shallow one.
+
+---
+
+## 4. Dark Souls easter eggs, depth zones
+
+All of this is flavour; none of it changes scoring. It lives in `src/eggs.ts`.
+
+**Depth zones.** Crossing a depth threshold shows a DS-style area banner
+(thin rules above and below, centred over the knight). It also eases the shaft into
+that zone's look:
+- a colour wash over the stone (canvas `color` blend, so shading is kept)
+- the darkness level
+- the colour of the drifting motes
+
+| From | Zone | Look |
+|---:|---|---|
+| 0 m | The Bonfire Shaft | neutral |
+| 600 m | Undead Burrows | dusty |
+| 1,500 m | The Depths | teal, damp |
+| 2,500 m | Blightpit | sickly green, green spores |
+| 3,500 m | Catacombs of the Hollow | bone |
+| 4,500 m | Tomb of Giants | near-black |
+| 5,500 m | The Abyss | violet, violet motes |
+| 6,500 m | Kiln of the First Flame | pale ash, white ash fall |
+
+Zone names are translated into PL and UK.
+
+**Secret phrases.** These are typed into the answer box and never consume the turn,
+unless the phrase is somehow a valid answer:
+- *praise the sun* / `\[T]/` / *chwała słońcu* / *слава сонцю*: the knight
+  strikes the \[T]/ pose (new `KNIGHT_PRAISE` sprite), with a golden spark ring, a
+  chord, and a "PRAISE THE SUN!" banner.
+- *git gud* and *rest at bonfire* get a one-line reply.
+
+**Death quips.** Offering a famous DS name as a wrong answer replaces "Not
+inscribed in the tome":
+- Solaire: "If only you could be so grossly incandescent."
+- Siegmeyer is napping, and Patches apologises.
+- Artorias, Gwyn, Ornstein/Smough, Estus, Fire Keeper, Mimic and "you died" each have a line.
+- Any other wrong answer has a 4% chance of "Patches kicked you down the shaft".
+
+**Hollowing.** After three deaths in one run, the knight's armour rusts
+(`HOLLOW_PALETTE` recolour).
+
+**BONFIRE LIT.** Starting a fresh Daily Descent kindles the bonfire with the
+golden banner and a whoosh. The ask panel stays hidden until it fades.
+
+**Endings.** 600+ points gives "VICTORY ACHIEVED" instead of "DESCENT COMPLETE".
+Seven deaths gives a red "YOU DIED".
+
+**At the bonfire (home):**
+- An orange soapstone rune glows on the floor. Tapping it reads a message in the
+  series' style ("Try platypus", "Rare answer ahead", "Fort, night"…, 16 of them, in all three
+  languages) with a random "Appraised ×N".
+- Tapping the title 5×, 10×… makes the Fire Keeper speak.
+- The Konami code (↑↑↓↓←→←→BA) makes the seated knight stand up and praise the sun.
+
+**Also fixed**
+- The bonfire floor now vanishes quickly when a descent starts. It used to hang in the air
+  for a moment.
+- The scene is exposed as `window.scene` in dev builds only, for testing.
+
+**Verified:** Playwright screenshots of each egg and of all eight zones (forced
+depth through the dev hook). `tsc` and the build are clean.

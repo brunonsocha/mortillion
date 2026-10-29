@@ -3,7 +3,8 @@ import { METRES_PER_POINT, dateOfDay, dayNumber, msUntilNextDay } from '../engin
 import { currentStreak, load } from '../engine/storage.ts';
 import { PACK_NAMES, PACK_SUBS } from '../i18n/strings.ts';
 import { sfx } from '../render/sfx.ts';
-import { app, go, onLeave, route, showHelp } from './app.ts';
+import { FIRE_KEEPER, SECRET_TEXT, SOAPSTONE } from '../eggs.ts';
+import { app, banner, go, onLeave, route, showHelp } from './app.ts';
 import { fmt, h } from './dom.ts';
 import { icon } from './icons.ts';
 
@@ -57,11 +58,11 @@ route('', () => {
     h(
       'section',
       { class: 'hero' },
-      h('h1', { class: 'title', 'data-text': 'MORTILLION' }, 'MORTILLION'),
+      h('h1', { class: 'title', 'data-text': 'MORTILLION', onclick: tapTitle }, 'MORTILLION'),
       h('p', { class: 'tagline' }, `— ${t.tagline} —`),
       h('p', { class: 'blurb' }, t.blurb),
     ),
-    h('div', { class: 'anchor fire-gap', 'aria-hidden': 'true' }),
+    h('div', { class: 'anchor fire-gap' }, soapstone()),
     h(
       'section',
       { class: 'menu' },
@@ -81,6 +82,46 @@ route('', () => {
       ),
     ),
   );
+});
+
+/** An orange soapstone message left on the floor by another "player". */
+function soapstone(): HTMLElement {
+  const msg = SOAPSTONE[Math.floor(Math.random() * SOAPSTONE.length)][app.lang];
+  const appraised = 3 + Math.floor(Math.random() * 400);
+  const bubble = h(
+    'div',
+    { class: 'soap-bubble', hidden: true, role: 'note' },
+    h('p', null, msg),
+    h('span', null, `${app.t.appraised} ×${appraised}`),
+  );
+  const rune = h('button', { class: 'soap-rune', 'aria-label': app.t.readMessage, title: app.t.readMessage }, '⟡');
+  rune.onclick = () => {
+    sfx.click();
+    bubble.hidden = !bubble.hidden;
+  };
+  return h('div', { class: 'soapstone' }, bubble, rune);
+}
+
+let titleTaps = 0;
+function tapTitle() {
+  titleTaps++;
+  if (titleTaps % 5 === 0) {
+    const lines = FIRE_KEEPER;
+    void banner(lines[(titleTaps / 5 - 1) % lines.length][app.lang], 'quote', 3200);
+  }
+}
+
+const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+let konami = 0;
+addEventListener('keydown', (e) => {
+  if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
+  konami = e.key === KONAMI[konami] ? konami + 1 : e.key === KONAMI[0] ? 1 : 0;
+  if (konami === KONAMI.length) {
+    konami = 0;
+    app.scene.praise();
+    sfx.praise();
+    void banner(SECRET_TEXT.sun[app.lang], 'sun', 2400);
+  }
 });
 
 function stat(label: string, value: string) {

@@ -10,3 +10,6 @@ import './ui/results.ts';
 const scene = new Scene(document.getElementById('abyss') as HTMLCanvasElement);
 initApp(document.getElementById('app')!, scene);
 void document.fonts.ready.then(() => render());
+
+// Dev-only handle for poking the scene from the console or tests.
+if (import.meta.env.DEV) (window as unknown as { scene: Scene }).scene = scene;

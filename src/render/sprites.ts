@@ -134,11 +134,40 @@ export const BONES: Sprite = [
   '.W..W..W..W.',
 ];
 
+/** Knight with arms raised: \\[T]/ */
+export const KNIGHT_PRAISE: Sprite = [
+  'kk...kkkk...kk',
+  'kck.kcddck.kck',
+  'kbkkbcddcbkkbk',
+  '.kbkbccccbkbk.',
+  '.kbkyyyyyykbk.',
+  '..kkbbccbbkk..',
+  '..kbkaGGakbk..',
+  '..kbbarRabbk..',
+  '...kbarRrabk..',
+  '...kaarRraak..',
+  '....krRrRrk...',
+  '....krrRrrk...',
+  '....kgGGGgk...',
+  '.....kaRak....',
+  '....kbarRbk...',
+  '....kbr.Rbk...',
+  '....kba.abk...',
+  '....kba.abk...',
+  '...kkbk.kbkk..',
+  '...kkkk.kkkk..',
+];
+
+/** Rusted, withered colours for a knight going Hollow. */
+export const HOLLOW_PALETTE: Record<string, string> = {
+  a: '#2e2620', b: '#5a4a3a', c: '#7d6a55', d: '#9a8670', r: '#3a2a20', R: '#56402c', G: '#7a6a40', g: '#5a4c30',
+};
+
 const cache = new Map<string, HTMLCanvasElement>();
 
-/** Pre-renders a sprite (optionally tinted) to an offscreen canvas. */
-export function bake(sprite: Sprite, tint?: string): HTMLCanvasElement {
-  const id = sprite.join('/') + (tint ?? '');
+/** Pre-renders a sprite (optionally tinted or recoloured) to an offscreen canvas. */
+export function bake(sprite: Sprite, tint?: string, palette?: Record<string, string>): HTMLCanvasElement {
+  const id = sprite.join('/') + (tint ?? '') + (palette ? JSON.stringify(palette) : '');
   const hit = cache.get(id);
   if (hit) return hit;
   const w = Math.max(...sprite.map((r) => r.length));
@@ -148,7 +177,7 @@ export function bake(sprite: Sprite, tint?: string): HTMLCanvasElement {
   const g = c.getContext('2d')!;
   sprite.forEach((row, y) => {
     for (let x = 0; x < row.length; x++) {
-      const col = PALETTE[row[x]];
+      const col = palette?.[row[x]] ?? PALETTE[row[x]];
       if (!col) continue;
       g.fillStyle = tint && row[x] !== 'k' && row[x] !== 'y' ? tint : col;
       g.fillRect(x, y, 1, 1);

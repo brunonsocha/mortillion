@@ -127,6 +127,21 @@ export function modal(title: string, body: HTMLElement): void {
   dlg.querySelector<HTMLButtonElement>('.btn')?.focus();
 }
 
+export type BannerKind = 'zone' | 'lit' | 'sun' | 'quote' | 'victory';
+
+/** A Dark Souls style announcement that fades in and out over the screen. */
+export function banner(text: string, kind: BannerKind, ms = 2800): Promise<void> {
+  document.querySelector(`.banner.${kind}`)?.remove();
+  const el = h('div', { class: `banner ${kind}`, role: 'status', style: { '--ms': `${ms}ms` } }, h('span', null, text));
+  document.body.appendChild(el);
+  return new Promise((r) =>
+    setTimeout(() => {
+      el.remove();
+      r();
+    }, ms),
+  );
+}
+
 export function tierBadge(tier: number): HTMLElement {
   return h('span', { class: `tier t${tier}`, style: { '--tc': TIER_COLORS[tier] } }, tier ? TIER_NAMES[app.lang][tier] : app.t.youDied);
 }

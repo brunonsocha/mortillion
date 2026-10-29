@@ -345,6 +345,7 @@ body:not(:has(.home)) .brand {
 }
 
 .fire-gap {
+  position: relative;
   flex: 1;
   min-height: clamp(120px, 26vh, 300px);
 }
@@ -1173,4 +1174,148 @@ body:not(:has(.home)) .brand {
 .still .died.show::before {
   animation: none;
   opacity: 1;
+}
+
+/* ───────────── banners (zones, BONFIRE LIT, praise the sun) ───────────── */
+
+.banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 38%;
+  z-index: 25;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  animation: banner var(--ms) ease both;
+}
+
+.banner span {
+  font-family: var(--display);
+  text-align: center;
+  padding: 0 16px;
+}
+
+.banner.zone {
+  top: 14%;
+}
+
+.banner.zone span {
+  font-family: var(--font);
+  font-size: clamp(22px, 6vw, 40px);
+  letter-spacing: 0.12em;
+  color: #ece4d0;
+  text-shadow: 0 3px 0 #000, 0 0 18px rgba(0, 0, 0, 0.9);
+  padding: 10px 28px;
+  border-top: 2px solid rgba(236, 228, 208, 0.45);
+  border-bottom: 2px solid rgba(236, 228, 208, 0.45);
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.75) 20%, rgba(0, 0, 0, 0.75) 80%, transparent);
+}
+
+.banner.lit span,
+.banner.victory span {
+  font-size: clamp(30px, 9vw, 64px);
+  letter-spacing: 0.08em;
+  color: #f0c95e;
+  text-shadow: 0 0 24px rgba(255, 190, 70, 0.6), 0 4px 0 #2a1a00;
+}
+
+.banner.lit,
+.banner.victory {
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.82) 30%, rgba(0, 0, 0, 0.82) 70%, transparent);
+  padding: 4vh 0;
+  top: 34%;
+}
+
+.banner.sun span {
+  font-size: clamp(30px, 9vw, 64px);
+  color: #ffe27a;
+  text-shadow: 0 0 30px #ffb52e, 0 0 60px #ff9a1f, 0 4px 0 #3a2400;
+}
+
+.banner.sun {
+  top: 16%;
+}
+
+.banner.quote span {
+  font-family: var(--font);
+  font-size: clamp(16px, 4.4vw, 22px);
+  color: #e8823e;
+  font-style: italic;
+  text-shadow: 0 2px 0 #000;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 10px 18px;
+}
+
+.banner.quote {
+  top: auto;
+  bottom: 12%;
+}
+
+@keyframes banner {
+  0% { opacity: 0; transform: scale(0.97); }
+  18%, 78% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.02); }
+}
+
+/* ───────────── soapstone message ───────────── */
+
+.soapstone {
+  position: absolute;
+  left: calc(50% + 48px);
+  bottom: 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.soap-rune {
+  background: none;
+  border: 0;
+  padding: 2px 6px;
+  color: #ff9a3c;
+  font-size: 22px;
+  line-height: 1;
+  text-shadow: 0 0 8px #ff7a1a, 0 0 18px rgba(255, 110, 20, 0.7);
+  animation: rune 2.4s ease-in-out infinite;
+}
+
+@keyframes rune {
+  50% { opacity: 0.55; text-shadow: 0 0 4px #ff7a1a; }
+}
+
+.soap-bubble {
+  position: absolute;
+  bottom: 34px;
+  left: -40px;
+  width: max-content;
+  max-width: 220px;
+  padding: 10px 14px;
+  background: rgba(8, 6, 6, 0.92);
+  box-shadow: 0 0 0 2px #5a3218, 0 0 18px rgba(255, 110, 20, 0.25);
+  animation: rise 0.25s steps(4);
+}
+
+.soap-bubble[hidden] {
+  display: none;
+}
+
+.soap-bubble p {
+  margin: 0 0 4px;
+  color: #f2c48a;
+}
+
+.soap-bubble span {
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.title {
+  cursor: default;
+  user-select: none;
+}
+
+.victory.fallen span {
+  color: #9c1414;
+  text-shadow: 0 0 24px rgba(160, 20, 20, 0.6), 0 4px 0 #1a0000;
 }
