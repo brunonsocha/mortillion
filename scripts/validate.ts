@@ -32,6 +32,8 @@ for (const f of files) {
     if (seenIds.has(p.id)) err(`${where} duplicate id (also in ${seenIds.get(p.id)})`);
     seenIds.set(p.id, f);
     for (const l of LANGS) if (!p.q?.[l]?.trim()) err(`${where} missing question text for "${l}"`);
+    for (const l of LANGS) if ((p.q?.[l]?.length ?? 0) > 60) warn(`${where} "${l}" question is ${p.q[l].length} chars; keep it ≤ 55`);
+    if (![1, 2, 3].includes(p.d)) err(`${where} difficulty "d" must be 1 (easy), 2 (medium) or 3 (hard)`);
     if (p.q?.uk && !/[а-яіїєґ]/i.test(p.q.uk)) err(`${where} Ukrainian question is not in Cyrillic`);
 
     const prompt = prompts[i];

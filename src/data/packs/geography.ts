@@ -1,4 +1,4 @@
-import type { PackSpec, PromptSpec, L10n, Tier } from '../types.ts';
+import type { Difficulty, PackSpec, PromptSpec, L10n, Tier } from '../types.ts';
 import { matchKey } from '../../engine/normalize.ts';
 
 // ---------------------------------------------------------------------------
@@ -234,6 +234,14 @@ type Answers = Record<Tier, CC[]>;
 
 const names = (spec: string) => spec.split('|').filter(Boolean);
 
+/** Difficulty of the country prompts built by `countries()`. */
+const COUNTRY_DIFFICULTY: Record<string, Difficulty> = {
+  'country-europe': 1, 'country-asia': 1, 'country-south-america': 1, 'eu-member': 1,
+  'spanish-speaking': 1, 'borders-germany-or-poland': 1,
+  'country-africa': 2, 'country-north-america': 2, 'landlocked-country': 2, 'borders-china': 2,
+  'borders-russia': 2, 'flag-red-white': 2, 'island-nation': 2, 'french-official': 2, 'arabic-official': 2,
+};
+
 /**
  * A prompt whose answers are countries. Every other country in the table is
  * added to `reject`, so a near-miss like "Australia" for "Austria" or
@@ -249,7 +257,7 @@ function countries(id: string, q: L10n, tiers: Answers, extraReject: string[] = 
   const answers = Object.fromEntries(
     Object.entries(tiers).map(([t, list]) => [t, list.map((c) => C[c])]),
   ) as Record<Tier, string[]>;
-  return { id, q, answers, reject: [...new Set([...reject, ...extraReject])] };
+  return { id, q, d: COUNTRY_DIFFICULTY[id] ?? 2, answers, reject: [...new Set([...reject, ...extraReject])] };
 }
 
 export default {
@@ -482,6 +490,7 @@ export default {
     // ------------------------------------------------------------------ capitals
     {
       id: 'capital-europe',
+      d: 1,
       q: { en: 'Name the capital of a European country', pl: 'Podaj stolicę państwa europejskiego', uk: 'Назвіть столицю європейської країни' },
       answers: {
         1: [
@@ -562,6 +571,7 @@ export default {
     // ------------------------------------------------------------------ rivers
     {
       id: 'river-europe',
+      d: 2,
       q: { en: 'Name a river in Europe', pl: 'Podaj rzekę w Europie', uk: 'Назвіть річку Європи' },
       answers: {
         1: [
@@ -695,6 +705,7 @@ export default {
     },
     {
       id: 'river-black-sea',
+      d: 3,
       q: {
         en: 'Name a river flowing into the Black or Azov Sea',
         pl: 'Podaj rzekę uchodzącą do Morza Czarnego lub Azowskiego',
@@ -744,6 +755,7 @@ export default {
     },
     {
       id: 'river-baltic',
+      d: 3,
       q: {
         en: 'Name a river that flows into the Baltic Sea',
         pl: 'Podaj rzekę uchodzącą do Morza Bałtyckiego',
@@ -805,6 +817,7 @@ export default {
     // ------------------------------------------------------------------ landforms
     {
       id: 'mountain-range',
+      d: 2,
       q: { en: 'Name a mountain range', pl: 'Podaj pasmo górskie', uk: 'Назвіть гірське пасмо чи гірську систему' },
       answers: {
         1: [
@@ -903,6 +916,7 @@ export default {
     },
     {
       id: 'desert',
+      d: 2,
       q: { en: 'Name a desert', pl: 'Podaj pustynię', uk: 'Назвіть пустелю' },
       answers: {
         1: [
@@ -976,6 +990,7 @@ export default {
     },
     {
       id: 'island-mediterranean',
+      d: 2,
       q: { en: 'Name an island in the Mediterranean Sea', pl: 'Podaj wyspę na Morzu Śródziemnym', uk: 'Назвіть острів у Середземному морі' },
       answers: {
         1: [
@@ -1070,6 +1085,7 @@ export default {
     },
     {
       id: 'volcano',
+      d: 2,
       q: { en: 'Name a volcano', pl: 'Podaj wulkan', uk: 'Назвіть вулкан' },
       answers: {
         1: [
@@ -1177,6 +1193,7 @@ export default {
     },
     {
       id: 'lake-europe',
+      d: 2,
       q: { en: 'Name a lake in Europe', pl: 'Podaj jezioro w Europie', uk: 'Назвіть озеро в Європі' },
       answers: {
         1: [
@@ -1275,6 +1292,7 @@ export default {
     },
     {
       id: 'sea',
+      d: 2,
       q: { en: 'Name a sea', pl: 'Podaj morze', uk: 'Назвіть море' },
       answers: {
         1: [
@@ -1379,6 +1397,7 @@ export default {
     // ------------------------------------------------------------------ straits & wonders
     {
       id: 'strait',
+      d: 3,
       q: { en: 'Name a sea strait', pl: 'Podaj cieśninę morską', uk: 'Назвіть морську протоку' },
       answers: {
         1: [
@@ -1454,6 +1473,7 @@ export default {
     },
     {
       id: 'seven-wonders',
+      d: 2,
       q: {
         en: 'Name one of the Seven Wonders of the World',
         pl: 'Podaj jeden z siedmiu cudów świata',
@@ -1499,6 +1519,7 @@ export default {
     // ------------------------------------------------------------------ USA
     {
       id: 'us-state',
+      d: 1,
       q: { en: 'Name a US state', pl: 'Podaj stan USA', uk: 'Назвіть штат США' },
       answers: {
         1: [
@@ -1568,6 +1589,7 @@ export default {
     // ------------------------------------------------------------------ Poland
     {
       id: 'polish-voivodeship',
+      d: 2,
       q: { en: 'Name a Polish voivodeship (province)', pl: 'Podaj województwo', uk: 'Назвіть польське воєводство' },
       answers: {
         1: [
@@ -1604,6 +1626,7 @@ export default {
     },
     {
       id: 'polish-city',
+      d: 1,
       q: { en: 'Name a city or town in Poland', pl: 'Podaj miasto w Polsce', uk: 'Назвіть місто в Польщі' },
       answers: {
         1: [
@@ -1756,6 +1779,7 @@ export default {
     // ------------------------------------------------------------------ Ukraine
     {
       id: 'ukrainian-oblast',
+      d: 2,
       q: { en: 'Name an oblast (region) of Ukraine', pl: 'Podaj obwód Ukrainy', uk: 'Назвіть область України' },
       answers: {
         1: [
@@ -1803,6 +1827,7 @@ export default {
     },
     {
       id: 'ukrainian-city',
+      d: 1,
       q: { en: 'Name a city or town in Ukraine', pl: 'Podaj miasto w Ukrainie', uk: 'Назвіть місто України' },
       answers: {
         1: [

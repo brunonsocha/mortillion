@@ -6,6 +6,7 @@ export default {
     // ───────────────────────────── Pixar ─────────────────────────────
     {
       id: 'pixar-film',
+      d: 1,
       q: {
         en: 'Name a Pixar film (to 2025)',
         pl: 'Podaj film Pixara (do 2025)',
@@ -63,6 +64,7 @@ export default {
     // ─────────────────────── Disney animated canon ───────────────────────
     {
       id: 'disney-animated-film',
+      d: 1,
       q: {
         en: 'Name a Disney animated film (not Pixar, to 2024)',
         pl: 'Podaj animację Disneya (nie Pixara, do 2024)',
@@ -156,6 +158,7 @@ export default {
     // ───────────────────────────── Nolan ─────────────────────────────
     {
       id: 'nolan-film',
+      d: 2,
       q: {
         en: 'Name a Christopher Nolan film (to 2025)',
         pl: 'Podaj film Christophera Nolana (do 2025)',
@@ -191,6 +194,7 @@ export default {
     // ─────────────────────────── Spielberg ───────────────────────────
     {
       id: 'spielberg-film',
+      d: 2,
       q: {
         en: 'Name a Steven Spielberg film (to 2025)',
         pl: 'Podaj film Stevena Spielberga (do 2025)',
@@ -257,6 +261,7 @@ export default {
     // ─────────────────────────── Tarantino ───────────────────────────
     {
       id: 'tarantino-film',
+      d: 2,
       q: {
         en: 'Name a Quentin Tarantino film',
         pl: 'Podaj film Quentina Tarantino',
@@ -294,6 +299,7 @@ export default {
     // ──────────────────────────── Kubrick ────────────────────────────
     {
       id: 'kubrick-film',
+      d: 2,
       q: {
         en: 'Name a Stanley Kubrick film',
         pl: 'Podaj film Stanleya Kubricka',
@@ -334,6 +340,7 @@ export default {
     // ──────────────────────────── Scorsese ───────────────────────────
     {
       id: 'scorsese-film',
+      d: 3,
       q: {
         en: 'Name a Martin Scorsese film (to 2025)',
         pl: 'Podaj film Martina Scorsese (do 2025)',
@@ -392,6 +399,7 @@ export default {
     // ─────────────────────────── Hitchcock ───────────────────────────
     {
       id: 'hitchcock-film',
+      d: 2,
       q: {
         en: 'Name an Alfred Hitchcock film',
         pl: 'Podaj film Alfreda Hitchcocka',
@@ -470,6 +478,7 @@ export default {
     // ─────────────────────── Best Picture winners ───────────────────────
     {
       id: 'best-picture-1990-2024',
+      d: 3,
       q: {
         en: 'Name a Best Picture winner (1990–2024)',
         pl: 'Podaj Oscarowy najlepszy film (1990–2024)',
@@ -534,6 +543,7 @@ export default {
     // ─────────────────────── Best Actor winners ───────────────────────
     {
       id: 'best-actor-oscar-1980-2024',
+      d: 3,
       q: {
         en: 'Name a Best Actor Oscar winner (1980–2024)',
         pl: 'Podaj Oscarowego najlepszego aktora (1980–2024)',
@@ -601,6 +611,7 @@ export default {
     // ─────────────── Bond / Batman / Joker actors ───────────────
     {
       id: 'bond-batman-joker-actor',
+      d: 2,
       q: {
         en: 'Name an actor who played Bond, Batman or Joker',
         pl: 'Podaj aktora, który grał Bonda, Batmana lub Jokera',
@@ -658,6 +669,7 @@ export default {
     // ─────────────────────────── Bond films ───────────────────────────
     {
       id: 'james-bond-film',
+      d: 2,
       q: {
         en: 'Name a James Bond film',
         pl: 'Podaj film o Jamesie Bondzie',
@@ -710,6 +722,7 @@ export default {
     // ─────────────────────────────── MCU ───────────────────────────────
     {
       id: 'mcu-film',
+      d: 1,
       q: {
         en: 'Name a Marvel Cinematic Universe film (to 2025)',
         pl: 'Podaj film z kinowego uniwersum Marvela (do 2025)',
@@ -774,6 +787,7 @@ export default {
     // ───────────────────────────── Horror ─────────────────────────────
     {
       id: 'horror-film',
+      d: 1,
       q: {
         en: 'Name a horror film',
         pl: 'Podaj tytuł horroru',
@@ -888,6 +902,7 @@ export default {
     // ─────────────────────────── Star Wars ───────────────────────────
     {
       id: 'star-wars-character',
+      d: 1,
       q: {
         en: 'Name a Star Wars character',
         pl: 'Podaj postać z Gwiezdnych wojen',
@@ -1019,6 +1034,7 @@ export default {
     // ─────────────────────── Lord of the Rings ───────────────────────
     {
       id: 'lotr-character',
+      d: 1,
       q: {
         en: 'Name a Lord of the Rings character',
         pl: 'Podaj postać z „Władcy Pierścieni”',
@@ -1131,6 +1147,7 @@ export default {
     // ─────────────────────────── Harry Potter ───────────────────────────
     {
       id: 'harry-potter-character',
+      d: 1,
       q: {
         en: 'Name a Harry Potter character',
         pl: 'Podaj postać z „Harry’ego Pottera”',
@@ -1313,6 +1330,7 @@ export default {
     // ─────────────────────────── Composers ───────────────────────────
     {
       id: 'film-composer',
+      d: 3,
       q: {
         en: 'Name a film composer',
         pl: 'Podaj kompozytora muzyki filmowej',
@@ -1426,6 +1444,7 @@ export default {
     // ─────────────────────────── Villains ───────────────────────────
     {
       id: 'movie-villain',
+      d: 1,
       q: {
         en: 'Name a famous movie villain',
         pl: 'Podaj słynnego filmowego złoczyńcę',
@@ -1576,6 +1595,7 @@ export default {
     // ─────────────────────────── Ghibli ───────────────────────────
     {
       id: 'ghibli-film',
+      d: 2,
       q: {
         en: 'Name a Studio Ghibli film (to 2025)',
         pl: 'Podaj film Studia Ghibli (do 2025)',
@@ -1630,6 +1650,7 @@ export default {
     // ─────────────────────── Robot / AI sci-fi ───────────────────────
     {
       id: 'robot-ai-film',
+      d: 2,
       q: {
         en: 'Name a film starring a robot or AI',
         pl: 'Podaj film z robotem lub SI w głównej roli',
@@ -1732,6 +1753,7 @@ export default {
     // ─────────────────────────── Fantasy ───────────────────────────
     {
       id: 'fantasy-film',
+      d: 1,
       q: {
         en: 'Name a live-action fantasy film',
         pl: 'Podaj aktorski film fantasy',
@@ -1826,6 +1848,7 @@ export default {
     // ─────────────────────── Polish directors ───────────────────────
     {
       id: 'polish-film-director',
+      d: 3,
       q: {
         en: 'Name a Polish film director',
         pl: 'Podaj polskiego reżysera filmowego',
@@ -1921,6 +1944,7 @@ export default {
     // ─────────────────────────── Polish films ───────────────────────────
     {
       id: 'polish-film',
+      d: 2,
       q: {
         en: 'Name a Polish film',
         pl: 'Podaj polski film',
@@ -2051,6 +2075,7 @@ export default {
     // ─────────────────────────── Ukrainian films ───────────────────────────
     {
       id: 'ukrainian-film',
+      d: 3,
       q: {
         en: 'Name a Ukrainian film',
         pl: 'Podaj ukraiński film',
@@ -2134,6 +2159,7 @@ export default {
     // ─────────────────────────── GoT houses (TV) ───────────────────────────
     {
       id: 'game-of-thrones-house',
+      d: 2,
       q: {
         en: 'Name a Game of Thrones house',
         pl: 'Podaj ród z „Gry o tron”',

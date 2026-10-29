@@ -8,6 +8,12 @@ export type L10n = Record<Lang, string>;
 export type Tier = 1 | 2 | 3 | 4 | 5 | 6;
 
 /**
+ * How hard it is to name any valid answer at all, for a general player:
+ * 1 = easy (everyone can name one), 2 = medium, 3 = hard (needs real knowledge).
+ */
+export type Difficulty = 1 | 2 | 3;
+
+/**
  * An answer entry is a single pipe-separated string:
  *
  *   "English name|Polish name|Ukrainian name|alias|alias…"
@@ -24,6 +30,8 @@ export interface PromptSpec {
   /** Stable, unique, kebab-case id. Never change once published. */
   id: string;
   q: L10n;
+  /** Difficulty tag, see {@link Difficulty}. */
+  d: Difficulty;
   /** Answers grouped by rarity tier. */
   answers: Partial<Record<Tier, AnswerSpec[]>>;
   /**
@@ -52,6 +60,7 @@ export interface Prompt {
   id: string;
   pack: string;
   q: L10n;
+  d: Difficulty;
   answers: Answer[];
   reject: string[];
 }

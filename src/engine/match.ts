@@ -23,7 +23,7 @@ export function buildPack(spec: PackSpec): Prompt[] {
     for (const [t, list] of Object.entries(p.answers)) {
       for (const a of list ?? []) answers.push(parseAnswer(a, Number(t) as Tier));
     }
-    return { id: p.id, pack: spec.id, q: p.q, answers, reject: (p.reject ?? []).map(matchKey) };
+    return { id: p.id, pack: spec.id, q: p.q, d: p.d ?? 2, answers, reject: (p.reject ?? []).map(matchKey) };
   });
 }
 

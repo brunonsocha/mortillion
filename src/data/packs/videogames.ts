@@ -6,6 +6,7 @@ export default {
     // ───────────────────────────── HARDWARE ─────────────────────────────
     {
       id: 'nintendo-console',
+      d: 1,
       q: {
         en: 'Name a Nintendo console (to 2025)',
         pl: 'Podaj konsolę Nintendo (do 2025)',
@@ -46,6 +47,7 @@ export default {
     // ───────────────────────────── POKÉMON ─────────────────────────────
     {
       id: 'pokemon-gen1',
+      d: 1,
       q: {
         en: 'Name a Gen 1 Pokémon (the original 151)',
         pl: 'Podaj Pokémona z I generacji (pierwsze 151)',
@@ -90,6 +92,7 @@ export default {
     },
     {
       id: 'pokemon-legendary',
+      d: 2,
       q: {
         en: 'Name a Legendary or Mythical Pokémon (to 2024)',
         pl: 'Podaj legendarnego lub mitycznego Pokémona (do 2024)',
@@ -134,6 +137,7 @@ export default {
     // ───────────────────────────── NINTENDO ─────────────────────────────
     {
       id: 'mario-character',
+      d: 1,
       q: {
         en: 'Name a Super Mario character',
         pl: 'Podaj postać z Super Mario',
@@ -176,6 +180,7 @@ export default {
     },
     {
       id: 'zelda-game',
+      d: 2,
       q: {
         en: 'Name a Legend of Zelda game (to 2024)',
         pl: 'Podaj grę z serii Zelda (do 2024)',
@@ -220,6 +225,7 @@ export default {
     // ───────────────────────────── FROMSOFTWARE ─────────────────────────────
     {
       id: 'dark-souls-1-boss',
+      d: 3,
       q: {
         en: 'Name a boss from Dark Souls 1 (incl. DLC)',
         pl: 'Podaj bossa z Dark Souls 1 (z DLC)',
@@ -265,6 +271,7 @@ export default {
     },
     {
       id: 'elden-ring-boss',
+      d: 3,
       q: {
         en: 'Name an Elden Ring boss (incl. DLC)',
         pl: 'Podaj bossa z Elden Ring (z DLC)',
@@ -334,6 +341,7 @@ export default {
     },
     {
       id: 'fromsoftware-game',
+      d: 2,
       q: {
         en: 'Name a FromSoftware game (to 2025)',
         pl: 'Podaj grę studia FromSoftware (do 2025)',
@@ -380,6 +388,7 @@ export default {
     // ───────────────────────────── FINAL FANTASY ─────────────────────────────
     {
       id: 'final-fantasy-main',
+      d: 2,
       q: {
         en: 'Name a numbered Final Fantasy (I–XVI)',
         pl: 'Podaj numerowany Final Fantasy (I–XVI)',
@@ -418,6 +427,7 @@ export default {
     // ───────────────────────────── FIGHTING GAMES ─────────────────────────────
     {
       id: 'mortal-kombat-fighter',
+      d: 2,
       q: {
         en: 'Name a Mortal Kombat fighter (to 2024)',
         pl: 'Podaj wojownika z Mortal Kombat (do 2024)',
@@ -458,6 +468,7 @@ export default {
     },
     {
       id: 'street-fighter-fighter',
+      d: 2,
       q: {
         en: 'Name a Street Fighter fighter (to 2024)',
         pl: 'Podaj wojownika ze Street Fightera (do 2024)',
@@ -494,6 +505,7 @@ export default {
     // ───────────────────────────── ONLINE / MOBA / SANDBOX ─────────────────────────────
     {
       id: 'overwatch-hero',
+      d: 2,
       q: {
         en: 'Name an Overwatch hero (to 2024)',
         pl: 'Podaj bohatera Overwatch (do 2024)',
@@ -524,6 +536,7 @@ export default {
     },
     {
       id: 'minecraft-mob',
+      d: 1,
       q: {
         en: 'Name a Minecraft mob (to 2024)',
         pl: 'Podaj moba z Minecrafta (do 2024)',
@@ -577,6 +590,7 @@ export default {
     // ───────────────────────────── INDUSTRY ─────────────────────────────
     {
       id: 'game-company',
+      d: 1,
       q: {
         en: 'Name a video game developer or publisher',
         pl: 'Podaj producenta lub wydawcę gier',
@@ -646,6 +660,7 @@ export default {
     // ───────────────────────────── POLAND ─────────────────────────────
     {
       id: 'polish-game',
+      d: 1,
       q: {
         en: 'Name a game made in Poland (to 2024)',
         pl: 'Podaj grę z polskiego studia (do 2024)',
@@ -696,6 +711,7 @@ export default {
     },
     {
       id: 'witcher-character',
+      d: 1,
       q: {
         en: 'Name a character from The Witcher',
         pl: 'Podaj postać z Wiedźmina',
@@ -756,6 +772,7 @@ export default {
     },
     {
       id: 'cyberpunk-character',
+      d: 2,
       q: {
         en: 'Name a Cyberpunk 2077 character',
         pl: 'Podaj postać z Cyberpunka 2077',
@@ -798,6 +815,7 @@ export default {
     // ───────────────────────────── UKRAINE ─────────────────────────────
     {
       id: 'ukrainian-game',
+      d: 2,
       q: {
         en: 'Name a game made in Ukraine (to 2024)',
         pl: 'Podaj grę z ukraińskiego studia (do 2024)',
@@ -850,6 +868,7 @@ export default {
     // ───────────────────────────── ACTION ─────────────────────────────
     {
       id: 'gta-protagonist',
+      d: 2,
       q: {
         en: 'Name a GTA protagonist (to 2024)',
         pl: 'Podaj protagonistę serii GTA (do 2024)',
@@ -871,6 +890,7 @@ export default {
     },
     {
       id: 'call-of-duty-title',
+      d: 1,
       q: {
         en: 'Name a Call of Duty game (to 2024)',
         pl: 'Podaj grę z serii Call of Duty (do 2024)',
@@ -916,6 +936,7 @@ export default {
     },
     {
       id: 'game-engine',
+      d: 2,
       q: {
         en: 'Name a video game engine',
         pl: 'Podaj silnik gier wideo',
@@ -961,6 +982,7 @@ export default {
     },
     {
       id: 'battle-royale-game',
+      d: 1,
       q: {
         en: 'Name a battle royale game (to 2024)',
         pl: 'Podaj grę battle royale (do 2024)',
@@ -1007,6 +1029,7 @@ export default {
     // ───────────────────────────── SEGA ─────────────────────────────
     {
       id: 'sonic-character',
+      d: 1,
       q: {
         en: 'Name a Sonic the Hedgehog character',
         pl: 'Podaj postać z gier o Sonicu',
@@ -1053,6 +1076,7 @@ export default {
     // ───────────────────────────── GENRES ─────────────────────────────
     {
       id: 'metroidvania',
+      d: 2,
       q: {
         en: 'Name a Metroidvania game (to 2024)',
         pl: 'Podaj grę typu metroidvania (do 2024)',
@@ -1099,6 +1123,7 @@ export default {
     },
     {
       id: 'roguelike',
+      d: 2,
       q: {
         en: 'Name a roguelike or roguelite (to 2024)',
         pl: 'Podaj grę roguelike lub roguelite (do 2024)',
@@ -1145,6 +1170,7 @@ export default {
     // ───────────────────────────── VALVE ─────────────────────────────
     {
       id: 'half-life-character',
+      d: 2,
       q: {
         en: 'Name a Half-Life character or creature',
         pl: 'Podaj postać lub stwora z Half-Life',

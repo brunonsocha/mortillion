@@ -6,6 +6,7 @@ export default {
     // ───────────────────────────── Football ─────────────────────────────
     {
       id: 'world-cup-host',
+      d: 2,
       q: {
         en: 'Name a World Cup host country (to 2022)',
         pl: 'Wymień gospodarza piłkarskiego mundialu (do 2022)',
@@ -40,6 +41,7 @@ export default {
     },
     {
       id: 'world-cup-or-euro-winner',
+      d: 1,
       q: {
         en: 'Name a World Cup or Euro winner (to 2024)',
         pl: 'Wymień zwycięzcę mundialu lub Euro (do 2024)',
@@ -68,6 +70,7 @@ export default {
     },
     {
       id: 'euro-host',
+      d: 2,
       q: {
         en: 'Name a country that hosted Euro matches (to 2024)',
         pl: 'Wymień kraj, który gościł mecze Euro (do 2024)',
@@ -108,6 +111,7 @@ export default {
     },
     {
       id: 'world-cup-nation',
+      d: 1,
       q: {
         en: 'Name a country that played at a World Cup (to 2022)',
         pl: 'Wymień kraj, który grał na mundialu (do 2022)',
@@ -214,6 +218,7 @@ export default {
     },
     {
       id: 'premier-league-club',
+      d: 2,
       q: {
         en: 'Name a Premier League club (to 2024/25)',
         pl: 'Wymień klub z Premier League (do 2024/25)',
@@ -286,6 +291,7 @@ export default {
     },
     {
       id: 'champions-league-winner',
+      d: 2,
       q: {
         en: 'Name a Champions League winner (to 2025)',
         pl: 'Wymień zwycięzcę Ligi Mistrzów (do 2025)',
@@ -335,6 +341,7 @@ export default {
     },
     {
       id: 'uefa-cup-winner',
+      d: 3,
       q: {
         en: 'Name a UEFA Cup / Europa League winner (to 2025)',
         pl: 'Wymień zdobywcę Pucharu UEFA / Ligi Europy (do 2025)',
@@ -387,6 +394,7 @@ export default {
     },
     {
       id: 'ballon-dor-winner',
+      d: 2,
       q: {
         en: 'Name a Ballon d\'Or winner (to 2025)',
         pl: 'Wymień zdobywcę Złotej Piłki (do 2025)',
@@ -467,6 +475,7 @@ export default {
     // ───────────────────────────── Motorsport ─────────────────────────────
     {
       id: 'f1-world-champion',
+      d: 2,
       q: {
         en: 'Name an F1 world champion (to 2024)',
         pl: 'Wymień mistrza świata F1 (do 2024)',
@@ -527,6 +536,7 @@ export default {
     },
     {
       id: 'f1-race-winner',
+      d: 2,
       q: {
         en: 'Name an F1 Grand Prix winner (to 2024)',
         pl: 'Wymień zwycięzcę Grand Prix F1 (do 2024)',
@@ -660,6 +670,7 @@ export default {
     // ───────────────────────────── Tennis ─────────────────────────────
     {
       id: 'tennis-men-slam-champion',
+      d: 2,
       q: {
         en: 'Name a men\'s Grand Slam singles winner (1968–2025)',
         pl: 'Wymień triumfatora Wielkiego Szlema w singlu (1968–2025)',
@@ -745,6 +756,7 @@ export default {
     },
     {
       id: 'tennis-women-slam-champion',
+      d: 2,
       q: {
         en: 'Name a women\'s Grand Slam singles winner (1968–2025)',
         pl: 'Wymień triumfatorkę Wielkiego Szlema w singlu (1968–2025)',
@@ -836,6 +848,7 @@ export default {
     // ───────────────────────────── Combat ─────────────────────────────
     {
       id: 'boxing-world-champion',
+      d: 2,
       q: {
         en: 'Name a pro boxing world champion (to 2025)',
         pl: 'Wymień zawodowego mistrza świata w boksie (do 2025)',
@@ -971,6 +984,7 @@ export default {
     },
     {
       id: 'martial-art',
+      d: 1,
       q: {
         en: 'Name a martial art or combat sport',
         pl: 'Wymień sztukę walki lub sport walki',
@@ -1051,6 +1065,7 @@ export default {
     // ───────────────────────────── Cycling ─────────────────────────────
     {
       id: 'tour-de-france-winner',
+      d: 3,
       q: {
         en: 'Name a Tour de France winner (to 2025)',
         pl: 'Wymień zwycięzcę Tour de France (do 2025)',
@@ -1144,6 +1159,7 @@ export default {
     // ───────────────────────────── Chess ─────────────────────────────
     {
       id: 'chess-world-champion',
+      d: 3,
       q: {
         en: 'Name a World Chess Champion (to 2025)',
         pl: 'Wymień szachowego mistrza świata (do 2025)',
@@ -1213,6 +1229,7 @@ export default {
     // ───────────────────────────── Winter sports ─────────────────────────────
     {
       id: 'ski-jumping-world-cup-winner',
+      d: 2,
       q: {
         en: 'Name a Ski Jumping World Cup overall winner (to 2025)',
         pl: 'Wymień zdobywcę Kryształowej Kuli w skokach (do 2025)',
@@ -1266,6 +1283,7 @@ export default {
     },
     {
       id: 'winter-olympics-sport',
+      d: 2,
       q: {
         en: 'Name a sport at the Beijing 2022 Winter Olympics',
         pl: 'Wymień sport z zimowych igrzysk Pekin 2022',
@@ -1330,6 +1348,7 @@ export default {
     },
     {
       id: 'winter-olympics-host',
+      d: 3,
       q: {
         en: 'Name a Winter Olympics host city (to 2022)',
         pl: 'Wymień miasto-gospodarza zimowych igrzysk (do 2022)',
@@ -1374,6 +1393,7 @@ export default {
     // ───────────────────────────── Olympics ─────────────────────────────
     {
       id: 'summer-olympics-host',
+      d: 2,
       q: {
         en: 'Name a Summer Olympics host city (to 2024)',
         pl: 'Wymień miasto-gospodarza letnich igrzysk (do 2024)',
@@ -1416,6 +1436,7 @@ export default {
     },
     {
       id: 'summer-olympics-sport',
+      d: 1,
       q: {
         en: 'Name a sport at the Paris 2024 Olympics',
         pl: 'Wymień sport z igrzysk w Paryżu 2024',
@@ -1499,6 +1520,7 @@ export default {
     },
     {
       id: 'sports-equipment',
+      d: 1,
       q: {
         en: 'Name a piece of sports equipment',
         pl: 'Wymień sprzęt sportowy',
@@ -1611,6 +1633,7 @@ export default {
     },
     {
       id: 'olympic-volleyball-gold',
+      d: 3,
       q: {
         en: 'Name an Olympic volleyball champion nation (to 2024)',
         pl: 'Wymień kraj ze złotem olimpijskim w siatkówce (do 2024)',
@@ -1640,6 +1663,7 @@ export default {
     },
     {
       id: 'racket-or-bat-sport',
+      d: 1,
       q: {
         en: 'Name a sport played with a racket or bat',
         pl: 'Wymień sport z rakietą, paletką lub kijem',
@@ -1694,6 +1718,7 @@ export default {
     // ───────────────────────────── Basketball ─────────────────────────────
     {
       id: 'nba-champion-team',
+      d: 2,
       q: {
         en: 'Name an NBA championship team (to 2025)',
         pl: 'Wymień drużynę – mistrza NBA (do 2025)',
@@ -1739,6 +1764,7 @@ export default {
     },
     {
       id: 'nba-mvp',
+      d: 3,
       q: {
         en: 'Name an NBA regular-season MVP (to 2025)',
         pl: 'Wymień MVP sezonu zasadniczego NBA (do 2025)',

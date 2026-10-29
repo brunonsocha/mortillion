@@ -6,6 +6,7 @@ export default {
     // ───────────────────────────── ANIMALS ─────────────────────────────
     {
       id: 'mammal',
+      d: 1,
       q: { en: 'Name a mammal', pl: 'Podaj ssaka', uk: 'Назвіть ссавця' },
       answers: {
         1: [
@@ -61,6 +62,7 @@ export default {
     },
     {
       id: 'bird',
+      d: 1,
       q: { en: 'Name a bird', pl: 'Podaj ptaka', uk: 'Назвіть птаха' },
       answers: {
         1: [
@@ -110,6 +112,7 @@ export default {
     },
     {
       id: 'insect',
+      d: 1,
       q: { en: 'Name an insect', pl: 'Podaj owada', uk: 'Назвіть комаху' },
       answers: {
         1: [
@@ -159,6 +162,7 @@ export default {
     },
     {
       id: 'fish',
+      d: 1,
       q: { en: 'Name a fish', pl: 'Podaj rybę', uk: 'Назвіть рибу' },
       answers: {
         1: [
@@ -207,6 +211,7 @@ export default {
     },
     {
       id: 'reptile',
+      d: 2,
       q: { en: 'Name a reptile', pl: 'Podaj gada', uk: 'Назвіть плазуна' },
       answers: {
         1: [
@@ -250,6 +255,7 @@ export default {
     },
     {
       id: 'dinosaur',
+      d: 2,
       q: { en: 'Name a dinosaur', pl: 'Podaj dinozaura', uk: 'Назвіть динозавра' },
       answers: {
         1: [
@@ -297,6 +303,7 @@ export default {
     },
     {
       id: 'dog-breed',
+      d: 2,
       q: { en: 'Name a dog breed', pl: 'Podaj rasę psa', uk: 'Назвіть породу собак' },
       answers: {
         1: [
@@ -360,6 +367,7 @@ export default {
     // ─────────────────────────────── FOOD ───────────────────────────────
     {
       id: 'fruit',
+      d: 1,
       q: { en: 'Name a fruit', pl: 'Podaj owoc', uk: 'Назвіть фрукт або ягоду' },
       answers: {
         1: [
@@ -410,6 +418,7 @@ export default {
     },
     {
       id: 'vegetable',
+      d: 1,
       q: { en: 'Name a vegetable', pl: 'Podaj warzywo', uk: 'Назвіть овоч' },
       answers: {
         1: [
@@ -461,6 +470,7 @@ export default {
     },
     {
       id: 'herb-or-spice',
+      d: 2,
       q: { en: 'Name a herb or spice', pl: 'Podaj zioło lub przyprawę', uk: 'Назвіть приправу або пряну траву' },
       answers: {
         1: [
@@ -509,6 +519,7 @@ export default {
     // ────────────────────────────── NATURE ──────────────────────────────
     {
       id: 'tree',
+      d: 1,
       q: { en: 'Name a tree', pl: 'Podaj drzewo', uk: 'Назвіть дерево' },
       answers: {
         1: [
@@ -557,6 +568,7 @@ export default {
     },
     {
       id: 'flower',
+      d: 1,
       q: { en: 'Name a flower', pl: 'Podaj kwiat', uk: 'Назвіть квітку' },
       answers: {
         1: [
@@ -615,6 +627,7 @@ export default {
     // ─────────────────────────────── BODY ───────────────────────────────
     {
       id: 'bone',
+      d: 2,
       q: { en: 'Name a bone in the human body', pl: 'Podaj kość w ludzkim ciele', uk: 'Назвіть кістку людського тіла' },
       answers: {
         1: [
@@ -663,6 +676,7 @@ export default {
     },
     {
       id: 'organ',
+      d: 2,
       q: { en: 'Name an organ of the human body', pl: 'Podaj narząd ludzkiego ciała', uk: 'Назвіть орган людського тіла' },
       answers: {
         1: [
@@ -714,6 +728,7 @@ export default {
     // ────────────────────────────── SCIENCE ─────────────────────────────
     {
       id: 'chemical-element',
+      d: 2,
       q: { en: 'Name a chemical element', pl: 'Podaj pierwiastek chemiczny', uk: 'Назвіть хімічний елемент' },
       answers: {
         1: [
@@ -769,6 +784,7 @@ export default {
     // ─────────────────────────────── ARTS ───────────────────────────────
     {
       id: 'musical-instrument',
+      d: 1,
       q: { en: 'Name a musical instrument', pl: 'Podaj instrument muzyczny', uk: 'Назвіть музичний інструмент' },
       answers: {
         1: [
@@ -820,6 +836,7 @@ export default {
     },
     {
       id: 'composer',
+      d: 2,
       q: { en: 'Name a classical composer', pl: 'Podaj kompozytora muzyki klasycznej', uk: 'Назвіть композитора класичної музики' },
       answers: {
         1: [
@@ -890,6 +907,7 @@ export default {
     },
     {
       id: 'painter',
+      d: 2,
       q: { en: 'Name a famous painter', pl: 'Podaj sławnego malarza', uk: 'Назвіть відомого художника' },
       answers: {
         1: [
@@ -963,6 +981,7 @@ export default {
     // ─────────────────────────── LITERATURE & IDEAS ───────────────────────────
     {
       id: 'writer',
+      d: 2,
       q: { en: 'Name a famous writer or poet', pl: 'Podaj sławnego pisarza lub poetę', uk: 'Назвіть відомого письменника або поета' },
       answers: {
         1: [
@@ -1048,6 +1067,7 @@ export default {
     },
     {
       id: 'scientist',
+      d: 2,
       q: { en: 'Name a famous scientist', pl: 'Podaj sławnego naukowca', uk: 'Назвіть відомого науковця' },
       answers: {
         1: [
@@ -1104,6 +1124,7 @@ export default {
     },
     {
       id: 'philosopher',
+      d: 3,
       q: { en: 'Name a philosopher', pl: 'Podaj filozofa', uk: 'Назвіть філософа' },
       answers: {
         1: [
@@ -1164,6 +1185,7 @@ export default {
     // ───────────────────────────── MYTH & HISTORY ─────────────────────────────
     {
       id: 'greek-deity',
+      d: 2,
       q: { en: 'Name a god or goddess of Greek mythology', pl: 'Podaj boga lub boginię z mitologii greckiej', uk: 'Назвіть бога або богиню грецької міфології' },
       answers: {
         1: [
@@ -1209,6 +1231,7 @@ export default {
     },
     {
       id: 'mythical-creature',
+      d: 2,
       q: { en: 'Name a mythical creature', pl: 'Podaj mityczne stworzenie', uk: 'Назвіть міфічну істоту' },
       answers: {
         1: [
@@ -1254,6 +1277,7 @@ export default {
     },
     {
       id: 'roman-emperor',
+      d: 3,
       q: { en: 'Name a Roman emperor', pl: 'Podaj rzymskiego cesarza', uk: 'Назвіть римського імператора' },
       answers: {
         1: [
@@ -1305,6 +1329,7 @@ export default {
     },
     {
       id: 'medieval-weapon',
+      d: 2,
       q: { en: 'Name a medieval weapon', pl: 'Podaj średniowieczną broń', uk: 'Назвіть середньовічну зброю' },
       answers: {
         1: [
@@ -1345,6 +1370,7 @@ export default {
     // ──────────────────────────── EVERYDAY LIFE ────────────────────────────
     {
       id: 'colour',
+      d: 1,
       q: { en: 'Name a colour', pl: 'Podaj kolor', uk: 'Назвіть колір' },
       answers: {
         1: [
@@ -1391,6 +1417,7 @@ export default {
     },
     {
       id: 'kitchen-utensil',
+      d: 1,
       q: { en: 'Name a kitchen utensil or appliance', pl: 'Podaj sprzęt lub przybór kuchenny', uk: 'Назвіть кухонне приладдя або техніку' },
       answers: {
         1: [
@@ -1445,6 +1472,7 @@ export default {
     },
     {
       id: 'tool',
+      d: 1,
       q: { en: 'Name a tool', pl: 'Podaj narzędzie', uk: 'Назвіть інструмент для роботи' },
       answers: {
         1: [
@@ -1492,6 +1520,7 @@ export default {
     },
     {
       id: 'clothing',
+      d: 1,
       q: { en: 'Name an item of clothing', pl: 'Podaj część garderoby', uk: 'Назвіть предмет одягу' },
       answers: {
         1: [
@@ -1541,6 +1570,7 @@ export default {
     },
     {
       id: 'profession',
+      d: 1,
       q: { en: 'Name a profession', pl: 'Podaj zawód', uk: 'Назвіть професію' },
       answers: {
         1: [
@@ -1602,6 +1632,7 @@ export default {
     },
     {
       id: 'language',
+      d: 1,
       q: { en: 'Name a language', pl: 'Podaj język', uk: 'Назвіть мову' },
       answers: {
         1: [
@@ -1667,6 +1698,7 @@ export default {
     },
     {
       id: 'dance',
+      d: 2,
       q: { en: 'Name a dance', pl: 'Podaj taniec', uk: 'Назвіть танець' },
       answers: {
         1: [
@@ -1709,6 +1741,7 @@ export default {
     },
     {
       id: 'gemstone',
+      d: 2,
       q: { en: 'Name a gemstone', pl: 'Podaj kamień szlachetny', uk: 'Назвіть дорогоцінний камінь' },
       answers: {
         1: [
@@ -1748,6 +1781,7 @@ export default {
     },
     {
       id: 'shakespeare-play',
+      d: 3,
       q: { en: 'Name a play by Shakespeare', pl: 'Podaj sztukę Szekspira', uk: 'Назвіть п\'єсу Шекспіра' },
       answers: {
         1: [
