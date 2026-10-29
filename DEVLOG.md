@@ -474,3 +474,15 @@ the Polish, Ukrainian, K-pop and record-label prompts.
 magic-link sign-in → Settings shows the account → Join → the run starts. The production
 build (no keys) is unchanged, `tsc` is clean, and 12/12 tests pass. The Edge Functions are
 **not** deployed or executed. They need your Supabase and Stripe keys (see the final section).
+
+---
+
+## 20. Readable faint text
+
+**What**
+- `--ink-faint` (stat labels, hints, "of 7,000 m", answer-list headings) went from
+  `#5d564c` (2.7:1 on the dark background, below readable contrast) to `#857c6d`
+  (4.8:1 on the background, 4.6:1 on panels). It still reads as secondary next to
+  `--ink-dim`.
+
+**Verified:** contrast ratios computed with the WCAG formula. The build is clean.
