@@ -1,0 +1,48 @@
+# Mortillion: development log
+
+One entry per commit, newest at the bottom. Each entry lists what changed, why,
+and how it was verified, so the history can be reviewed commit by commit.
+
+Overnight session started 2026-10-29 22:15 CET.
+
+---
+
+## 1. Baseline: playable game, five content packs
+
+**What**
+- Vite + vanilla TypeScript app with no UI framework, built to static files.
+- The canvas pixel-art scene (`src/render/scene.ts`) has a torch-lit shaft, a bonfire with a
+  coiled sword, ash/ember particles, banded pixel lighting, a knight that sinks
+  as you score, and red eyes deeper down.
+- Synthesized WebAudio sound effects (`src/render/sfx.ts`).
+- Screens:
+  - home (bonfire)
+  - Daily Descent
+  - Themed Catacombs (4 themes + 3 sealed)
+  - Archive (practice)
+  - game
+  - results with emoji share
+  - how-to-play and settings modals
+- i18n for EN, PL and UK, auto-detected and switchable.
+- The answer engine (`src/engine/normalize.ts`, `match.ts`):
+  - Cyrillic transliteration, diacritic stripping and phonetic folding
+  - Roman numerals, typo tolerance by length, and a per-prompt reject list
+  - exact spelling takes priority, which keeps кіт (cat) and кит (whale) apart
+- Daily deal: a weighted rotation across packs with seeded per-pack decks, so no repeat
+  within 9 days. A run in progress is pinned to its prompt ids, and reloading
+  counts the current prompt as lost.
+- Content written by agents and checked by `npm run validate`:
+
+| Pack | Prompts | Answers |
+|---|---:|---:|
+| general | 34 | 3,164 |
+| geography | 32 | 1,523 |
+| movies | 26 | 1,493 |
+| sports | 26 | 1,170 |
+| videogames | 26 | 1,918 |
+
+**Verified:** `npm run build` is clean and the validator reports 0 errors. Playwright (Firefox) runs covered:
+- desktop and mobile sizes in EN, PL and UK
+- a full daily run through to results
+- a scored answer in every pack, with a tier stamp for every tier
+- the "YOU DIED" fit on mobile

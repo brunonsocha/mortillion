@@ -1,0 +1,85 @@
+// Tiny synthesized sound effects. No audio files are shipped.
+
+let ctx: AudioContext | null = null;
+let enabled = true;
+
+export function setSound(on: boolean) {
+  enabled = on;
+}
+
+function ac(): AudioContext | null {
+  if (!enabled) return null;
+  try {
+    ctx ??= new AudioContext();
+    if (ctx.state === 'suspended') void ctx.resume();
+    return ctx;
+  } catch {
+    return null;
+  }
+}
+
+function tone(freq: number, start: number, dur: number, type: OscillatorType, vol: number, slideTo?: number) {
+  const a = ac();
+  if (!a) return;
+  const t0 = a.currentTime + start;
+  const o = a.createOscillator();
+  const g = a.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(freq, t0);
+  if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(vol, t0 + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g).connect(a.destination);
+  o.start(t0);
+  o.stop(t0 + dur + 0.05);
+}
+
+function noise(start: number, dur: number, vol: number, from: number, to: number) {
+  const a = ac();
+  if (!a) return;
+  const t0 = a.currentTime + start;
+  const len = Math.ceil(a.sampleRate * dur);
+  const buf = a.createBuffer(1, len, a.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const src = a.createBufferSource();
+  src.buffer = buf;
+  const f = a.createBiquadFilter();
+  f.type = 'bandpass';
+  f.frequency.setValueAtTime(from, t0);
+  f.frequency.exponentialRampToValueAtTime(to, t0 + dur);
+  const g = a.createGain();
+  g.gain.setValueAtTime(vol, t0);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  src.connect(f).connect(g).connect(a.destination);
+  src.start(t0);
+}
+
+export const sfx = {
+  click() {
+    tone(220, 0, 0.06, 'square', 0.03);
+  },
+  tick() {
+    tone(880, 0, 0.05, 'square', 0.025);
+  },
+  kindle() {
+    noise(0, 0.9, 0.25, 300, 2400);
+    tone(110, 0.05, 0.8, 'sawtooth', 0.04, 55);
+  },
+  reward(tier: number) {
+    // A rising arpeggio in a minor key; rarer tiers climb higher.
+    const notes = [220, 261.6, 329.6, 392, 440, 523.3, 659.3, 784];
+    const n = 2 + tier;
+    for (let i = 0; i < n; i++) tone(notes[i % notes.length] * (i >= notes.length ? 2 : 1), i * 0.07, 0.35, 'triangle', 0.07);
+    if (tier >= 5) tone(1046.5, n * 0.07, 0.9, 'sine', 0.06);
+  },
+  death() {
+    tone(98, 0, 1.6, 'sawtooth', 0.09, 41);
+    tone(146.8, 0, 1.4, 'triangle', 0.06, 61);
+    noise(0, 0.5, 0.2, 800, 80);
+  },
+  complete() {
+    [196, 246.9, 293.7, 392].forEach((f, i) => tone(f, i * 0.18, 1.2, 'triangle', 0.06));
+  },
+};

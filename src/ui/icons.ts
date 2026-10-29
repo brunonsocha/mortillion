@@ -1,0 +1,116 @@
+// Small pixel icons for the theme cards and menus, baked to data URLs.
+import { bake, type Sprite } from '../render/sprites.ts';
+
+const ICONS: Record<string, Sprite> = {
+  sports: [
+    '....kkkkk....',
+    '..kkwwkwwkk..',
+    '.kwwwkkkwwwk.',
+    '.kwwkkkkkwwk.',
+    'kwwwkkkkkwwwk',
+    'kkwwwkkkwwwkk',
+    'kkkwwwwwwwkkk',
+    'kkwwwwkwwwwkk',
+    'kwwwwkkkwwwwk',
+    '.kwwkkkkkwwk.',
+    '.kwwwkkkwwwk.',
+    '..kkwwwwwkk..',
+    '....kkkkk....',
+  ],
+  movies: [
+    '..kkkk.kkkk..',
+    '.kbbbbkbbbbk.',
+    'kbbkbbkbbkbbk',
+    'kbkokbkbkokbk',
+    'kbbkbbkbbkbbk',
+    '.kbbbbkbbbbk.',
+    '..kkkkkkkkk..',
+    'kkkkkkkkkkkk.',
+    'kccccccccckRk',
+    'kcdddddddckRk',
+    'kccccccccckRk',
+    'kkkkkkkkkkkk.',
+    '.kk......kk..',
+  ],
+  geography: [
+    '....kkkkk....',
+    '..kkUUUUUkk..',
+    '.kUUvvUUUUUk.',
+    '.kUvvvvUUvUk.',
+    'kUUvvvUUvvvUk',
+    'kUUUvUUUvvvUk',
+    'kUUUUUUUUvUUk',
+    'kUUUvvUUUUUUk',
+    'kUUvvvvUUUUUk',
+    '.kUUvvUUUvvk.',
+    '.kUUUUUUUUUk.',
+    '..kkUUUUUkk..',
+    '....kkkkk....',
+  ],
+  videogames: [
+    '.............',
+    '..kkk...kkk..',
+    '.kbbbkkkbbbk.',
+    'kbbbbbbbbbbbk',
+    'kbkbbbbbbobbk',
+    'kkkkbbbbobobk',
+    'kbkbbbbbbobbk',
+    'kbbbbkkkbbbbk',
+    'kbbbk...kbbbk',
+    '.kkk.....kkk.',
+    '.............',
+    '.............',
+    '.............',
+  ],
+  sealed: [
+    '....kkkkk....',
+    '...kbbbbbk...',
+    '..kbk...kbk..',
+    '..kbk...kbk..',
+    '..kbk...kbk..',
+    '.kkkkkkkkkkk.',
+    '.kgGGGGGGGgk.',
+    '.kgGGGkGGGgk.',
+    '.kgGGkkkGGgk.',
+    '.kgGGGkGGGgk.',
+    '.kgGGGkGGGgk.',
+    '.kgggggggggk.',
+    '.kkkkkkkkkkk.',
+  ],
+  skull: [
+    '..kkkkkkk..',
+    '.kwwwwwwwk.',
+    'kwwwwwwwwwk',
+    'kwkkwwwkkwk',
+    'kwkkwwwkkwk',
+    'kwwwwkwwwwk',
+    '.kwwwwwwwk.',
+    '..kwkwkwk..',
+    '..kkkkkkk..',
+  ],
+  flame: [
+    '.....k.....',
+    '....kok....',
+    '...kook....',
+    '...koOok...',
+    '..kooOook..',
+    '.koOOOOok..',
+    '.koOOOOOok.',
+    'kooOOOOOook',
+    'kooOOOOOook',
+    '.kooOOOook.',
+    '..kkkkkkk..',
+  ],
+};
+
+const urls = new Map<string, string>();
+
+export function icon(name: keyof typeof ICONS | string): string {
+  const sprite = ICONS[name] ?? ICONS.sealed;
+  let u = urls.get(name);
+  if (!u) {
+    u = bake(sprite).toDataURL();
+    urls.set(name, u);
+  }
+  return u;
+}

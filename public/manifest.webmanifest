@@ -1,0 +1,10 @@
+{
+  "name": "Mortillion",
+  "short_name": "Mortillion",
+  "description": "The daily descent. Rare answers send you deeper.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07060a",
+  "theme_color": "#07060a",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
