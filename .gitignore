@@ -3,3 +3,6 @@ dist
 shots
 .vite.log
 .preview.log
+shots/dist-mock
+.env
+.env.local

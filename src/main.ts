@@ -4,6 +4,7 @@ import './styles.css';
 import { loadAll } from './data/packs/index.ts';
 import { Scene } from './render/scene.ts';
 import { initApp, render } from './ui/app.ts';
+import { initAccount, onAccountChange } from './account/session.ts';
 import './ui/home.ts';
 import './ui/game.ts';
 import './ui/results.ts';
@@ -13,6 +14,16 @@ if (new URLSearchParams(location.search).has('og')) document.documentElement.cla
 
 const scene = new Scene(document.getElementById('abyss') as HTMLCanvasElement);
 initApp(document.getElementById('app')!, scene);
+// Starts synchronously by taking any OAuth/magic-link tokens out of the URL
+// hash, before the router reads it; the network part finishes later.
+void initAccount();
+// Screens that show account state refresh when it changes; a run in progress
+// is never interrupted.
+onAccountChange(() => {
+  const route = location.hash.replace(/^#\/?/, '').split('/')[0];
+  if (['', 'themes', 'archive'].includes(route)) void render();
+});
+
 void document.fonts.ready.then(() => render());
 
 // Warm every content pack once the page is idle: the daily needs them all,

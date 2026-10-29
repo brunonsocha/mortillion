@@ -1697,3 +1697,59 @@ body:not(:has(.home)) .brand {
   font-style: italic;
   color: #b57a3c;
 }
+
+/* ───────────── account & covenant ───────────── */
+
+.account {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.account p {
+  margin: 0;
+}
+
+.signin-wrap,
+.signin {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.signin .answer {
+  font-size: 17px;
+}
+
+.covenant {
+  color: #c58cff;
+  text-shadow: 0 0 10px rgba(166, 108, 240, 0.4);
+}
+
+.account-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 2px solid var(--line);
+}
+
+.account-box h3,
+.account-box p {
+  margin: 0;
+}
+
+.account-box .note {
+  text-align: left;
+}
+
+.account-box .actions {
+  justify-content: flex-start;
+}
+
+.quota {
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-faint);
+}

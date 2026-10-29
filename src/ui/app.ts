@@ -8,6 +8,7 @@ import { setSound, sfx } from '../render/sfx.ts';
 import { TIER_POINTS } from '../engine/game.ts';
 import { h } from './dom.ts';
 import { icon } from './icons.ts';
+import { accountSection } from './account.ts';
 
 export interface App {
   lang: Lang;
@@ -136,7 +137,8 @@ export function modal(title: string, body: HTMLElement): void {
   };
   addEventListener('keydown', onKey);
   document.body.appendChild(dlg);
-  dlg.querySelector<HTMLButtonElement>('.modal-panel > .btn')?.focus({ preventScroll: true });
+  // Forms want their first field; everything else focuses Close.
+  (dlg.querySelector<HTMLElement>('.modal-panel input') ?? dlg.querySelector<HTMLElement>('.modal-panel > .btn'))?.focus({ preventScroll: true });
 }
 
 export type BannerKind = 'zone' | 'lit' | 'sun' | 'quote' | 'victory';
@@ -214,6 +216,7 @@ export function showSettings() {
         app.scene.motion = v;
         document.documentElement.classList.toggle('still', !v);
       }),
+      accountSection(),
       h(
         'button',
         {

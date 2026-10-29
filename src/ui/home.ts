@@ -8,6 +8,7 @@ import { FIRE_KEEPER, SECRET_TEXT, SOAPSTONE } from '../eggs.ts';
 import { app, banner, go, modal, onLeave, route, showHelp } from './app.ts';
 import { fmt, h } from './dom.ts';
 import { icon } from './icons.ts';
+import { quotaLabel } from './account.ts';
 
 export function countdown(): HTMLElement {
   const el = h('span', { class: 'mono' });
@@ -87,6 +88,7 @@ route('', () => {
         h('button', { class: 'card', onclick: () => (sfx.click(), go('party')) }, h('span', { class: 'card-title sm' }, t.party), h('span', { class: 'card-sub' }, t.partySub)),
         h('button', { class: 'card', onclick: () => (sfx.click(), go('archive')) }, h('span', { class: 'card-title sm' }, t.archive), h('span', { class: 'card-sub' }, t.archiveSub)),
       ),
+      quotaLabel() ? h('p', { class: 'quota' }, quotaLabel()) : null,
       h(
         'button',
         { class: 'stats', title: t.status, 'aria-label': t.status, onclick: () => showStatus() },

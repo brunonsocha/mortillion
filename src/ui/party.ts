@@ -12,6 +12,7 @@ import { TIER_COLORS } from '../render/scene.ts';
 import { sfx } from '../render/sfx.ts';
 import { app, banner, go, onLeave, route, tierBadge } from './app.ts';
 import { fmt, h } from './dom.ts';
+import { gateRun } from './account.ts';
 
 const ROUNDS = 5;
 const MIN_PLAYERS = 2;
@@ -90,6 +91,7 @@ function setup(): HTMLElement {
   );
   form.onsubmit = async (e) => {
     e.preventDefault();
+    if (!gateRun()) return;
     const clean = names.map((n, i) => n.trim() || `${t.phantom} ${i + 1}`);
     lastSetup = { names: clean, pack };
     const pool = pack === 'all' ? await loadAll() : await loadPack(pack);

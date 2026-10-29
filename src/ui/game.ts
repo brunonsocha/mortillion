@@ -12,6 +12,7 @@ import { BONFIRE_LIT, PATCHES, SECRET_TEXT, quipFor, secretOf, zoneAt } from '..
 import { app, banner, go, onLeave, route, tierBadge } from './app.ts';
 import { countUp, fmt, h, wait } from './dom.ts';
 import { icon } from './icons.ts';
+import { gateRun } from './account.ts';
 
 export type RunKind = 'daily' | 'pack' | 'archive' | 'endless';
 
@@ -95,15 +96,26 @@ route('daily', async () => {
   return play({ kind: 'daily', id: String(today), prompts, turns });
 });
 
+/** Sends the player home (with the paywall) if today's free runs are spent. */
+function blocked(): HTMLElement | null {
+  if (gateRun()) return null;
+  queueMicrotask(() => go(''));
+  return loading();
+}
+
 route('archive-run', async ([d]) => {
   const day = Number(d);
   if (!(day >= 1 && day < dayNumber())) return empty();
+  const stop = blocked();
+  if (stop) return stop;
   const pool = await loadAll();
   if (!pool.length) return empty();
   return play({ kind: 'archive', id: String(day), prompts: dailyPrompts(pool, day), turns: [] });
 });
 
 route('endless', async () => {
+  const stop = blocked();
+  if (stop) return stop;
   const pool = await loadAll();
   if (!pool.length) return empty();
   const draw = endlessDealer(pool);
@@ -112,6 +124,8 @@ route('endless', async () => {
 
 route('pack', async ([id]) => {
   if (!THEMES.includes(id)) return empty();
+  const stop = blocked();
+  if (stop) return stop;
   const prompts = await loadPack(id);
   if (!prompts.length) return empty();
   return play({ kind: 'pack', id, prompts: drawFromPack(id, prompts), turns: [] });

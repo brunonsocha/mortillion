@@ -437,3 +437,40 @@ and an Endless run, inspected visually. `tsc` and the build are clean.
 the Polish, Ukrainian, K-pop and record-label prompts.
 
 **Verified:** the validator reports 0 errors and the build is clean (the music chunk is lazy-loaded).
+
+---
+
+## 19. Accounts and the Covenant subscription (scaffolding, off until keys exist)
+
+**What** (full design and setup: `docs/subscriptions.md`)
+- **The rule:**
+  - The Daily Descent is always free.
+  - Themes, Endless Abyss, Summon Signs and Archive allow **3 free runs per local day**
+    (`VITE_FREE_RUNS`).
+  - Beyond that, the player needs to sign in (`VITE_GATE=login`) or hold an active paid **Covenant of
+    the Abyss** subscription (`VITE_GATE=subscription`, the default).
+- **Client:** tiny `fetch` wrappers instead of supabase-js.
+  - Magic-link and Google sign-in, with implicit-flow tokens taken from the URL hash before the
+    router reads it.
+  - Token refresh and a profile read (RLS: own row only).
+  - Stripe Checkout and Customer Portal via Edge Functions, plus polling after a successful checkout
+    while the webhook lands.
+- **UI (EN/PL/UK):**
+  - the "The embers are spent" paywall (sign-in first, then Join)
+  - an Account section in Settings (email, Covenant status with renewal date, runs
+    left, Manage subscription, Sign out)
+  - a "2/3 free descents left today" line on the home screen
+  - forms in modals now focus their first field
+- **Server:**
+  - `supabase/migrations/0001_profiles.sql`: `profiles` with RLS and a new-user trigger.
+  - Deno Edge Functions: `create-checkout`, `customer-portal` and `stripe-webhook` (verifies the
+    signature, mirrors status and period end).
+  - Redirect URLs come from the server-side `SITE_URL`, never from the request.
+- **Off by default:** with no `VITE_SUPABASE_*` keys, nothing changes for players.
+  `VITE_ACCOUNTS_MOCK=1` gives a fake local backend for development.
+- `.env.example` documents every variable. `.env` is git-ignored.
+
+**Verified:** with a mock build in Playwright, three free runs → the fourth shows the paywall →
+magic-link sign-in → Settings shows the account → Join → the run starts. The production
+build (no keys) is unchanged, `tsc` is clean, and 12/12 tests pass. The Edge Functions are
+**not** deployed or executed. They need your Supabase and Stripe keys (see the final section).
