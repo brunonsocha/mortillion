@@ -5,6 +5,43 @@ let enabled = true;
 
 export function setSound(on: boolean) {
   enabled = on;
+  setAmbience(wantAmbience);
+}
+
+let crackleTimer: ReturnType<typeof setTimeout> | null = null;
+let unlocked = false;
+let wantAmbience = false;
+
+// Browsers only allow audio after a user gesture.
+for (const ev of ['pointerdown', 'keydown']) {
+  addEventListener(ev, () => {
+    unlocked = true;
+    if (wantAmbience && !crackleTimer) setAmbience(true);
+  }, { passive: true });
+}
+
+// Silence the fire while the tab is hidden.
+document.addEventListener('visibilitychange', () => setAmbience(wantAmbience));
+
+/** Quiet bonfire crackle while the player rests at the bonfire. */
+export function setAmbience(on: boolean) {
+  wantAmbience = on;
+  if (!on || !enabled || !unlocked || document.hidden) {
+    if (crackleTimer) clearTimeout(crackleTimer);
+    crackleTimer = null;
+    return;
+  }
+  if (crackleTimer) return;
+  const pop = () => {
+    // A cluster of short, filtered clicks; occasionally a louder snap.
+    const snap = Math.random() < 0.12;
+    const n = snap ? 3 : 1 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < n; i++) {
+      noise(i * 0.015, 0.025 + Math.random() * 0.03, snap ? 0.05 : 0.018, 1800 + Math.random() * 2400, 600);
+    }
+    crackleTimer = setTimeout(pop, 90 + Math.random() * 420);
+  };
+  pop();
 }
 
 function ac(): AudioContext | null {

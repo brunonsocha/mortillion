@@ -2,6 +2,7 @@
 // resolution and scaled up with nearest-neighbour filtering.
 
 import { ZONES, zoneAt } from '../eggs.ts';
+import { setAmbience } from './sfx.ts';
 import { BONES, BONFIRE, CHAIN, HOLLOW_PALETTE, KNIGHT, KNIGHT_PRAISE, KNIGHT_SIT, SKULL, TORCH, bake } from './sprites.ts';
 
 export type Mode = 'bonfire' | 'descent';
@@ -143,6 +144,7 @@ export class Scene {
 
   setMode(mode: Mode) {
     this.mode = mode;
+    setAmbience(mode === 'bonfire');
     if (mode === 'bonfire') {
       this.targetY = 0;
       this.knightY = Math.min(this.knightY, 0);

@@ -237,3 +237,17 @@ card screenshots. `tsc` and the build are clean.
 
 **Verified:** Playwright with the context switched offline after one online
 visit. `#/daily` still renders its first prompt. `tsc` and the build are clean.
+
+---
+
+## 9. Bonfire ambience
+
+**What**
+- Soft, synthesized fire crackle while resting at the bonfire (home, themes,
+  archive): short band-passed noise clicks at random intervals, with an occasional
+  louder snap. No audio files.
+- It starts only after the first user gesture (autoplay rules), follows the Sound
+  setting, stops during a descent, and goes silent while the tab is hidden.
+
+**Verified:** a Playwright run with sound on and navigation between screens shows no
+console errors. `tsc` and the build are clean.
