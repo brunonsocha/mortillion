@@ -1397,6 +1397,37 @@ the whole game?"
 python3 scripts/pixelize-portrait.py art/liora/maiden-cutout.png --size 72x90 --colors 32 --saturation 1.3 --contrast 1.15
 ```
 
+## 50. Liora's portrait at the scene's own pixel size
+
+Your feedback (2026-10-30), with a screenshot: "not even close, look how much they differ".
+
+**Cause:** the portrait was 72×90 shown at 2×, but the scene draws every pixel at 4–5× (`--ps`).
+Her pixels were half the size of the knight's, so she still looked like an illustration.
+
+**What**
+- **Same pixel size as the scene:** the portrait is now **48×60**, shown at `--ps`, the scene's
+  pixel scale (`calc(48px * var(--ps))`). Her pixels are exactly the size of the knight's at any
+  window size. Phones show it at 2×.
+- **Better pixelizer** (`scripts/pixelize-portrait.py`); plain averaging at this size smeared her
+  face into noise. New options:
+  - `--crop`: frame just the head, hood, hand and shoulders, so the face gets most of the pixels.
+  - `--smooth 7`: a median filter on the source first, which flattens fine hair strands into clean
+    clumps instead of speckle.
+  - `--lines 80`: keeps line art. In each block, if a clearly darker group covers enough of it,
+    the pixel takes that dark tone, so lashes, eyes, lips and outlines survive the shrink.
+  - `--despeckle 1`: a clean-up pass after colour reduction. A lone pixel matching none of its
+    neighbours, while most of them agree, takes their colour, like a pixel artist's tidy-up.
+- **20 colours.**
+
+```sh
+python3 scripts/pixelize-portrait.py art/liora/maiden-cutout.png --crop 110,0,640,800 --size 48x60 \
+  --colors 20 --saturation 1.3 --contrast 1.15 --lines 80 --smooth 7 --despeckle 1
+```
+
+**Limit:** an automatic conversion of a detailed painting only goes so far. For a truly
+hand-pixelled look, the best source is art made as pixel art at about 48×60 (a commission, or an
+image generator asked for "48×60 pixel art portrait"), dropped into the same command.
+
 ---
 
 ## What I need from you
