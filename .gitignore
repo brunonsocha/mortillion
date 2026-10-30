@@ -6,3 +6,7 @@ shots
 shots/dist-mock
 .env
 .env.local
+supabase/functions/_game
+supabase/.temp
+supabase/functions/.env
+deno.lock

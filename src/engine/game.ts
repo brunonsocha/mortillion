@@ -108,6 +108,31 @@ export function dailyPrompts(pool: Prompt[], day: number): Prompt[] {
   return byDifficulty(shuffle(out, rng(day * 2654435761)));
 }
 
+/**
+ * Deals prompts for the Endless Abyss: easy ones first, then mostly medium,
+ * then mostly hard, never repeating a prompt until every prompt of that
+ * difficulty has been seen.
+ */
+export function endlessDealer(pool: Prompt[], rand: () => number): () => Prompt {
+  const decks = new Map<number, Prompt[]>();
+  const take = (d: number): Prompt => {
+    let deck = decks.get(d);
+    if (!deck?.length) {
+      deck = shuffle(pool.filter((p) => p.d === d), rand);
+      if (!deck.length) deck = shuffle(pool, rand);
+      decks.set(d, deck);
+    }
+    return deck.pop()!;
+  };
+  let n = 0;
+  return () => {
+    const r = rand();
+    const d = n < 3 ? 1 : n < 8 ? (r < 0.25 ? 1 : 2) : n < 14 ? (r < 0.6 ? 2 : 3) : r < 0.35 ? 2 : 3;
+    n++;
+    return take(d);
+  };
+}
+
 export interface Turn {
   promptId: string;
   guess: string;

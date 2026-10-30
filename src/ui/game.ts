@@ -1,7 +1,7 @@
 import { THEMES, loadAll, loadPack } from '../data/packs/index.ts';
 import type { Prompt } from '../data/types.ts';
 import {
-  METRES_PER_POINT, PROMPTS_PER_RUN, SECONDS_PER_PROMPT, TIER_POINTS, byDifficulty, dailyPrompts, dayNumber, shuffle, totalPoints, type Turn,
+  METRES_PER_POINT, PROMPTS_PER_RUN, SECONDS_PER_PROMPT, TIER_POINTS, byDifficulty, dailyPrompts, endlessDealer, dayNumber, shuffle, totalPoints, type Turn,
 } from '../engine/game.ts';
 import { findAnswer } from '../engine/match.ts';
 import { load, recordDay, recordPack, save } from '../engine/storage.ts';
@@ -30,30 +30,6 @@ export interface Run {
 /** Estus flasks at the start of an Endless Abyss run. */
 export const ENDLESS_LIVES = 3;
 
-/**
- * Deals prompts for the Endless Abyss: easy ones first, then mostly medium,
- * then mostly hard, never repeating a prompt until every prompt of that
- * difficulty has been seen.
- */
-function endlessDealer(pool: Prompt[]): () => Prompt {
-  const decks = new Map<number, Prompt[]>();
-  const take = (d: number): Prompt => {
-    let deck = decks.get(d);
-    if (!deck?.length) {
-      deck = shuffle(pool.filter((p) => p.d === d));
-      if (!deck.length) deck = shuffle(pool);
-      decks.set(d, deck);
-    }
-    return deck.pop()!;
-  };
-  let n = 0;
-  return () => {
-    const r = Math.random();
-    const d = n < 3 ? 1 : n < 8 ? (r < 0.25 ? 1 : 2) : n < 14 ? (r < 0.6 ? 2 : 3) : r < 0.35 ? 2 : 3;
-    n++;
-    return take(d);
-  };
-}
 
 /** The most recent finished run, for the results screen. */
 export let lastRun: Run | null = null;
@@ -118,7 +94,7 @@ route('endless', async () => {
   if (stop) return stop;
   const pool = await loadAll();
   if (!pool.length) return empty();
-  const draw = endlessDealer(pool);
+  const draw = endlessDealer(pool, Math.random);
   return play({ kind: 'endless', id: 'endless', prompts: [], turns: [], lives: ENDLESS_LIVES, draw });
 });
 

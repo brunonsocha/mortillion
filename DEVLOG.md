@@ -637,6 +637,72 @@ on typeface, knot, wine-grape and rarer deities. Those are worth a quick native 
 
 ---
 
+## 26. Authoritative game server: answers, timer and quota enforced server-side
+
+Your decisions (2026-10-30): paid access only after signing in, and it must persist; Google
+sign-in; achievements and a leaderboard for signed-in players; 19,99 PLN or 5 EUR;
+enforcement on the server.
+
+**What**
+- **`supabase/functions/game`** is the authoritative game server. The answer lists live only
+  there. The browser asks for one prompt at a time, sends a guess, and receives the verdict
+  plus the reveal lists. Actions: `start`, `prompt`, `answer`, `state`, `stats`,
+  `leaderboard`, `profile`.
+  - **Quota:** 3 non-daily runs per UTC day without full access (402 `quota`).
+  - **Daily:** one run per player per day. It's a unique index in the database, restarting
+    resumes the same run, and a finished daily can't be replayed. The day must be within ±1 of the server's.
+  - **Timer:** the clock starts when the prompt is served, and re-requesting doesn't reset it.
+    Answers after 25 s plus 3 s grace score 0, and double submits are rejected (409).
+  - **Isolation:** players can only touch their own runs.
+  - The same engine, packs and dealing logic as the browser: `npm run functions:sync`
+    copies them into `supabase/functions/_game` (generated, git-ignored).
+- **Anonymous accounts:** every player silently gets an anonymous Supabase account, so
+  quotas and the one-daily rule hold before sign-in. Signing in later keeps the same account
+  (client work in the next entry).
+- **Database (`0002_game.sql`):**
+  - `runs`, `turns` and `achievements`, with RLS so players can only read their own rows and
+    nobody can write from the browser
+  - `profiles` gains `display_name`, `full_access` (a lifetime purchase that persists),
+    `purchased_at`, `purchase_currency` and `is_anonymous` (kept in sync by triggers)
+- **Achievements** (`src/achievements.ts`, shared): 16 Dark Souls-flavoured achievements (Undead
+  Pilgrim, Kindled, No Death, Hollowed, Lord of Cinder, Way of the Pilgrim, Undying,
+  Abysswalker, Age of Dark, Estus Hoarder, Lorekeeper, Soul Collector, Soul of Cinder,
+  Sunbro, Spectrum of Souls, Centurion of the Pit). The server evaluates them from runs
+  it recorded itself, and only for signed-in players.
+- **Leaderboards:** daily (by day) and Endless (each player's best), top 50 plus your rank.
+  Only signed-in players appear. Names are validated (2–24 letters, digits, `_ . ' -`). Players
+  without a name show as "Unkindled #ABCD".
+- **Payments:**
+  - `create-checkout` refuses anonymous players. It takes `pln` or `eur` from a single Stripe
+    Price (PLN base plus an EUR currency option).
+  - The Price itself decides the mode: one-time → lifetime "full version" (`full_access`),
+    recurring → subscription.
+  - The webhook grants access on `checkout.session.completed` and on
+    `async_payment_succeeded` (Przelewy24 and other delayed methods). It revokes access on
+    `charge.refunded` and mirrors subscription status.
+- The helpers are split into `_supabase.ts` and `_stripe.ts`, so the game function never loads Stripe.
+- Local stack: `supabase/config.toml` enables anonymous sign-ins and sets the local redirect URLs.
+
+**Verified:** against a real local Supabase stack (Docker), `npm run test:server` → **10/10 pass**:
+- anonymous daily, once per day, resumable, future days refused
+- no answer data before guessing
+- quota 3 → 402 → full access lifts it
+- the 25 s timeout is enforced and double submits rejected
+- the prompt clock doesn't restart on re-request
+- Endless ends on three deaths
+- one player can't touch another's runs
+- achievements and the leaderboard work for signed-in players, while anonymous players are excluded
+- display-name validation
+- the webhook, using a locally signed fake event: a bad signature → 400, paid → full access,
+  unlimited runs, refund → access revoked
+
+`deno check` passes on all four functions. Engine tests pass 12/12.
+
+**Not testable without your keys:** real Stripe Checkout and Portal sessions, and Google OAuth.
+
+
+---
+
 ## What I need from you: subscription keys
 
 The subscription is fully scaffolded but **switched off**: with no keys, the game behaves
