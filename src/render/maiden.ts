@@ -2,43 +2,38 @@
 // character maps like every other sprite, with her own palette.
 import type { Sprite } from './sprites.ts';
 
-export const MAIDEN_PALETTE: Record<string, string> = { j: '#6a5884', k: '#0a090c', h: '#1d1826', H: '#2f2740', W: '#cfcbe0', w: '#f2f0fa', v: '#8f89aa', x: '#ffffff', r: '#2a1f33', R: '#45345a', s: '#f6dccb', S: '#e0b19e', a: '#ffbe5c', A: '#e2641c', p: '#3a1408', b: '#f09aa0', m: '#c2506a', M: '#e8909e', g: '#d4a64a', o: '#ff6a1f', O: '#ffd06a' };
+export const MAIDEN_PALETTE: Record<string, string> = { k: '#241226', w: '#ece8fb', v: '#b8afe4', j: '#7d6cbc', s: '#ffdccf', S: '#eba7ad', e: '#de5b1a', l: '#4a2034', m: '#e8607e', b: '#ff8fa6', x: '#fff3ec', R: '#4a3270', r: '#2a1d46', P: '#8e66c4', g: '#f2c35e', o: '#ff6a1f', O: '#ffd46e', c: '#3a1830' };
 
-
-
-
-/** Standing at the bonfire, 16×30: long gown with a slit, belted waist. */
+/** Standing at the bonfire, 16×28, facing the knight: off-shoulder gown, gold belt, a slit skirt. */
 export const MAIDEN: Sprite = [
-  '......kkkk......',
-  '.....kwwwwk.....',
-  '....kwwwwwwk....',
-  '....kwgOgggk....',
-  '....kwssssWk....',
-  '...kwWassaWwk...',
-  '...kwWsssSWwk...',
-  '...kwWsMMsWwk...',
-  '...kwvWssWvwk...',
-  '..kwwvrsSrvwwk..',
-  '.kwRrrgssgrrRwk.',
-  '.kWRrrgsSgrrRWk.',
-  '.kWRrRRgggRRrRWk',
-  '.kvRRrRRgRRrRRvk',
-  '..kvRrrrrrrrRvk.',
-  '...kvRggOggRvk..',
-  '...kvRrrrrrRvk..',
-  '..kvRrrrrrrrRvk.',
-  '.kvRrrrrrrrrrRvk',
-  '.kvRrrrrrrrrrRvk',
-  '.kRrrrrrrrrrrrRk',
-  '.kRrrrrrrrsrrrRk',
-  '.kRrrrrrrrsSrrRk',
-  '.kRrrrrrrrsSrrRk',
-  'kRrrrrrrrrsSrrRk',
-  'kRrrrrrrrrsSrrRk',
-  'kRrrRrrrrrsSrRrk',
-  'kRrRrrRrrrsSRrRk',
-  'kkRrRrrRrrkSkRkk',
-  '.kkkkkkkkkkkkkk.',
+  '....kkkkk.......',
+  '...kwgOgwk......',
+  '..kwwwvwwvk.....',
+  '..kvwvwvwvjk....',
+  '..kwsvsswvjk....',
+  '..kesSeswvjk....',
+  '..ksssSwvwjk....',
+  '...kmsSkwvjk....',
+  '...kSckwvwjk....',
+  '..kssSswvvjjk...',
+  '.ksSsssSwvwjk...',
+  '.kssSsSswvvjk...',
+  '.kgggRgggkvjk...',
+  '..kRPRrRkvjk....',
+  '..kRPRrkvwjk....',
+  '..kgOggkvjjk....',
+  '.kRPRRRrkjk.....',
+  'kRPRRRRrrRk.....',
+  'kRPRRRRrrRk.....',
+  'kRPsRRRrrRk.....',
+  '.kPsSRRrrRk.....',
+  '.kPsSRRrrrRk....',
+  '.kRsSRRrrrRk....',
+  '.kRsSRRrrrRk....',
+  'kRPsSRRrrrrRk...',
+  'kRPsSRRRrrrRk...',
+  'kRPsSRRrrrrrRk..',
+  'kkkkSkkkkkkkkk..',
 ];
 
 /**

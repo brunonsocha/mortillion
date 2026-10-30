@@ -1087,6 +1087,18 @@ Your request (2026-10-30): "for the portrait - be inspired from va-11 hall-a cyb
 - **Outfit:** the off-shoulder gown with gold trim and an ember brooch, the choker and the tiara.
 - **Blink and talk frames** are regenerated from the same source.
 
+## 38. Liora's sprite at the bonfire, redrawn
+
+Your request (2026-10-30): "the sprite should be better".
+
+**What** (`MAIDEN` in `src/render/maiden.ts`, source in `shots/liora4/body.py`)
+- **Proportions:** 16×28 in adult proportions (a 7-row head instead of 11), so she no longer
+  towers over the 20 px knight. Her silhouette now goes narrow waist, then wide hips.
+- **Pose:** she faces the knight in three-quarter view, with silver hair falling down her back.
+- **Outfit:** the off-shoulder gown with a gold neckline, a gold belt with an ember buckle, and a
+  skirt slit showing the leg.
+- **Palette:** the same colours as the new portrait, so the two read as one character.
+
 ---
 
 ## What I need from you
