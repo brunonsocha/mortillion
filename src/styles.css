@@ -2031,8 +2031,8 @@ body:not(:has(.home)) .brand {
 
 .maiden-portrait {
   display: block;
-  width: calc(48px * var(--ps, 4));
-  height: calc(60px * var(--ps, 4));
+  width: 144px;
+  height: 180px;
   image-rendering: pixelated;
 }
 
@@ -2077,8 +2077,9 @@ body:not(:has(.home)) .brand {
   }
 
   .maiden-portrait {
-    width: 96px;
-    height: 120px;
+    width: 72px;
+    height: 90px;
+    image-rendering: auto;
   }
 
   .maiden-line {

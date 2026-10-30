@@ -1428,6 +1428,16 @@ python3 scripts/pixelize-portrait.py art/liora/maiden-cutout.png --crop 110,0,64
 hand-pixelled look, the best source is art made as pixel art at about 48×60 (a commission, or an
 image generator asked for "48×60 pixel art portrait"), dropped into the same command.
 
+## 51. Portrait pixelization reverted
+
+Your request (2026-10-30): "ok, revert the pixelization to before".
+
+**What:** Liora's portrait is back to the first conversion of your artwork from entry 48:
+144×180, 56 colours, shown 1:1 (96×120 smoothed on phones). The portrait sheet, `src/ui/maiden.ts`
+and the portrait CSS are restored from `7ee2d51`. Entries 49 and 50 (72×90 at 2×, then 48×60 at
+the scene's pixel scale) are undone. The pixelizer keeps its new options (`--crop`, `--smooth`,
+`--lines`, `--despeckle`, `--contrast`) for later use; they change nothing unless used.
+
 ---
 
 ## What I need from you

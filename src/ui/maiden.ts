@@ -9,11 +9,10 @@ import { sfx } from '../render/sfx.ts';
 import { app } from './app.ts';
 import { h } from './dom.ts';
 
-// The portrait: a sheet of three 48×60 frames (base, blink, talk) made by
-// scripts/pixelize-portrait.py from the artwork in art/liora. It's shown at
-// the scene's own pixel scale (--ps), so its pixels match the knight's.
-const PW = 48;
-const PH = 60;
+// The portrait: a sheet of three 144×180 frames (base, blink, talk) made by
+// scripts/pixelize-portrait.py from the illustration in art/liora.
+const PW = 144;
+const PH = 180;
 const sheet = new Image();
 sheet.src = portraitUrl;
 
