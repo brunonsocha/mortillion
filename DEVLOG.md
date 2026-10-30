@@ -521,3 +521,28 @@ instead of being swallowed by it.
 
 **Verified:** frames at 0.25 s / 0.7 s / 1.4 s after `scene.die()` show fallen → lying
 → respawned. The build is clean.
+
+---
+
+## 23. Content: Science pack, "Alchemist's Vault" (agent-written, finished by hand)
+
+**What**
+- New theme `science`, which unlocks *Alchemist's Vault*: 31 prompts and 3,625 answers. Difficulty
+  split: 9 easy, 13 medium, 9 hard.
+  - **Prompts:** planets, astronauts, units, weather phenomena, tech companies, infectious diseases,
+    vitamins, branches of science, shapes, moons, constellations, stars, spacecraft/missions,
+    rocks, hormones, muscles, cell organelles, subatomic particles, alloys, programming
+    languages, chemical compounds, mathematicians, galaxies, nebulae, comets, meteor showers,
+    cloud types, geological periods, eponymous laws, mathematical constants, and Nobel Physics laureates.
+- The writing agent was cut off by the API session limit before its final validation pass.
+  I fixed the 3 remaining validator errors by hand:
+  - Removed the "Vitamin P" / "Witamina P" rejects, which collided with a valid alias.
+  - Removed the Ukrainian "S-кварк" alias of *strange quark*, which is spelled identically
+    to "Скварк" (*squark*). The Ukrainian display name is now "Дивний кварк".
+
+**Please review:** this pack did not get the agent's own final review. It validates, but
+spot-checking tiers 5–6 would be worthwhile.
+
+**Verified:** all packs validate with 0 errors, 12/12 tests pass, the build is clean, and a smoke test of
+the science theme scores a tier-3 answer. Seven themes are now playable: Literature, Art
+and Food remain sealed.
