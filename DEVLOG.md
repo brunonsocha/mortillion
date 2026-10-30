@@ -1279,6 +1279,22 @@ on the side maybe? so that it doesn't cover the interface."
 - **Unchanged:** tap to finish or dismiss, typing, blinking and lip-flap.
 - **Reduced motion:** no pop and no jitter.
 
+## 45. Liora's dialogue back to pixel art, beside the column
+
+Your feedback (2026-10-30): "its too far to the side and way too much like persona - ours is
+supposed to be pixel art!!!!!! and use a proper color palette".
+
+**What** (replaces the look from entry 44)
+- **Pixel art, in the game's palette:** the notched 3 px pixel frame used by every panel, in gold
+  (`--gold`) on dark plum. The text is in the game's parchment ink, her name sits on a small gold
+  plate, and an ember pixel arrow blinks when there's more to read.
+- **A stepped pixel tail** from the bubble down to her portrait.
+- **No tilts, halftones, jagged shapes or Persona red and white.** Animations are stepped (3
+  frames), like the rest of the UI.
+- **Placement:** on wide screens the box hugs the **left edge of the game column**, level with
+  the scene, instead of the far screen edge. It still never covers the panels or buttons. On
+  narrower screens it's the compact strip under the header, with no tail.
+
 ---
 
 ## What I need from you

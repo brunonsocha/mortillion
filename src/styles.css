@@ -1941,232 +1941,157 @@ body:not(:has(.home)) .brand {
   color: #e06a6a;
 }
 
-/* ───────────── Liora's dialogue (Persona-style) ───────────── */
+/* ───────────── Liora's dialogue ───────────── */
 
 /*
- * Wide screens: she cuts in at the bottom-left corner and speaks from the
- * margin beside the central column (660px), never over panels or buttons.
- * Narrow screens: a compact strip under the header, over the scenery.
+ * Pixel-framed, in the game's palette. Wide screens: just left of the
+ * central column (660px), level with the scene, so it never covers the
+ * panels. Narrow screens: a compact strip under the header.
  */
 .maiden-box {
-  --side: calc((100vw - 660px) / 2 + 8px);
   position: fixed;
-  left: 0;
-  bottom: 0;
+  top: 30%;
+  right: calc(50% + 330px + 4px);
   z-index: 40;
-  width: var(--side);
-  height: 100%;
-  pointer-events: none;
-}
-
-.maiden-box > * {
-  pointer-events: auto;
+  width: min(300px, calc(50% - 330px - 16px));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 18px;
   cursor: pointer;
 }
 
+/* the game's notched pixel frame: a 3px border with the corners left out */
+.maiden-bubble,
 .maiden-cut {
-  position: absolute;
-  left: 0;
-  bottom: 18px;
-  width: 176px;
-  height: 196px;
-  display: grid;
-  place-items: center;
-  background: #c8283a;
-  clip-path: polygon(0 6%, 100% 0, 88% 100%, 0 96%);
-  animation: cut-in 0.42s cubic-bezier(0.2, 1.4, 0.4, 1) both;
-}
-
-/* halftone dots behind her, the Persona way */
-.mc-dots {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle, rgba(0, 0, 0, 0.35) 1.6px, transparent 2px) 0 0 / 8px 8px, linear-gradient(160deg, #e2364a, #6a0a1c);
-}
-
-.maiden-cut::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  box-shadow: inset 0 0 0 4px #0a0608;
-  clip-path: inherit;
-}
-
-.maiden-portrait {
   position: relative;
-  display: block;
-  width: 144px;
-  height: 180px;
-  image-rendering: pixelated;
-  transform: translateX(-6px);
+  background: #0e0a12;
+  box-shadow:
+    0 calc(var(--px) * -1) 0 0 var(--gold),
+    0 var(--px) 0 0 var(--gold),
+    calc(var(--px) * -1) 0 0 0 var(--gold),
+    var(--px) 0 0 0 var(--gold),
+    inset 0 var(--px) 0 0 #2a1f2e,
+    inset 0 calc(var(--px) * -1) 0 0 #050307;
 }
 
 .maiden-bubble {
-  position: absolute;
-  left: 18px;
-  bottom: 214px;
-  width: clamp(190px, calc(var(--side) - 40px), 340px);
-  padding: 30px 26px 26px;
-  transform: rotate(var(--tilt));
-  transform-origin: 20% 100%;
-  animation: bubble-in 0.38s cubic-bezier(0.2, 1.6, 0.4, 1) 0.08s both;
-}
-
-/* three jagged shapes stacked: an ember shadow, a white edge, the black face */
-.mb-layer {
-  position: absolute;
-  inset: 0;
-  clip-path: polygon(3% 8%, 22% 0, 58% 5%, 97% 0, 100% 44%, 95% 92%, 30% 100%, 12% 100%, 4% 118%, 6% 98%, 0 62%);
-}
-
-.mb-red {
-  background: #c8283a;
-  transform: translate(9px, 8px) rotate(2deg);
-  animation: jitter 2.4s steps(3) infinite;
-}
-
-.mb-white {
-  background: #f4efe6;
-  transform: scale(1.035, 1.06);
-}
-
-.mb-black {
-  background: #0b080d;
+  align-self: stretch;
+  padding: 18px 16px 16px;
+  animation: maiden-pop 0.24s steps(3) both;
 }
 
 .maiden-name {
   position: absolute;
-  top: -16px;
-  left: -6px;
-  z-index: 1;
-  padding: 4px 16px 4px 12px;
-  background: #f4efe6;
-  color: #0b080d;
-  font-family: var(--display);
-  font-size: 15px;
-  font-weight: 700;
+  top: -12px;
+  left: 10px;
+  padding: 1px 8px;
+  background: var(--gold);
+  color: #140d08;
+  font-size: 13px;
+  font-weight: 400;
   letter-spacing: 0.06em;
-  text-transform: uppercase;
-  clip-path: polygon(0 10%, 100% 0, 94% 100%, 3% 92%);
-  transform: rotate(-4deg);
-  box-shadow: inset 0 -3px 0 #c8283a;
+  box-shadow: 0 -3px 0 0 #7a5a22, 0 3px 0 0 #7a5a22, -3px 0 0 0 #7a5a22, 3px 0 0 0 #7a5a22;
 }
 
 .maiden-line {
-  position: relative;
   margin: 0;
-  color: #fbf7f0;
-  font-family: var(--display);
-  font-size: 18px;
-  line-height: 1.4;
-  min-height: 2.8em;
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.45;
+  min-height: 2.9em;
 }
 
+/* a blinking pixel arrow while there's more */
 .maiden-more {
   position: absolute;
-  right: 22px;
-  bottom: 10px;
-  width: 0;
-  height: 0;
-  border-left: 7px solid transparent;
-  border-right: 7px solid transparent;
-  border-top: 10px solid #e2364a;
-  animation: more-bob 0.8s steps(2) infinite;
+  right: 10px;
+  bottom: 8px;
+  width: 3px;
+  height: 3px;
+  box-shadow: -3px 0 0 var(--ember), 0 0 0 var(--ember), 3px 0 0 var(--ember), 0 3px 0 var(--ember);
+  animation: pulse 0.8s steps(2) infinite;
 }
 
-@keyframes more-bob {
-  50% { transform: translateY(3px); }
+/* the stepped tail, pointing down at her portrait */
+.maiden-tail {
+  position: absolute;
+  right: 54px;
+  bottom: -15px;
+  width: 3px;
+  height: 3px;
+  box-shadow: 0px 0px 0 0 #0e0a12, 3px 0px 0 0 #0e0a12, 6px 0px 0 0 #0e0a12, 9px 0px 0 0 #0e0a12, 12px 0px 0 0 #0e0a12, -3px 0px 0 0 #c9a24a, 15px 0px 0 0 #c9a24a, 3px 3px 0 0 #0e0a12, 6px 3px 0 0 #0e0a12, 9px 3px 0 0 #0e0a12, 12px 3px 0 0 #0e0a12, 0px 3px 0 0 #c9a24a, 15px 3px 0 0 #c9a24a, 6px 6px 0 0 #0e0a12, 9px 6px 0 0 #0e0a12, 12px 6px 0 0 #0e0a12, 3px 6px 0 0 #c9a24a, 15px 6px 0 0 #c9a24a, 9px 9px 0 0 #0e0a12, 12px 9px 0 0 #0e0a12, 6px 9px 0 0 #c9a24a, 15px 9px 0 0 #c9a24a, 12px 12px 0 0 #c9a24a;
 }
 
-.maiden-box.leaving .maiden-cut {
-  animation: cut-out 0.24s ease-in forwards;
+.maiden-cut {
+  padding: 3px;
+  background: #1a0f18;
+  animation: maiden-slide 0.24s steps(3) both;
 }
 
-.maiden-box.leaving .maiden-bubble {
-  animation: bubble-out 0.2s ease-in forwards;
+.maiden-portrait {
+  display: block;
+  width: 144px;
+  height: 180px;
+  image-rendering: pixelated;
 }
 
-@keyframes cut-in {
-  from { transform: translateX(-110%) skewX(-12deg); }
+.maiden-box.leaving {
+  animation: maiden-fade 0.2s steps(2) forwards;
 }
 
-@keyframes cut-out {
-  to { transform: translateX(-110%) skewX(-12deg); }
+@keyframes maiden-pop {
+  from { opacity: 0; transform: translateY(9px); }
 }
 
-@keyframes bubble-in {
-  from { opacity: 0; transform: rotate(calc(var(--tilt) - 10deg)) scale(0.4); }
+@keyframes maiden-slide {
+  from { opacity: 0; transform: translateX(-12px); }
 }
 
-@keyframes bubble-out {
-  to { opacity: 0; transform: rotate(calc(var(--tilt) + 6deg)) scale(0.7); }
+@keyframes maiden-fade {
+  to { opacity: 0; transform: translateY(6px); }
 }
 
-@keyframes jitter {
-  33% { transform: translate(10px, 9px) rotate(2.6deg); }
-  66% { transform: translate(8px, 7px) rotate(1.5deg); }
-}
-
-/* Not enough margin: a compact strip under the header, over the scenery. */
+/* Not enough room beside the column: a strip under the header. */
 @media (max-width: 1099px) {
   .maiden-box {
-    top: 54px;
-    left: 8px;
-    right: 8px;
-    bottom: auto;
+    top: 56px;
+    left: 10px;
+    right: 10px;
     width: auto;
-    height: auto;
-    display: flex;
+    flex-direction: row-reverse;
     align-items: flex-start;
-    gap: 10px;
+    justify-content: flex-end;
+    gap: 18px;
   }
 
-  .maiden-cut {
-    position: relative;
-    bottom: auto;
-    flex-shrink: 0;
-    width: 84px;
-    height: 98px;
+  .maiden-bubble {
+    flex: 1;
+    max-width: 520px;
+    margin-top: 12px;
+    padding: 14px 12px 12px;
+  }
+
+  .maiden-tail {
+    display: none;
   }
 
   .maiden-portrait {
     width: 72px;
     height: 90px;
     image-rendering: auto;
-    transform: translateX(-3px);
-  }
-
-  .maiden-bubble {
-    position: relative;
-    left: auto;
-    bottom: auto;
-    flex: 1;
-    width: auto;
-    max-width: 520px;
-    margin-top: 14px;
-    padding: 22px 18px 18px;
-    transform-origin: 0 50%;
-  }
-
-  .mb-layer {
-    clip-path: polygon(2% 8%, 22% 0, 58% 6%, 98% 0, 100% 50%, 96% 94%, 40% 100%, 6% 96%, 0 60%, -4% 30%, 1% 40%);
-  }
-
-  .maiden-name {
-    font-size: 13px;
-    top: -14px;
   }
 
   .maiden-line {
-    font-size: 15px;
+    font-size: 14px;
     min-height: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .maiden-cut,
   .maiden-bubble,
-  .mb-red {
+  .maiden-cut,
+  .maiden-box.leaving {
     animation: none;
   }
 }
