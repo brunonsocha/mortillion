@@ -341,7 +341,7 @@ body:not(:has(.home)) .brand {
 .blurb {
   margin: 14px auto 0;
   max-width: 30em;
-  color: var(--ink-dim);
+  color: #f4efe6;
   font-size: 16px;
   text-shadow: 0 2px 0 #000;
   padding: 6px 10px;
