@@ -154,6 +154,13 @@ export const sfx = {
     noise(0, 0.2, 0.3, 1400, 200);
     tone(120, 0, 0.25, 'square', 0.05, 60);
   },
+  /** Drinking Estus: two gulps and a warm chime. */
+  estus() {
+    tone(180, 0.3, 0.09, 'sine', 0.05, 120);
+    tone(170, 0.5, 0.09, 'sine', 0.05, 110);
+    noise(0.28, 0.4, 0.08, 900, 300);
+    [523.3, 659.3, 784].forEach((f, i) => tone(f, 0.62 + i * 0.06, 0.8, 'triangle', 0.04));
+  },
   complete() {
     [196, 246.9, 293.7, 392].forEach((f, i) => tone(f, i * 0.18, 1.2, 'triangle', 0.06));
   },

@@ -426,7 +426,12 @@ function play(src: Source): HTMLElement {
     if (!v.tier && !v.skipped && prevDead && Math.random() < 0.5) setTimeout(() => alive && say('deaths', 'top'), 2500);
     if (v.skipped) {
       sfx.click();
+      ask.hidden = true;
       app.scene.enemyFlee();
+      // Passing over a prompt: the knight drinks a flask (on the Endless
+      // Road it's one of the three).
+      await app.scene.drinkEstus();
+      if (!alive) return;
     } else if (v.tier) {
       // The kill first: the rarer the answer, the grander the blow.
       ask.hidden = true;
@@ -446,17 +451,27 @@ function play(src: Source): HTMLElement {
     } else {
       reason = Math.random() < 0.04 ? PATCHES[lang] : null;
       app.scene.setHollow(deaths() >= 3);
-      sfx.death();
       ask.hidden = true;
-      await app.scene.enemyStrike();
+      // Only a real loss (the last flask spent) is a death; otherwise the
+      // foe's blow just wounds the knight and the journey goes on.
+      const fatal = v.lives === 0;
+      await app.scene.enemyStrike(fatal);
       if (!alive) return;
-      died.hidden = false;
-      died.classList.remove('show');
-      void died.offsetWidth;
-      died.classList.add('show');
-      await wait(app.scene.motion ? 2300 : 900);
-      if (!alive) return;
-      died.hidden = true;
+      if (fatal) {
+        sfx.death();
+        died.hidden = false;
+        died.classList.remove('show');
+        void died.offsetWidth;
+        died.classList.add('show');
+        await wait(app.scene.motion ? 2300 : 900);
+        if (!alive) return;
+        died.hidden = true;
+      } else {
+        // Wounded, the knight drinks a flask and stands firm.
+        await wait(app.scene.motion ? 350 : 0);
+        if (!alive) return;
+        await app.scene.drinkEstus();
+      }
     }
 
     showReveal(v, reason, tries);

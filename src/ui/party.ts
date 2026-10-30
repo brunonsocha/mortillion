@@ -275,7 +275,6 @@ function play(players: Player[], src: Source): HTMLElement {
         sfx.reward(best);
         app.scene.reward(best);
       } else {
-        sfx.death();
         await app.scene.enemyStrike();
         if (!alive) return;
       }

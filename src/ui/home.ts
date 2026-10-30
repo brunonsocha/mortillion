@@ -173,7 +173,7 @@ function showStatus() {
   const rows = [6, 5, 4, 3, 2, 1, 0].map((tier) => {
     const n = counts[tier];
     const pct = turns.length ? Math.round((n / turns.length) * 100) : 0;
-    const label = tier ? TIER_NAMES[app.lang][tier] : t.youDied;
+    const label = tier ? TIER_NAMES[app.lang][tier] : t.wounded;
     return h(
       'li',
       { title: `${label}: ${n} (${pct}%)` },

@@ -71,7 +71,7 @@ export interface Source {
    * prompt stays open; `null` gives up (a death).
    */
   answer(guess: string | null): Promise<Outcome>;
-  /** Passes over the current prompt: no points, no death, no flask spent. */
+  /** Passes over the current prompt: no points, no death; spends a flask on the Endless Road. */
   skip(): Promise<Verdict>;
   /** Local runs only: whether a guess is a real answer (protects easter eggs). */
   accepts(guess: string): boolean;
@@ -158,6 +158,8 @@ export function localSource(o: LocalOptions): Source {
       misses = 0;
       const view: TurnView = { promptId: p.id, q: p.q, d: p.d, seat, guess: '', answer: null, tier: 0, points: 0, skipped: true, ...revealLists(p) };
       turns.push(view);
+      // Passing costs a flask where there are flasks (the Endless Road).
+      if (lives !== null) lives--;
       return { ...view, timedOut: false, finished: done(), lives, unlocked: [] };
     },
     accepts(guess) {

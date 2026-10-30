@@ -164,7 +164,7 @@ export function banner(text: string, kind: BannerKind, ms = 2800): Promise<void>
 
 export function tierBadge(tier: number, skipped = false): HTMLElement {
   if (skipped) return h('span', { class: 'tier skipped', style: { '--tc': SKIP_COLOR } }, app.t.skipped);
-  return h('span', { class: `tier t${tier}`, style: { '--tc': TIER_COLORS[tier] } }, tier ? TIER_NAMES[app.lang][tier] : app.t.youDied);
+  return h('span', { class: `tier t${tier}`, style: { '--tc': TIER_COLORS[tier] } }, tier ? TIER_NAMES[app.lang][tier] : app.t.wounded);
 }
 
 export function showHelp() {

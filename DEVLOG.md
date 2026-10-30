@@ -1099,6 +1099,36 @@ Your request (2026-10-30): "the sprite should be better".
   skirt slit showing the leg.
 - **Palette:** the same colours as the new portrait, so the two read as one character.
 
+## 39. YOU DIED only on a real loss; harder shake; 60 fps; Estus on skip and on a hit
+
+Your requests (2026-10-30): "you died should only appear on actual loss. more screen shake,
+harder the better the answer is. also it should all be 60fps." and "skipping a question should
+waste an estus. the character should have an animation of drinking an estus on skipping, or
+after receiving a hit (timer running out)".
+
+**What**
+- **YOU DIED** appears only when the run is lost: the last Estus flask spent on the Endless Road.
+  - When time runs out on any other prompt, the foe **wounds** the knight instead: knock-back,
+    a red flicker, blood and a shake, then the knight drinks Estus and the journey goes on.
+  - The reveal and history label for a prompt with no answer is now "Wounded / Zraniono /
+    Поранено". The results screen still says YOU DIED if every prompt of a pilgrimage went
+    unanswered.
+- **Screen shake on every kill,** stronger with rarity (`shakeAmp` per tier: 0.7, 0.9, 1.1,
+  1.5, 2.1, 2.8). Tier 3 and up shake again when the foe shatters, and tier 6 ends on a heavy
+  quake (3.4).
+- **60 fps:** the 30 fps throttle is gone; the scene draws every display frame. Sprite lookups
+  no longer build a string key from the whole sprite every frame: the cache is a `WeakMap` keyed
+  by the sprite and palette objects.
+- **Estus** (`Scene.drinkEstus()`, `sfx.estus()`): the knight lifts a green-glass flask of glowing
+  amber to the visor, tips it, and is healed in a golden glow with rising embers. Two gulps and a
+  warm chime. It plays after a skip and after a non-fatal wound.
+- **Skipping costs a flask** on the Endless Road, both on the server (`game` function) and in local
+  runs. The how-to-play rules say so (EN/PL/UK). The server test is updated to expect it.
+
+**Verified:**
+- `npm test` 12/12, `npm run test:server` 14/14.
+- Screenshots of the wound (2 flasks left, no YOU DIED) and the drinking frames.
+
 ---
 
 ## What I need from you

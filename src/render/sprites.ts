@@ -278,12 +278,23 @@ export const HOLLOW_PALETTE: Record<string, string> = {
   a: '#2e2620', b: '#5a4a3a', c: '#7d6a55', d: '#9a8670', r: '#3a2a20', R: '#56402c', G: '#7a6a40', g: '#5a4c30',
 };
 
-const cache = new Map<string, HTMLCanvasElement>();
+// Keyed by the sprite and palette objects themselves, so a lookup each frame
+// costs no string building.
+const cache = new WeakMap<Sprite, Map<string, HTMLCanvasElement>>();
+const paletteIds = new WeakMap<object, number>();
+let nextPaletteId = 1;
 
 /** Pre-renders a sprite (optionally tinted or recoloured) to an offscreen canvas. */
 export function bake(sprite: Sprite, tint?: string, palette?: Record<string, string>): HTMLCanvasElement {
-  const id = sprite.join('/') + (tint ?? '') + (palette ? JSON.stringify(palette) : '');
-  const hit = cache.get(id);
+  let byKey = cache.get(sprite);
+  if (!byKey) cache.set(sprite, (byKey = new Map()));
+  let pid = 0;
+  if (palette) {
+    pid = paletteIds.get(palette) ?? 0;
+    if (!pid) paletteIds.set(palette, (pid = nextPaletteId++));
+  }
+  const id = `${tint ?? ''}|${pid}`;
+  const hit = byKey.get(id);
   if (hit) return hit;
   const w = Math.max(...sprite.map((r) => r.length));
   const c = document.createElement('canvas');
@@ -298,7 +309,7 @@ export function bake(sprite: Sprite, tint?: string, palette?: Record<string, str
       g.fillRect(x, y, 1, 1);
     }
   });
-  cache.set(id, c);
+  byKey.set(id, c);
   return c;
 }
 

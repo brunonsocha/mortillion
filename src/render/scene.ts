@@ -30,6 +30,7 @@ export const MAIDEN_X = 13;
 
 /** Seconds the death animation lasts (topple, lie, respawn). */
 const DEATH_TIME = 1.6;
+const DRINK_TIME = 1.25;
 
 type RGB = [number, number, number];
 
@@ -151,6 +152,9 @@ export class Scene {
   /** Knight's sword pose and lunge toward the foe (world px). */
   private pose: 'none' | 'windup' | 'strike' = 'none';
   private lunge = 0;
+  private hurtT = 0;
+  /** Seconds into drinking an Estus flask (−1 when not drinking). */
+  private drinkT = -1;
   private lungeTarget = 0;
   /** Cinematic: letterbox bars, zoom on the duel, dimmed world (current and target). */
   private cin = { bars: 0, zoom: 1, dim: 0 };
@@ -267,6 +271,35 @@ export class Scene {
     this.hollow = on;
   }
 
+  /** A blow that wounds but doesn't end the run: knocked back, bleeding. */
+  hurt() {
+    this.hurtT = 0.6;
+    this.flashOnce('#7a0b0b', 0.45);
+    if (!this.motion) return;
+    this.shake = 0.35;
+    this.shakeAmp = 1.3;
+    this.lunge = -7;
+    for (let i = 0; i < 18; i++) {
+      this.particles.push({
+        x: this.knightX + 9, y: this.groundY - 12, vx: -10 - Math.random() * 40, vy: -Math.random() * 35,
+        life: 0, max: 0.6 + Math.random() * 0.5, color: Math.random() < 0.5 ? '#6e0d0d' : '#a01818', kind: 'blood',
+      });
+    }
+  }
+
+  /** The knight raises an Estus flask, drinks, and is healed in a golden glow. */
+  async drinkEstus(): Promise<void> {
+    sfx.estus();
+    if (!this.motion) {
+      this.glow = 0.8;
+      this.glowColor = '#ffa53a';
+      return;
+    }
+    this.drinkT = 0;
+    await wait(DRINK_TIME * 1000);
+    this.drinkT = -1;
+  }
+
   die() {
     this.dead = DEATH_TIME;
     this.flashOnce('#7a0b0b', 0.8);
@@ -297,10 +330,8 @@ export class Scene {
 
   private frame(now: number) {
     requestAnimationFrame((t) => this.frame(t));
-    // Pixel art at 3–6× scale gains nothing from 60 fps; 30 halves the
-    // battery cost on phones. The small margin tolerates rAF jitter.
-    if (now - this.last < 1000 / 30 - 4) return;
-    const dt = Math.min(0.05, (now - this.last) / 1000 || 0.033);
+    // Every display frame (60 fps or more); dt keeps motion speed-independent.
+    const dt = Math.min(0.05, (now - this.last) / 1000 || 1 / 60);
     this.last = now;
     this.t += dt;
     this.update(dt);
@@ -330,6 +361,22 @@ export class Scene {
     this.flash = Math.max(0, this.flash - dt * 1.4);
     this.glow = Math.max(0, this.glow - dt * 0.8);
     this.dead = Math.max(0, this.dead - dt);
+    this.hurtT = Math.max(0, this.hurtT - dt);
+    if (this.drinkT >= 0) {
+      const before = this.drinkT;
+      this.drinkT += dt;
+      // The gulp: a warm glow and embers rising around the knight.
+      if (before < 0.45 && this.drinkT >= 0.45) {
+        this.glow = 1;
+        this.glowColor = '#ffa53a';
+      }
+      if (this.drinkT > 0.45 && this.drinkT < 1.0 && Math.random() < 0.6) {
+        this.particles.push({
+          x: this.knightX + 2 + Math.random() * 12, y: this.groundY - 2 - Math.random() * 6, vx: (Math.random() - 0.5) * 6, vy: -12 - Math.random() * 18,
+          life: 0, max: 0.7 + Math.random() * 0.5, color: Math.random() < 0.5 ? '#ffb347' : '#ffe08a', kind: 'spark',
+        });
+      }
+    }
     this.praising = Math.max(0, this.praising - dt);
 
     // Combat: the foe walks in, flashes when hit; the knight lunges; the
@@ -511,10 +558,9 @@ export class Scene {
       this.slash(tier, i);
       sfx.slash(tier >= 4);
       if (i === hits - 1 && tier >= 4) sfx.crit();
-      if (tier >= 4) {
-        this.shake = 0.18 + tier * 0.04;
-        this.shakeAmp = tier >= 5 ? 1.6 : 1;
-      }
+      // Every blow shakes the screen; the rarer the answer, the harder.
+      this.shake = 0.1 + tier * 0.06;
+      this.shakeAmp = [0, 0.7, 0.9, 1.1, 1.5, 2.1, 2.8][tier];
       if (i === hits - 1 && tier >= 4) this.flashOnce('#ffffff', tier === 6 ? 0.9 : 0.45);
       if (i === hits - 1 && tier === 6) this.timeScale = 0.3;
       await wait(tier >= 5 ? 170 : 120);
@@ -526,13 +572,14 @@ export class Scene {
     this.timeScale = 1;
     this.shatter(tier);
     sfx.shatter();
+    if (tier >= 3) this.shake = Math.max(this.shake, 0.12 + tier * 0.05);
     const c = this.enemyCentre();
     if (tier >= 4) this.rings.push({ x: c.x, y: c.y, r: 2, v: 60 + tier * 25, color: TIER_COLORS[tier], life: 0, max: 0.6 });
     if (tier === 6) {
       this.rings.push({ x: c.x, y: c.y, r: 2, v: 140, color: '#ffffff', life: 0, max: 0.8 });
       for (let i = -2; i <= 2; i++) this.pillars.push({ x: c.x + i * 9, life: 0, max: 1.1 + Math.abs(i) * 0.1 });
-      this.shake = 0.6;
-      this.shakeAmp = 2;
+      this.shake = 0.8;
+      this.shakeAmp = 3.4;
     }
     await wait(tier >= 5 ? 650 : 320);
     this.pose = 'none';
@@ -542,18 +589,19 @@ export class Scene {
     if (this.enemy === e) this.enemy = null;
   }
 
-  /** Time ran out: the foe strikes the knight down. */
-  async enemyStrike(): Promise<void> {
+  /** No answer held: the foe strikes, wounding the knight, or (fatal) ending the run. */
+  async enemyStrike(fatal = false): Promise<void> {
     const e = this.enemy;
+    const blow = () => (fatal ? this.die() : this.hurt());
     if (!e || !this.motion) {
-      this.die();
+      blow();
       return;
     }
     e.dx = -Math.max(0, e.x - (this.knightX + 16));
     await wait(160);
     this.arcs.push({ x: this.knightX + 7, y: this.groundY - 10, r: 10, a0: 2.4, a1: -0.9, w: 2, color: '#ff3a3a', life: 0, max: 0.35 });
     sfx.hit();
-    this.die();
+    blow();
     await wait(260);
     e.dx = 0;
   }
@@ -1209,7 +1257,7 @@ export class Scene {
     const { g } = this;
     const goal = this.resting() ? this.campX - 24 : this.targetX;
     const arrived = Math.abs(goal - this.knightX) < 0.5;
-    const tint = this.dead > DEATH_TIME - 0.5 && Math.floor(this.t * 12) % 2 === 0 ? '#8a1010' : undefined;
+    const tint = (this.dead > DEATH_TIME - 0.5 || this.hurtT > 0) && Math.floor(this.t * 12) % 2 === 0 ? '#8a1010' : undefined;
     const pal = this.hollow ? HOLLOW_PALETTE : undefined;
     const x = Math.round(this.knightX + this.lunge - cam);
 
@@ -1255,6 +1303,34 @@ export class Scene {
       g.restore();
     } else g.drawImage(k, x, y);
     if (this.pose !== 'none') this.drawSword(x + 10, y + 10);
+    if (this.drinkT >= 0) this.drawFlask(x, y);
+  }
+
+  /** The Estus flask: lifted from the hip to the visor, tipped, lowered. */
+  private drawFlask(x: number, y: number) {
+    const { g } = this;
+    const t = this.drinkT;
+    const up = t < 0.25 ? t / 0.25 : t < 0.95 ? 1 : Math.max(0, 1 - (t - 0.95) / 0.25);
+    const fx = Math.round(x + 11 - up * 1);
+    const fy = Math.round(y + 12 - up * 8);
+    const tipped = t > 0.3 && t < 0.95;
+    // A green-glass bottle with a glowing amber draught.
+    g.fillStyle = '#1a0d16';
+    g.fillRect(fx - 1, fy - 1, 5, 6);
+    g.fillStyle = '#3f6b4a';
+    g.fillRect(fx, fy, 3, 4);
+    g.fillStyle = tipped ? '#ffb347' : '#ff8a1f';
+    g.fillRect(fx, fy + (tipped ? 1 : 2), 3, tipped ? 3 : 2);
+    g.fillStyle = '#ffe08a';
+    g.fillRect(fx, fy + (tipped ? 1 : 2), 1, 1);
+    // the neck, tilted toward the visor while drinking
+    g.fillStyle = '#c9b58a';
+    g.fillRect(tipped ? fx - 1 : fx + 1, fy - 2, 1, 2);
+    // its glow
+    g.globalCompositeOperation = 'lighter';
+    g.fillStyle = 'rgba(255,150,40,0.15)';
+    g.fillRect(fx - 3, fy - 2, 9, 9);
+    g.globalCompositeOperation = 'source-over';
   }
 
   /** The knight's blade: raised behind for the windup, cutting down to strike. */
