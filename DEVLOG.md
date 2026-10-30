@@ -5,6 +5,48 @@ and how it was verified, so the history can be reviewed commit by commit.
 
 Overnight session started 2026-10-29 22:15 CET.
 
+## Morning summary (read this first)
+
+**What happened overnight:** work ran from 22:15 until the API session limit stopped it
+(sometime before 02:30, when the limit reset), and resumed around 09:20. Every change is a separate
+commit with an entry below.
+
+**Content: 237 prompts, 18,973 answers, every prompt tagged with a difficulty**
+
+| Pack | Prompts | Easy / Medium / Hard | Answers | Status |
+|---|---:|---|---:|---|
+| general (daily mix) | 34 | 15 / 16 / 3 | 3,164 | from yesterday, now difficulty-tagged |
+| geography | 32 | 10 / 19 / 3 | 1,523 | tagged |
+| movies | 26 | 9 / 11 / 6 | 1,493 | tagged |
+| sports | 26 | 6 / 14 / 6 | 1,170 | tagged |
+| videogames | 26 | 10 / 14 / 2 | 1,918 | tagged |
+| **history** | 32 | 9 / 14 / 9 | 1,890 | **new** (entry 17) |
+| **music** | 30 | 9 / 12 / 9 | 4,190 | **new** (entry 18) |
+| **science** | 31 | 9 / 13 / 9 | 3,625 | **new** (entry 23) |
+
+**New in the game**
+- **Difficulty:** every run descends easy → hard, with skull badges *Shallow / Deep / Abyssal* (entries 2–3).
+- **Dark Souls easter eggs** (entry 4):
+  - depth zones with area-name banners (Blightpit, Tomb of Giants, the Abyss, Kiln of the First
+    Flame…) and per-zone visuals (entry 21)
+  - Praise the Sun \[T]/ and death quips (Solaire, Siegmeyer, Patches…)
+  - Hollowing, BONFIRE LIT, VICTORY ACHIEVED
+  - soapstone messages, Fire Keeper lines, the Konami code
+  - the knight topples and respawns on death (entry 22)
+- **Endless Abyss**, with three Estus flasks as lives (entry 6).
+- **Summon Signs**, local pass-and-play for 2–6 players with "echo" scoring (entry 11).
+- **Status** screen with a tier histogram, **shareable image card**, share preview
+  image (entries 7, 13).
+- **Offline play** via a service worker, resilient chunk loading, and bonfire ambience (entries 8–10).
+- **Engine test suite** (`npm test`, 12 tests) (entry 16).
+- **Accounts + Covenant subscription**, scaffolded and *off until you provide keys*.
+  See **"What I need from you"** at the end of this file and `docs/subscriptions.md` (entry 19).
+
+**Please review:**
+- the sensitive-figure note in entry 17
+- spot-checks suggested for obscure tiers in entries 18 and 23
+- the gate rule choices in the final section
+
 ---
 
 ## 1. Baseline: playable game, five content packs
@@ -546,3 +588,46 @@ spot-checking tiers 5–6 would be worthwhile.
 **Verified:** all packs validate with 0 errors, 12/12 tests pass, the build is clean, and a smoke test of
 the science theme scores a tier-3 answer. Seven themes are now playable: Literature, Art
 and Food remain sealed.
+
+
+---
+
+## What I need from you: subscription keys
+
+The subscription is fully scaffolded but **switched off**: with no keys, the game behaves
+exactly as before. Full design, flow diagram and file map: `docs/subscriptions.md`.
+
+### Decisions to confirm
+
+1. **Gate rule.** Right now the Daily Descent is always free, and the other modes (themes, Endless
+   Abyss, Summon Signs, Archive) give **3 free runs per day**. Should *signing in* unlock
+   unlimited play (`VITE_GATE=login`), or only a *paid* Covenant subscription
+   (`VITE_GATE=subscription`, the current default)?
+2. **Price and interval** of the Covenant (e.g. monthly), and whether to offer a trial.
+3. **Google sign-in:** yes or no. Magic-link email works without it.
+4. **Hard enforcement:** today the quota is enforced in the browser (a soft paywall), and
+   theme packs are public static files. If you want it enforced on the server, the next step is to
+   serve non-daily packs from an Edge Function that checks the subscription. That needs about one more evening of work.
+
+### Keys and accounts
+
+| What | Where it goes | Secret? |
+|---|---|---|
+| Supabase project URL | `.env` → `VITE_SUPABASE_URL` | public |
+| Supabase anon (publishable) key | `.env` → `VITE_SUPABASE_ANON_KEY` | public (RLS protects data) |
+| Stripe secret key `sk_…` (test first, then live) | `supabase secrets set STRIPE_SECRET_KEY=…` | **secret** |
+| Stripe Price id `price_…` for the Covenant | `supabase secrets set STRIPE_PRICE_ID=…` | not secret |
+| Stripe webhook signing secret `whsec_…` | `supabase secrets set STRIPE_WEBHOOK_SECRET=…` | **secret** |
+| Production site URL | `supabase secrets set SITE_URL=…` | not secret |
+| Google OAuth client id/secret (optional) | Supabase dashboard → Auth → Providers | **secret** |
+
+Please share secrets through `supabase secrets set` or a `.env` file on your machine.
+Don't paste them into chat or commit them. `.env` is git-ignored. With the keys in place, the remaining
+steps are:
+1. Run the migration.
+2. Deploy the three functions.
+3. Add the Stripe webhook.
+4. Set the Supabase redirect URLs.
+5. Test the whole flow in Stripe test mode.
+
+Each step is in the checklist in `docs/subscriptions.md`.
