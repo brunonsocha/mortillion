@@ -10,7 +10,7 @@ import { PACK_NAMES } from '../i18n/strings.ts';
 import {
   ApiError, isRetry, localSource, remoteSource, turnOf, type PromptView, type RunKind, type Source, type TurnView, type Verdict,
 } from '../play/source.ts';
-import { TIER_COLORS } from '../render/scene.ts';
+import { SKIP_COLOR, TIER_COLORS } from '../render/scene.ts';
 import { sfx } from '../render/sfx.ts';
 import { BONFIRE_LIT, PATCHES, SECRET_TEXT, quipFor, secretOf, zoneAt } from '../eggs.ts';
 import { gateRun, showPaywall } from './account.ts';
@@ -159,7 +159,7 @@ function play(src: Source): HTMLElement {
   onLeave(() => (alive = false));
 
   const points = () => src.turns.reduce((a, x) => a + x.points, 0);
-  const deaths = () => src.turns.filter((x) => !x.tier).length;
+  const deaths = () => src.turns.filter((x) => !x.tier && !x.skipped).length;
   app.scene.setMode('journey');
   app.scene.setDepth(points() * METRES_PER_POINT, src.turns.length > 0);
 
@@ -231,8 +231,8 @@ function play(src: Source): HTMLElement {
       p.className = 'pip' + (i === src.turns.length ? ' current' : '');
       if (turn) {
         p.classList.add('done');
-        (p as HTMLElement).style.setProperty('--tc', TIER_COLORS[turn.tier]);
-        p.setAttribute('title', `${turn.tier ? '+' + turn.points : '✕'}`);
+        (p as HTMLElement).style.setProperty('--tc', turn.skipped ? SKIP_COLOR : TIER_COLORS[turn.tier]);
+        p.setAttribute('title', turn.tier ? `+${turn.points}` : turn.skipped ? t.skipped : '✕');
       }
     });
   };
@@ -371,7 +371,17 @@ function play(src: Source): HTMLElement {
         if (tries.some((x) => x.toLowerCase() === v.toLowerCase())) return miss(t.alreadyTried, tries);
         void offer(v);
       };
-      giveUp.onclick = () => void offer(null);
+      // Skip: no points, no death; the knight just doesn't walk.
+      giveUp.onclick = async () => {
+        if (done || busy) return;
+        busy = true;
+        try {
+          const v = await src.skip();
+          if (alive) finish(v);
+        } finally {
+          busy = false;
+        }
+      };
       const tick = (now: number) => {
         if (done || !alive) return;
         if (hiddenAt) return void requestAnimationFrame(tick);
@@ -406,8 +416,10 @@ function play(src: Source): HTMLElement {
     const prevDead = src.turns.length > 1 && !src.turns[src.turns.length - 2].tier;
     if (v.tier === 6) setTimeout(() => alive && say('rare', 'top'), 900);
     else if (v.tier === 5 && Math.random() < 0.5) setTimeout(() => alive && say('lord', 'top'), 900);
-    else if (!v.tier && prevDead && Math.random() < 0.5) setTimeout(() => alive && say('deaths', 'top'), 2500);
-    if (v.tier) {
+    else if (!v.tier && !v.skipped && prevDead && Math.random() < 0.5) setTimeout(() => alive && say('deaths', 'top'), 2500);
+    if (v.skipped) {
+      sfx.click();
+    } else if (v.tier) {
       sfx.reward(v.tier);
       app.scene.reward(v.tier);
       app.scene.setDepth(points() * METRES_PER_POINT);
@@ -415,7 +427,7 @@ function play(src: Source): HTMLElement {
       const from = zoneAt(before * METRES_PER_POINT);
       const to = zoneAt(points() * METRES_PER_POINT);
       if (to !== from) void wait(700).then(() => { if (alive) void banner(to.name[lang], 'zone', 3000); });
-      if (to !== from && to.final && v.tier < 6) setTimeout(() => alive && say('abyss', 'top'), 3800);
+      if (to !== from && to.final && v.tier < 6) setTimeout(() => alive && say('final', 'top'), 3800);
     } else {
       reason = Math.random() < 0.04 ? PATCHES[lang] : null;
       app.scene.setHollow(deaths() >= 3);
@@ -438,7 +450,9 @@ function play(src: Source): HTMLElement {
     const cont = h('button', { class: 'btn primary' }, v.finished ? t.finish : t.next);
     const verdict = v.tier
       ? h('div', { class: `verdict stamp t${v.tier}` }, tierBadge(v.tier), h('span', { class: 'gain' }, `+${v.points} ${t.points}`))
-      : h('div', { class: 'verdict dead' }, h('span', { class: 'dead-reason' }, reason ?? (tries.length ? t.noneHeld : t.timeUp)));
+      : v.skipped
+        ? h('div', { class: 'verdict skipped' }, h('span', { class: 'dead-reason' }, t.skipped))
+        : h('div', { class: 'verdict dead' }, h('span', { class: 'dead-reason' }, reason ?? (tries.length ? t.noneHeld : t.timeUp)));
 
     reveal.replaceChildren(
       h('p', { class: 'prompt-kicker' }, v.q[lang]),

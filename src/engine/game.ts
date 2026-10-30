@@ -140,6 +140,8 @@ export interface Turn {
   answer: string | null;
   tier: Tier | 0;
   points: number;
+  /** Passed over with "Skip question": no score, but no death either. */
+  skipped?: boolean;
 }
 
 export function totalPoints(turns: Turn[]): number {

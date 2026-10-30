@@ -20,6 +20,9 @@ const START_CAMP = -46;
 // dark panels; the pale tiers are always shown with a text label.
 export const TIER_COLORS = ['#c83a3a', '#8a857b', '#d6d0b4', '#e8823e', '#c9284f', '#a66cf0', '#fff2b0'];
 
+/** Skipped prompts: neither a score nor a death. */
+export const SKIP_COLOR = '#55505a';
+
 /** Liora's offset from the bonfire's centre, in scene pixels. */
 export const MAIDEN_X = 13;
 

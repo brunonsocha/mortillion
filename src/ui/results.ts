@@ -7,7 +7,7 @@ import { load } from '../engine/storage.ts';
 import { VICTORY } from '../eggs.ts';
 import { PACK_NAMES } from '../i18n/strings.ts';
 import { shareCard } from './card.ts';
-import { TIER_COLORS } from '../render/scene.ts';
+import { SKIP_COLOR, TIER_COLORS } from '../render/scene.ts';
 import { sfx } from '../render/sfx.ts';
 import { app, banner, go, route, tierBadge } from './app.ts';
 import { countdown } from './home.ts';
@@ -37,7 +37,7 @@ export function shareText(kind: RunKind, id: string, turns: Turn[], lang: Lang):
   const label = kind === 'pack' || kind === 'endless' ? PACK_NAMES[id][lang] : `#${id}`;
   return [
     `MORTILLION ${label} · ${fmt(pts * METRES_PER_POINT, lang)} ${app.t.metres}`,
-    turns.map((t) => TIER_EMOJI[t.tier]).join(''),
+    turns.map((t) => (t.skipped ? '➖' : TIER_EMOJI[t.tier])).join(''),
     rankOf(pts, lang),
     location.origin + location.pathname,
   ].join('\n');
@@ -83,7 +83,7 @@ route('results', async ([kind, id]) => {
   })();
 
   const pts = totalPoints(turns);
-  const allDead = kind !== 'endless' && turns.every((tn) => !tn.tier);
+  const allDead = kind !== 'endless' && turns.every((tn) => !tn.tier && !tn.skipped);
   // The knight walks on to a camp at the end of the road, where Liora waits.
   app.scene.setDepth(pts * METRES_PER_POINT);
   app.scene.setMode('bonfire', pts * METRES_PER_POINT);
@@ -153,7 +153,7 @@ route('results', async ([kind, id]) => {
         ? h('p', { class: 'of-max' }, `${turns.length} ${t.promptsFaced}`)
         : h('p', { class: 'of-max' }, `${t.ofMax} ${fmt(MAX_SCORE * METRES_PER_POINT, lang)} ${t.metres}`),
       h('p', { class: 'rank' }, rankOf(pts, lang)),
-      h('div', { class: 'emoji-row', 'aria-hidden': 'true' }, turns.map((tn, i) => h('span', { style: { '--d': `${0.6 + i * 0.12}s`, '--tc': TIER_COLORS[tn.tier] } }, TIER_EMOJI[tn.tier]))),
+      h('div', { class: 'emoji-row', 'aria-hidden': 'true' }, turns.map((tn, i) => h('span', { style: { '--d': `${0.6 + i * 0.12}s`, '--tc': tn.skipped ? SKIP_COLOR : TIER_COLORS[tn.tier] } }, tn.skipped ? '➖' : TIER_EMOJI[tn.tier]))),
       h('div', { class: 'actions' }, actions, toast),
       next,
     ),
@@ -167,7 +167,7 @@ route('results', async ([kind, id]) => {
         views.map((v) =>
           h(
             'li',
-            { style: { '--tc': TIER_COLORS[v.tier] } },
+            { style: { '--tc': v.skipped ? SKIP_COLOR : TIER_COLORS[v.tier] } },
             h(
               'details',
               null,
@@ -176,7 +176,7 @@ route('results', async ([kind, id]) => {
                 null,
                 h('span', { class: 'tq' }, v.q[lang]),
                 h('span', { class: 'ta' }, v.answer ? v.answer[lang] : v.guess ? h('s', null, v.guess) : '—'),
-                h('span', { class: 'tt' }, tierBadge(v.tier), h('b', null, v.points ? `+${v.points}` : '0')),
+                h('span', { class: 'tt' }, tierBadge(v.tier, v.skipped), h('b', null, v.points ? `+${v.points}` : '0')),
               ),
               h(
                 'div',

@@ -3,7 +3,7 @@ import { LANGS } from '../data/types.ts';
 import { load, save } from '../engine/storage.ts';
 import { LANG_LABELS, STRINGS, TIER_LORE, TIER_NAMES, detectLang, type Strings } from '../i18n/strings.ts';
 import type { Scene } from '../render/scene.ts';
-import { TIER_COLORS } from '../render/scene.ts';
+import { SKIP_COLOR, TIER_COLORS } from '../render/scene.ts';
 import { setSound, sfx } from '../render/sfx.ts';
 import { TIER_POINTS } from '../engine/game.ts';
 import { h } from './dom.ts';
@@ -162,7 +162,8 @@ export function banner(text: string, kind: BannerKind, ms = 2800): Promise<void>
   );
 }
 
-export function tierBadge(tier: number): HTMLElement {
+export function tierBadge(tier: number, skipped = false): HTMLElement {
+  if (skipped) return h('span', { class: 'tier skipped', style: { '--tc': SKIP_COLOR } }, app.t.skipped);
   return h('span', { class: `tier t${tier}`, style: { '--tc': TIER_COLORS[tier] } }, tier ? TIER_NAMES[app.lang][tier] : app.t.youDied);
 }
 

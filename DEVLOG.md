@@ -905,6 +905,68 @@ Horizontally."
 
 ---
 
+## 32. "Skip question" instead of "give up"
+
+Your request (2026-10-30): give up should just skip the question, without advancing, not end
+the run, and be called "skip".
+
+**What**
+- The button is now **Skip question** / **Pomiń pytanie** / **Пропустити запитання**.
+- **A skip is not a death:**
+  - no YOU DIED and no death animation
+  - Liora doesn't tease it, and it doesn't count toward Hollowing
+  - **the Endless Road keeps all its Estus flasks**
+  - it scores 0, so the knight doesn't walk on
+  - the reveal says "Skipped" in muted grey
+  - pips, results, the emoji share (➖) and the image card mark it in grey
+- **Only running out of time is a death now.** The help rules say so in EN/PL/UK.
+- **Server:** `answer` with `skip: true` ends the prompt with 0 points and no flask spent
+  (migration `0006_skips.sql`, `turns.skipped`). Achievements treat skips fairly: they don't
+  break **No Death**, and they don't count toward **Hollowed**.
+
+**Verified:**
+- Browser: Skip on a themed prompt → no death overlay, verdict "Skipped". Skip in Endless → all 3
+  flasks remain.
+- `npm run test:server` → **14/14**, with a new test where a skip keeps the flask but a real death spends one.
+
+---
+
+## 33. Liora redrawn (big anime eyes, curvier figure) and flirtier
+
+Your request (2026-10-30): bigger anime eyes, hotter, appearing as a sprite and not only in the
+dialogue, curvy but not caricatured, and flirty lines "so streamers can say oh wow".
+
+**What**
+- **New 44×52 portrait:**
+  - big amber anime eyes with winged lashes, two highlights and a lower lash
+  - glossy lips, a beauty mark, gold earrings
+  - hood down, with long silver hair and the circlet
+  - a fitted plum gown with a gold-trimmed V-neckline and a hint of décolletage
+  - blink and talk frames
+  - she's clearly an adult woman
+- **New 16×30 full-body sprite** with an hourglass silhouette: full bust, a cinched gold-belted waist,
+  wide hips, and a long gown with a leg slit. She's tall and elegant, a head and a half above the knight,
+  fully clothed and non-explicit.
+- **Where she appears as a sprite:** at the home camp beside the bonfire, and **at the camp that ends
+  every journey** (results), where the knight walks up and sits with her.
+- **Lines rewritten flirtier** (36 per language, EN/PL/UK): teasing and warm, never explicit.
+  - "Today's journey was… unforgettable. Stay a little longer?"
+  - "Careful. Stare at a maiden that long and she starts getting ideas."
+  - "The flame leapt, and so did I. Behave yourself."
+  - "Three flasks, filled by my own hand. Think of me with every sip."
+  - "A short journey, hm? Don't worry. Distance isn't everything… today."
+  - "Free time is over, pilgrim. Join my Covenant… and you'll never have to leave my side."
+
+  Polish and Ukrainian still use gender-neutral address ("duszo" / "душе"). The old Abyss line
+  is now a line for reaching the Kiln.
+- The dialogue box is now fully opaque.
+
+**Verified:** sprite previews at 6–10×, the in-game camp, and the dialogue box in Polish. `tsc` and
+the build are clean, and 12/12 engine tests pass.
+
+
+---
+
 ## What I need from you
 
 ### Decisions (confirmed on 2026-10-30 / still open)

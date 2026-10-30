@@ -205,12 +205,13 @@ async function prompt(user: User, body: { runId?: string }) {
  * again" (`retry`); the prompt ends with a valid answer, when time runs out,
  * or when the player gives up (`giveUp`, or an empty guess).
  */
-async function answer(user: User, body: { runId?: string; guess?: string; giveUp?: boolean }) {
+async function answer(user: User, body: { runId?: string; guess?: string; giveUp?: boolean; skip?: boolean }) {
   const run = await loadRun(String(body.runId), user);
   if (run.finished_at) throw new HttpError(409, 'finished');
   if (!run.served_at) throw new HttpError(409, 'not_served');
   const p = BY_ID.get(run.prompt_ids[run.cursor])!;
-  const guess = body.giveUp ? '' : String(body.guess ?? '').slice(0, 80).trim();
+  const skipped = !!body.skip;
+  const guess = body.giveUp || skipped ? '' : String(body.guess ?? '').slice(0, 80).trim();
   const timedOut = Date.now() - Date.parse(run.served_at) > SECONDS_PER_PROMPT * 1000 + GRACE_MS;
   const match = !timedOut && guess ? findAnswer(p, guess) : null;
 
@@ -224,7 +225,7 @@ async function answer(user: User, body: { runId?: string; guess?: string; giveUp
   const points = tier ? TIER_POINTS[tier as Tier] : 0;
 
   const { error } = await admin.from('turns').insert({
-    run_id: run.id, idx: run.cursor, seat: run.seat, prompt_id: p.id, guess, answer: match?.answer.names.en ?? null, tier, points, misses: run.misses,
+    run_id: run.id, idx: run.cursor, seat: run.seat, prompt_id: p.id, guess, answer: match?.answer.names.en ?? null, tier, points, misses: run.misses, skipped,
   });
   // A duplicate means this turn was already answered (double submit).
   if (error) throw new HttpError(409, 'answered');
@@ -238,7 +239,8 @@ async function answer(user: User, body: { runId?: string; guess?: string; giveUp
       cursor++;
     }
   } else cursor++;
-  if (run.mode === 'endless' && !tier) lives = (lives ?? 1) - 1;
+  // Skipping costs no flask; only a real death does.
+  if (run.mode === 'endless' && !tier && !skipped) lives = (lives ?? 1) - 1;
   const finished = run.mode === 'endless' ? (lives ?? 0) <= 0 || cursor >= run.prompt_ids.length : cursor >= run.prompt_ids.length;
   const total = run.points + points;
 
@@ -250,6 +252,7 @@ async function answer(user: User, body: { runId?: string; guess?: string; giveUp
   const unlocked = finished && !user.is_anonymous ? await awardAchievements(user.id) : [];
   return {
     retry: false,
+    skipped,
     tier,
     points,
     total,
@@ -273,7 +276,7 @@ async function state(user: User, body: { runId?: string }) {
     turns: (turns ?? []).map((t) => {
       const p = BY_ID.get(t.prompt_id)!;
       const a: Answer | undefined = t.answer ? p.answers.find((x) => x.names.en === t.answer) : undefined;
-      return { idx: t.idx, seat: t.seat, promptId: t.prompt_id, q: p.q, d: p.d, guess: t.guess, answer: a?.names ?? null, tier: t.tier, points: t.points, ...lists(p, run.id) };
+      return { idx: t.idx, seat: t.seat, promptId: t.prompt_id, q: p.q, d: p.d, guess: t.guess, answer: a?.names ?? null, tier: t.tier, points: t.points, skipped: t.skipped, ...lists(p, run.id) };
     }),
   };
 }
@@ -286,9 +289,10 @@ async function playerStats(userId: string): Promise<{ stats: PlayerStats; days: 
     .not('finished_at', 'is', null);
   const list = runs ?? [];
   const ids = list.map((r) => r.id);
-  const { data: turns } = ids.length ? await admin.from('turns').select('run_id, tier').in('run_id', ids) : { data: [] };
+  const { data: turns } = ids.length ? await admin.from('turns').select('run_id, tier, skipped').in('run_id', ids) : { data: [] };
+  // Tiers per run; a skipped prompt is -1 (not a death, not a score).
   const byRun = new Map<string, number[]>();
-  for (const t of turns ?? []) byRun.set(t.run_id, [...(byRun.get(t.run_id) ?? []), t.tier]);
+  for (const t of turns ?? []) byRun.set(t.run_id, [...(byRun.get(t.run_id) ?? []), t.skipped ? -1 : t.tier]);
 
   const dailies = list.filter((r) => r.mode === 'daily');
   const days = dailies.map((r) => r.day).sort((a, b) => b - a);
@@ -302,7 +306,7 @@ async function playerStats(userId: string): Promise<{ stats: PlayerStats; days: 
     dailies: dailies.length,
     bestDaily: Math.max(0, ...dailies.map((r) => r.points)),
     streak,
-    deathlessDailies: dailies.filter((r) => tiersOf(r.id).length > 0 && tiersOf(r.id).every((t) => t > 0)).length,
+    deathlessDailies: dailies.filter((r) => tiersOf(r.id).length > 0 && tiersOf(r.id).every((t) => t !== 0)).length,
     allDeadDailies: dailies.filter((r) => tiersOf(r.id).length >= PROMPTS_PER_RUN && tiersOf(r.id).every((t) => t === 0)).length,
     deepest: Math.max(0, ...list.filter((r) => r.mode !== 'party').map((r) => r.points)),
     endlessBest: Math.max(0, ...list.filter((r) => r.mode === 'endless').map((r) => r.points)),

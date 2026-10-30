@@ -31,6 +31,8 @@ export interface TurnView {
   points: number;
   common: L10n[];
   rare: L10n[];
+  /** Passed over: scores nothing, but isn't a death. */
+  skipped?: boolean;
 }
 
 export interface Verdict extends TurnView {
@@ -69,6 +71,8 @@ export interface Source {
    * prompt stays open; `null` gives up (a death).
    */
   answer(guess: string | null): Promise<Outcome>;
+  /** Passes over the current prompt: no points, no death, no flask spent. */
+  skip(): Promise<Verdict>;
   /** Local runs only: whether a guess is a real answer (protects easter eggs). */
   accepts(guess: string): boolean;
   /** Prompt ids dealt so far (local daily runs persist these). */
@@ -86,12 +90,12 @@ export function revealLists(p: Prompt): { common: L10n[]; rare: L10n[] } {
 /** Rebuilds a turn's view from bundled content (local runs, old saves). */
 export function viewOf(p: Prompt, turn: Turn, seat = 0): TurnView {
   const a = turn.answer ? p.answers.find((x) => x.names.en === turn.answer) : undefined;
-  return { promptId: p.id, q: p.q, d: p.d, seat, guess: turn.guess, answer: a?.names ?? null, tier: turn.tier, points: turn.points, ...revealLists(p) };
+  return { promptId: p.id, q: p.q, d: p.d, seat, guess: turn.guess, answer: a?.names ?? null, tier: turn.tier, points: turn.points, skipped: turn.skipped, ...revealLists(p) };
 }
 
 /** The compact form stored in the save file. */
 export function turnOf(v: TurnView): Turn {
-  return { promptId: v.promptId, guess: v.guess, answer: v.answer?.en ?? null, tier: v.tier, points: v.points };
+  return { promptId: v.promptId, guess: v.guess, answer: v.answer?.en ?? null, tier: v.tier, points: v.points, ...(v.skipped ? { skipped: true } : {}) };
 }
 
 export interface LocalOptions {
@@ -146,6 +150,14 @@ export function localSource(o: LocalOptions): Source {
       };
       turns.push(view);
       if (lives !== null && !tier) lives--;
+      return { ...view, timedOut: false, finished: done(), lives, unlocked: [] };
+    },
+    async skip() {
+      const { idx, seat } = position();
+      const p = prompts[idx];
+      misses = 0;
+      const view: TurnView = { promptId: p.id, q: p.q, d: p.d, seat, guess: '', answer: null, tier: 0, points: 0, skipped: true, ...revealLists(p) };
+      turns.push(view);
       return { ...view, timedOut: false, finished: done(), lives, unlocked: [] };
     },
     accepts(guess) {
@@ -215,6 +227,16 @@ export async function remoteSource(kind: RunKind, id: string, start: Record<stri
       lives = v.lives;
       finished = v.finished;
       return { ...view, timedOut: v.timedOut, finished: v.finished, lives: v.lives, unlocked: v.unlocked };
+    },
+    async skip() {
+      const v = await callGame<Omit<Verdict, 'promptId' | 'q' | 'd' | 'guess' | 'seat'> & { seat: number }>('answer', { runId: run.runId, skip: true });
+      const view: TurnView = {
+        promptId: '', q: current!.q, d: current!.d, seat: current!.seat, guess: '', answer: null, tier: 0, points: 0, skipped: true, common: v.common, rare: v.rare,
+      };
+      turns.push(view);
+      lives = v.lives;
+      finished = v.finished;
+      return { ...view, timedOut: false, finished: v.finished, lives: v.lives, unlocked: v.unlocked };
     },
     // Secret phrases are never real answers; the server can't be asked cheaply.
     accepts: () => false,

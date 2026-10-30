@@ -100,6 +100,24 @@ test('a wrong guess asks for another; a right one scores; guesses are capped', a
   assert.equal(done.cursor, 1, 'giving up moves on');
 });
 
+test('skipping a question scores nothing, is no death, and costs no flask', async (t) => {
+  if (!up) return t.skip('local Supabase stack is not running');
+  const token = await anonToken();
+  const run = (await game(token, { action: 'start', mode: 'endless' })).body;
+  await game(token, { action: 'prompt', runId: run.runId });
+  const s1 = (await game(token, { action: 'answer', runId: run.runId, skip: true })).body;
+  assert.equal(s1.skipped, true);
+  assert.equal(s1.tier, 0);
+  assert.equal(s1.lives, 3, 'no flask spent');
+  assert.equal(s1.finished, false);
+  await game(token, { action: 'prompt', runId: run.runId });
+  const d1 = (await game(token, { action: 'answer', runId: run.runId, giveUp: true })).body;
+  assert.equal(d1.skipped, false);
+  assert.equal(d1.lives, 2, 'a real death still spends one');
+  const st = (await game(token, { action: 'state', runId: run.runId })).body;
+  assert.deepEqual(st.turns.map((x: { skipped: boolean }) => x.skipped), [true, false]);
+});
+
 test('the server never sends answers before they are guessed', async (t) => {
   if (!up) return t.skip('local Supabase stack is not running');
   const token = await anonToken();

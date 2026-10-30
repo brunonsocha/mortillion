@@ -1,7 +1,7 @@
 // Renders a run as a square pixel-art image for sharing on social media.
 
 import type { Turn } from '../engine/game.ts';
-import { TIER_COLORS } from '../render/scene.ts';
+import { SKIP_COLOR, TIER_COLORS } from '../render/scene.ts';
 import { BONFIRE, KNIGHT, bake } from '../render/sprites.ts';
 
 export interface CardInfo {
@@ -95,7 +95,7 @@ export async function renderCard(info: CardInfo): Promise<Blob> {
     const x = SIZE / 2 - total / 2 + i * (cell + 12);
     g.fillStyle = '#000';
     g.fillRect(x - 4, 830 - 4, cell + 8, cell + 8);
-    g.fillStyle = TIER_COLORS[t.tier];
+    g.fillStyle = t.skipped ? SKIP_COLOR : TIER_COLORS[t.tier];
     g.fillRect(x, 830, cell, cell);
     g.fillStyle = 'rgba(0,0,0,0.28)';
     g.fillRect(x, 830 + cell - 9, cell, 9);
