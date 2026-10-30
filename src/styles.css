@@ -96,7 +96,8 @@ button {
 
 .panel {
   padding: 18px 20px;
-  backdrop-filter: blur(2px);
+  /* no backdrop blur: it re-blurred the moving scene behind every panel each frame */
+  background: rgba(9, 7, 11, 0.92);
 }
 
 /* ───────────── top bar ───────────── */
@@ -325,15 +326,8 @@ body:not(:has(.home)) .brand {
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  /* a static filter is rasterised once; animating it repainted the title every frame */
   filter: drop-shadow(0 4px 0 #2a0e05) drop-shadow(0 0 18px rgba(255, 110, 30, 0.35));
-  animation: flicker 4s infinite;
-}
-
-@keyframes flicker {
-  0%, 100% { filter: drop-shadow(0 4px 0 #2a0e05) drop-shadow(0 0 18px rgba(255, 110, 30, 0.35)); }
-  47% { filter: drop-shadow(0 4px 0 #2a0e05) drop-shadow(0 0 26px rgba(255, 110, 30, 0.5)); }
-  50% { filter: drop-shadow(0 4px 0 #2a0e05) drop-shadow(0 0 10px rgba(255, 110, 30, 0.2)); }
-  53% { filter: drop-shadow(0 4px 0 #2a0e05) drop-shadow(0 0 22px rgba(255, 110, 30, 0.45)); }
 }
 
 .tagline {

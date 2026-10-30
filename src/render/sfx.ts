@@ -161,6 +161,25 @@ export const sfx = {
     noise(0.28, 0.4, 0.08, 900, 300);
     [523.3, 659.3, 784].forEach((f, i) => tone(f, 0.62 + i * 0.06, 0.8, 'triangle', 0.04));
   },
+  /** The bonfire warp: a hollow rising whoosh and a soft bell. */
+  warp() {
+    noise(0, 0.9, 0.12, 600, 3200);
+    tone(196, 0, 1.2, 'sine', 0.05, 392);
+    tone(784, 0.85, 1.2, 'triangle', 0.03);
+  },
+  /**
+   * Crossing a rarity marker. Each line crossed in the same walk climbs the
+   * scale; the rare tiers add sparkle, and the last tier rings out a chord.
+   */
+  milestone(tier: number, combo: number) {
+    const scale = [523.3, 587.3, 659.3, 784, 880, 1046.5, 1174.7, 1318.5];
+    const f = scale[Math.min(combo, scale.length - 1)];
+    tone(f, 0, 0.18, 'square', 0.035);
+    tone(f * 2, 0.02, 0.35, 'triangle', 0.04);
+    if (tier >= 4) tone(f * 1.5, 0.06, 0.4, 'triangle', 0.035);
+    if (tier >= 5) [1, 1.25, 1.5, 2].forEach((m, i) => tone(f * m * 2, 0.08 + i * 0.04, 0.25, 'sine', 0.025));
+    if (tier === 6) [1, 1.26, 1.5, 2].forEach((m) => tone(523.3 * m, 0.12, 1.4, 'triangle', 0.04));
+  },
   complete() {
     [196, 246.9, 293.7, 392].forEach((f, i) => tone(f, i * 0.18, 1.2, 'triangle', 0.06));
   },

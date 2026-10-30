@@ -4,6 +4,8 @@
 // low internal resolution and scaled up with nearest-neighbour filtering.
 
 import { ZONES, zoneAt, type Zone, type ZoneKind } from '../eggs.ts';
+import { METRES_PER_POINT, TIER_POINTS } from '../engine/game.ts';
+import type { Tier } from '../data/types.ts';
 import { sfx } from './sfx.ts';
 import { ENEMIES, ENEMY_OF, ENEMY_PALETTE } from './enemies.ts';
 import { MAIDEN, MAIDEN_PALETTE } from './maiden.ts';
@@ -31,6 +33,13 @@ export const MAIDEN_X = 13;
 /** Seconds the death animation lasts (topple, lie, respawn). */
 const DEATH_TIME = 1.6;
 const DRINK_TIME = 1.25;
+// The bonfire warp: dissolve into light, black out, jump, fade in, reform.
+const WARP_OUT = 0.6;
+const WARP_BLACK = 0.95;
+const WARP_IN = 1.45;
+const WARP_END = 1.95;
+/** Any move longer than this (world px) is a warp, not a walk. */
+const WARP_MIN = 40;
 
 type RGB = [number, number, number];
 
@@ -133,6 +142,16 @@ export class Scene {
   private campX = START_CAMP;
   /** An unlit bonfire is ash and a coiled sword; Liora appears once it burns. */
   private campLit = true;
+  /**
+   * Rarity markers for the current prompt: where each tier would carry the
+   * knight. Crossing one chimes; `fade` runs once the walk is over.
+   */
+  private markers: { x: number; tier: number; crossed: number }[] = [];
+  private markerFade = 0;
+  /** Lines crossed in the current walk, for the climbing chime. */
+  private combo = 0;
+  /** A bonfire warp in progress: `jump` moves the knight while the screen is black. */
+  private warp: { t: number; jump: (() => void) | null } | null = null;
   private maidenIn = 1;
   private facing = 1;
   private walkPhase = 0;
@@ -207,6 +226,7 @@ export class Scene {
     if (mode === 'bonfire') {
       this.restAt(restMetres);
       this.enemy = null;
+      this.markers = [];
       this.campLit = true;
     }
     this.mode = mode;
@@ -219,10 +239,13 @@ export class Scene {
    */
   restAt(metres: number | null) {
     this.campX = metres === null ? START_CAMP : metres * PX_PER_M + 34;
-    // Far away (e.g. back home after a long run): jump rather than walk back.
-    if (Math.abs(this.knightX - (this.campX - 24)) > this.W) {
-      this.knightX = this.campX - 24;
-      this.camX = this.campX - this.W / 2;
+    // Elsewhere (e.g. back home after a run): warp rather than walk back.
+    if (Math.abs(this.knightX - (this.campX - 24)) > WARP_MIN) {
+      const campX = this.campX;
+      this.teleport(() => {
+        this.knightX = campX - 24;
+        this.camX = campX - this.W / 2;
+      });
     }
   }
 
@@ -235,8 +258,21 @@ export class Scene {
   setDepth(metres: number, instant = false) {
     this.targetX = metres * PX_PER_M;
     if (instant) {
-      this.knightX = this.targetX;
-      this.camX = this.camTarget();
+      const jump = () => {
+        this.knightX = this.targetX;
+        this.camX = this.camTarget();
+      };
+      // Elsewhere (e.g. a new journey after resting at the road's end): warp.
+      if (Math.abs(this.knightX - this.targetX) > WARP_MIN) this.teleport(jump);
+      else if (this.warp?.jump) this.warp.jump = jump;
+      else jump();
+    } else if (this.targetX < this.knightX - WARP_MIN) {
+      // The road never runs backwards: a new journey from where the last one
+      // ended warps the knight to its start.
+      this.teleport(() => {
+        this.knightX = this.targetX;
+        this.camX = this.camTarget();
+      });
     }
   }
 
@@ -346,8 +382,22 @@ export class Scene {
     const a = this.anchor;
     this.groundY = Math.round(a ? a.bottom / this.scale : this.H * 0.94);
 
+    // A warp holds everything still until the blackout, then jumps.
+    const w = this.warp;
+    if (w) {
+      const before = w.t;
+      w.t += dt;
+      if (w.jump && w.t >= WARP_BLACK) {
+        w.jump();
+        w.jump = null;
+      }
+      if (before < WARP_IN && w.t >= WARP_IN) this.warpBurst(1);
+      if (w.t >= WARP_END) this.warp = null;
+    }
+    const frozen = !!w?.jump;
+
     // Walk toward the goal at a steady pace (faster when far behind).
-    const goal = this.resting() ? this.campX - 24 : this.targetX;
+    const goal = frozen ? this.knightX : this.resting() ? this.campX - 24 : this.targetX;
     const gap = goal - this.knightX;
     const speed = Math.min(160, 28 + Math.abs(gap) * 1.6);
     const step = Math.sign(gap) * Math.min(Math.abs(gap), speed * dt);
@@ -356,8 +406,30 @@ export class Scene {
       this.facing = Math.sign(step);
       this.walkPhase += Math.abs(step) / 3;
     }
+    // Rarity markers: crossing one is a little triumph, and each further one
+    // in the same walk rings higher.
+    for (const m of this.markers) {
+      if (m.crossed) m.crossed = Math.max(0.001, m.crossed - dt * 1.5);
+      else if (this.knightX + 0.5 >= m.x && !frozen) {
+        m.crossed = 1;
+        sfx.milestone(m.tier, this.combo++);
+        if (this.motion) {
+          for (let i = 0; i < 6 + m.tier * 3; i++) {
+            const a = -Math.PI / 2 + (Math.random() - 0.5) * 2;
+            const v = 20 + Math.random() * (20 + m.tier * 8);
+            this.particles.push({ x: m.x, y: this.groundY - 4 - Math.random() * 30, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0, max: 0.4 + Math.random() * 0.5, color: TIER_COLORS[m.tier], kind: 'spark' });
+          }
+          if (m.tier >= 5) this.shake = Math.max(this.shake, 0.12);
+        }
+      }
+    }
+    // Once the walk is over (foe gone, knight standing), the posts fade away.
+    if (this.markers.length && !this.enemy && Math.abs(goal - this.knightX) < 0.5) {
+      this.markerFade += dt;
+      if (this.markerFade > 1.6) this.markers = [];
+    }
     const prevCam = this.camX;
-    this.camX += (this.camTarget() - this.camX) * (1 - Math.exp(-dt * 6));
+    if (!frozen) this.camX += (this.camTarget() - this.camX) * (1 - Math.exp(-dt * 6));
     const pan = this.camX - prevCam;
 
     this.shake = Math.max(0, this.shake - dt);
@@ -505,6 +577,58 @@ export class Scene {
     }
   }
 
+  /**
+   * Dark Souls' bonfire warp: the knight dissolves into rising light, the
+   * screen goes black, he's moved, and he reforms where he lands.
+   */
+  private teleport(jump: () => void) {
+    // Instant on the very first frames (a page opened straight on results)
+    // and with reduced motion.
+    if (!this.motion || this.t < 0.3) {
+      jump();
+      return;
+    }
+    if (this.warp) {
+      // Already warping: before the blackout, land at the newest spot; after it, just go.
+      if (this.warp.jump) this.warp.jump = jump;
+      else jump();
+      return;
+    }
+    this.warp = { t: 0, jump };
+    sfx.warp();
+    this.warpBurst(-1);
+  }
+
+  /** Motes of light around the knight: rising away (-1) or gathering in (+1). */
+  private warpBurst(dir: number) {
+    for (let i = 0; i < 40; i++) {
+      const x = this.knightX + 3 + Math.random() * 10;
+      const y = this.groundY - Math.random() * 20;
+      this.particles.push({
+        x, y: dir < 0 ? y : y - 18, vx: (Math.random() - 0.5) * 8, vy: dir < 0 ? -20 - Math.random() * 30 : 10 + Math.random() * 14,
+        life: 0, max: 0.6 + Math.random() * 0.6, color: Math.random() < 0.5 ? '#fff2b0' : '#ffd06a', kind: 'spark',
+      });
+    }
+  }
+
+  /** How visible the knight is during a warp (1 otherwise). */
+  private knightAlpha(): number {
+    const w = this.warp;
+    if (!w) return 1;
+    if (w.t < WARP_OUT) return 1 - w.t / WARP_OUT;
+    if (w.t < WARP_IN) return 0;
+    return Math.min(1, (w.t - WARP_IN) / (WARP_END - WARP_IN));
+  }
+
+  /** The black-out over the whole screen during a warp. */
+  private warpBlack(): number {
+    const w = this.warp;
+    if (!w || w.t < WARP_OUT) return 0;
+    if (w.t < WARP_BLACK) return (w.t - WARP_OUT) / (WARP_BLACK - WARP_OUT);
+    if (w.t < WARP_IN) return 1 - (w.t - WARP_BLACK) / (WARP_IN - WARP_BLACK);
+    return 0;
+  }
+
   // ───────────────────────────── combat ─────────────────────────────
 
   /** A foe of the current biome steps onto the road ahead of the knight. */
@@ -512,6 +636,16 @@ export class Scene {
     const x = this.targetX + 30;
     const kind = ENEMY_OF[zoneAt(Math.max(0, x / PX_PER_M)).kind];
     this.enemy = { sprite: ENEMIES[kind], x, boss, enter: this.motion ? 0 : 1, flash: 0, dx: 0, alpha: 1, state: 'idle' };
+    this.showMarkers();
+  }
+
+  /** Posts on the road ahead: how far each rarity tier would walk the knight. */
+  private showMarkers() {
+    this.markers = ([1, 2, 3, 4, 5, 6] as Tier[]).map((tier) => ({
+      x: this.targetX + TIER_POINTS[tier] * METRES_PER_POINT * PX_PER_M, tier, crossed: 0,
+    }));
+    this.markerFade = 0;
+    this.combo = 0;
   }
 
   private enemyCentre() {
@@ -698,7 +832,9 @@ export class Scene {
     this.drawCamp(cam, gy, lights);
     this.drawParticles(cam, 'back');
     this.drawEnemy(cam, gy);
+    g.globalAlpha = this.knightAlpha();
     this.drawKnight(cam, gy);
+    g.globalAlpha = 1;
     this.drawParticles(cam, 'front');
     this.drawCombatFx(cam, gy);
     this.collectLights(cam, gy, lights);
@@ -730,6 +866,7 @@ export class Scene {
     }
     g.globalCompositeOperation = 'source-over';
 
+    this.drawMarkers(cam, gy);
     this.drawForeground(cam, gy);
     g.drawImage(this.vignette, 0, 0);
 
@@ -739,7 +876,9 @@ export class Scene {
       g.fillRect(0, 0, W, H);
       this.drawPillars(cam, gy);
       this.drawEnemy(cam, gy);
+      g.globalAlpha = this.knightAlpha();
       this.drawKnight(cam, gy);
+      g.globalAlpha = 1;
       this.drawParticles(cam, 'front');
       this.drawCombatFx(cam, gy);
     } else this.drawPillars(cam, gy);
@@ -765,6 +904,11 @@ export class Scene {
       o.fillStyle = '#000';
       o.fillRect(0, 0, W, bh);
       o.fillRect(0, H - bh, W, bh);
+    }
+    const black = this.warpBlack();
+    if (black > 0) {
+      o.fillStyle = `rgba(0,0,0,${black})`;
+      o.fillRect(0, 0, W, H);
     }
   }
 
@@ -817,6 +961,41 @@ export class Scene {
       for (let i = 0; i < 48; i++) {
         const ang = (i / 48) * Math.PI * 2;
         g.fillRect(Math.round(r.x - cam + Math.cos(ang) * r.r), Math.round(r.y + Math.sin(ang) * r.r * 0.45), 1, 1);
+      }
+    }
+    g.globalAlpha = 1;
+  }
+
+  /** The rarity posts: a dashed line in the tier's colour, a pennant, and pips for the tier. */
+  private drawMarkers(cam: number, gy: number) {
+    if (!this.markers.length || this.warp?.jump) return;
+    const { g } = this;
+    const fade = Math.max(0, 1 - Math.max(0, this.markerFade - 0.8) / 0.8);
+    for (const m of this.markers) {
+      const x = Math.round(m.x - cam);
+      if (x < -4 || x > this.W + 4) continue;
+      const lit = m.crossed;
+      const h = 30 + m.tier * 3;
+      const pulse = this.motion ? 0.15 * Math.sin(this.t * 4 + m.tier) : 0;
+      g.globalAlpha = fade * Math.min(1, lit ? 0.75 + lit * 0.25 : 0.85 + pulse);
+      // a dark core keeps the post readable against bright skies
+      g.fillStyle = '#0a060c';
+      g.fillRect(x + 1, gy - h + 1, 1, h - 1);
+      g.fillStyle = TIER_COLORS[m.tier];
+      for (let y = gy - h; y < gy; y += 4) g.fillRect(x, y, 1, 3);
+      g.fillRect(x - 1, gy - 1, 3, 1);
+      // pennant
+      g.fillRect(x + 1, gy - h, 6, 1);
+      g.fillRect(x + 1, gy - h + 1, 5, 1);
+      g.fillRect(x + 1, gy - h + 2, 3, 1);
+      g.fillRect(x + 1, gy - h + 3, 1, 1);
+      // one pip per tier
+      for (let i = 0; i < m.tier; i++) g.fillRect(x - 2, gy - h + 4 + i * 2, 1, 1);
+      if (lit) {
+        // the flare as it's crossed
+        g.globalAlpha = fade * lit;
+        g.fillStyle = '#fff6d8';
+        g.fillRect(x - 1, gy - h, 3, h);
       }
     }
     g.globalAlpha = 1;

@@ -1195,6 +1195,42 @@ your answers carried you. The run ends when the prompts run out, not on a loss.
 **Verified:** a themed path skipped through to the end (screenshots of the ashen bonfire, the
 kindling and the results). `tsc` and `npm test` pass.
 
+## 42. Smoother frames, the bonfire warp, and rarity markers on the road
+
+Your requests (2026-10-30): "the game is somewhat laggy. sometimes fps drops. also, on restart,
+after bonfire, make an animation of the character teleporting back to the starting spot" and "there
+should be lines indicating how far he would've walked depending on the rarity of the answer. a
+sound that gives the player dopamine (especially on getting a super rare answer and walking past
+multiple lines in a row!) should play on crossing a line."
+
+**Lag:** I profiled the scene in a browser (`shots/tools/prof.mjs`: time per frame and canvas
+calls per frame). The drawing itself is cheap: under 1 ms a frame on the road, about 2 ms at camp.
+The drops came from **CSS**:
+- every `.panel` had `backdrop-filter: blur`, so the browser re-blurred the animated scene behind
+  each panel on every frame
+- the title animated its `drop-shadow` filter, repainting it every frame
+
+Both are gone: panels are a little more opaque instead, and the title glow is static. Headless
+Firefox went from about 5 fps to 59 fps on the home screen.
+
+**Bonfire warp** (`Scene.teleport()`): whenever the knight would have to go backwards (a new
+journey after resting at the road's end, or returning home from the results):
+- he **dissolves into rising golden motes** with a hollow whoosh and a bell
+- the screen **fades to black**, he is moved, and the screen fades back in
+- he **reforms** as motes gather
+
+Reduced motion, or a page opened straight on the results, still jumps instantly.
+
+**Rarity markers** (`showMarkers()`, `drawMarkers()`, `sfx.milestone()`): when a prompt appears,
+six posts stand on the road ahead, one per tier, each where that tier's answer would carry the
+knight. Each is a dashed line in the tier colour with a pennant and one pip per tier.
+- Each post **flares and sprays sparks** as the knight walks past it.
+- A **chime** plays on every crossing, and each further line in the same walk **climbs the
+  scale**. Rare tiers add sparkle notes, tier 5 and 6 posts nudge the screen, and the tier-6
+  post rings out a chord. A One-in-a-Mortillion answer plays a six-note run.
+- The knight stops exactly on the post of the tier he earned. The posts fade once the walk ends.
+- Liora's rare-answer praise now waits until the walk is over, so she doesn't hide it.
+
 ---
 
 ## What I need from you

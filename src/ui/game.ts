@@ -420,8 +420,9 @@ function play(src: Source): HTMLElement {
     const prevDead = src.turns.length > 1 && !src.turns[src.turns.length - 2].tier;
     // (Praise for a rare answer waits until the kill has played out.)
     const praise = () => {
-      if (v.tier === 6) setTimeout(() => alive && say('rare', 'top'), 500);
-      else if (v.tier === 5 && Math.random() < 0.5) setTimeout(() => alive && say('lord', 'top'), 500);
+      // (after the walk past the markers, so she doesn't hide it)
+      if (v.tier === 6) setTimeout(() => alive && say('rare', 'top'), 2600);
+      else if (v.tier === 5 && Math.random() < 0.5) setTimeout(() => alive && say('lord', 'top'), 2400);
     };
     if (!v.tier && !v.skipped && prevDead && Math.random() < 0.5) setTimeout(() => alive && say('deaths', 'top'), 2500);
     if (v.skipped) {
