@@ -11,11 +11,17 @@ languages (and Cyrillic typed on a Russian layout) are accepted.
 
 ## Modes
 
-- **Daily Descent:** the same seven prompts for everyone, one attempt per day, with
-  streaks and a shareable emoji result.
-- **Themed Catacombs:** endless runs in Sports, Movies & TV, Geography and
-  Video games. Music, History and Science are shown as sealed, coming soon.
+- **Daily Descent:** the same seven prompts for everyone, ordered easy → hard. One attempt
+  per day, with streaks, an emoji share and a shareable image card.
+- **Endless Abyss:** three Estus flasks are your lives. Descend until the last is gone.
+- **Themed Catacombs:** seven prompts from one theme: Sports, Movies & TV, Geography,
+  Video games, Music, History and Science. Literature, Art and Food are sealed teasers.
+- **Summon Signs:** local pass-and-play for 2–6 players. Shared answers "echo" for half
+  points.
 - **Archive:** replay past daily descents as practice.
+- **Status:** lifetime records and a histogram of your answers by tier.
+
+Dark Souls easter eggs are hidden throughout. `DEVLOG.md` lists them if you want spoilers.
 
 | Tier | Points | |
 |---|---:|---|
@@ -53,7 +59,12 @@ npm install
 npm run dev        # http://localhost:5173
 npm run build      # typecheck + production build into dist/
 npm run validate   # check all content packs (or: npm run validate -- sports)
+npm test           # engine tests (matching, daily deal, easter eggs)
 ```
+
+Writing content: see `docs/content-guide.md` (schema, rarity tiers, difficulty,
+wording rules). Accounts and the optional subscription: see `docs/subscriptions.md`
+(off unless Supabase/Stripe keys are configured). Change history: `DEVLOG.md`.
 
 ## Content packs
 
@@ -80,10 +91,10 @@ Exact spellings win over folded ones, so Ukrainian кіт (cat) and кит (whal
 stay apart.
 
 To add a theme:
-1. Create `src/data/packs/<id>.ts`.
-2. Add the id to `THEMES` in `src/data/packs/index.ts`.
-3. Name it in `PACK_NAMES` / `PACK_SUBS` in `src/i18n/strings.ts`.
-4. Give it an icon in `src/ui/icons.ts`.
+1. Create `src/data/packs/<id>.ts`. If its id is in `THEME_ORDER`
+   (`src/data/packs/index.ts`), the theme unlocks automatically.
+2. Name it in `PACK_NAMES` / `PACK_SUBS` in `src/i18n/strings.ts`.
+3. Give it an icon in `src/ui/icons.ts`.
 
 New packs join the daily rotation automatically. Prompts are dealt per pack
 from seeded decks, so nothing repeats until the pack has been used up.
