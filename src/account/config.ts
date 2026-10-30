@@ -23,8 +23,8 @@ export const FREE_RUNS_PER_DAY = Number(env.VITE_FREE_RUNS ?? 3) || 3;
 /** Shown on the purchase buttons; the real price lives in Stripe. */
 export const PRICE_LABEL = { pln: env.VITE_PRICE_PLN ?? '19,99 zł', eur: env.VITE_PRICE_EUR ?? '5 €' };
 
-/** Copy only: whether the Stripe Price is a one-time "full version" or recurring. */
-export const PURCHASE: 'one-time' | 'subscription' = env.VITE_PURCHASE === 'subscription' ? 'subscription' : 'one-time';
+/** Copy only: whether the Stripe Price is a monthly subscription (default) or one-time. */
+export const PURCHASE: 'one-time' | 'subscription' = env.VITE_PURCHASE === 'one-time' ? 'one-time' : 'subscription';
 
 /** Show the Google button (needs the provider enabled in Supabase). */
 export const GOOGLE_ENABLED = env.VITE_AUTH_GOOGLE !== '0';

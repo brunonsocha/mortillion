@@ -49,7 +49,7 @@ interface Run {
 }
 
 class HttpError extends Error {
-  constructor(public status: number, public code: string) {
+  constructor(public status: number, public code: string, public extra: Record<string, unknown> = {}) {
     super(code);
   }
 }
@@ -86,16 +86,40 @@ function publicRun(run: Run, freeLeft: number | null) {
   };
 }
 
-async function runsToday(userId: string): Promise<number> {
-  const midnight = new Date();
-  midnight.setUTCHours(0, 0, 0, 0);
-  const { count } = await admin
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The free-run quota: FREE_RUNS runs, which come back 24 hours after the run
+ * that used the last of them. A partly used allowance also lapses 24 hours
+ * after its first run, so old runs never linger.
+ */
+async function quotaState(userId: string): Promise<{ used: number; resetAt: number | null }> {
+  const { data } = await admin
     .from('runs')
-    .select('id', { count: 'exact', head: true })
+    .select('created_at')
     .eq('user_id', userId)
-    .neq('mode', 'daily')
-    .gte('created_at', midnight.toISOString());
-  return count ?? 0;
+    .eq('free', true)
+    .gte('created_at', new Date(Date.now() - 3 * DAY_MS).toISOString())
+    .order('created_at');
+  let used = 0;
+  let windowStart: number | null = null;
+  let lockedUntil: number | null = null;
+  const lapse = (t: number) => {
+    if ((lockedUntil !== null && t >= lockedUntil) || (lockedUntil === null && windowStart !== null && t >= windowStart + DAY_MS)) {
+      used = 0;
+      windowStart = null;
+      lockedUntil = null;
+    }
+  };
+  for (const r of data ?? []) {
+    const t = Date.parse(r.created_at);
+    lapse(t);
+    windowStart ??= t;
+    used++;
+    if (used >= FREE_RUNS) lockedUntil = t + DAY_MS;
+  }
+  lapse(Date.now());
+  return { used, resetAt: lockedUntil ?? (windowStart !== null ? windowStart + DAY_MS : null) };
 }
 
 async function start(user: User, body: { mode?: Mode; pack?: string; day?: number; seats?: number }) {
@@ -115,10 +139,13 @@ async function start(user: User, body: { mode?: Mode; pack?: string; day?: numbe
     return publicRun(data as Run, null);
   }
 
-  // Everything except the Daily Descent spends today's free runs.
+  // Everything except the Daily Descent spends a free run.
   const paid = await hasFullAccess(user.id);
-  const used = paid ? 0 : await runsToday(user.id);
-  if (!paid && used >= FREE_RUNS) throw new HttpError(402, 'quota');
+  const quota = paid ? { used: 0, resetAt: null } : await quotaState(user.id);
+  if (!paid && quota.used >= FREE_RUNS) {
+    throw new HttpError(402, 'quota', { resetAt: new Date(quota.resetAt!).toISOString() });
+  }
+  const used = quota.used;
 
   let ids: string[];
   let day = today;
@@ -144,7 +171,7 @@ async function start(user: User, body: { mode?: Mode; pack?: string; day?: numbe
 
   const { data, error } = await admin
     .from('runs')
-    .insert({ user_id: user.id, mode, pack: body.pack ?? null, day, prompt_ids: ids, seats, lives })
+    .insert({ user_id: user.id, mode, pack: body.pack ?? null, day, prompt_ids: ids, seats, lives, free: !paid })
     .select('*')
     .single();
   if (error) throw new HttpError(500, 'insert_failed');
@@ -352,7 +379,7 @@ Deno.serve(async (req) => {
   try {
     return json(await fn(user, body));
   } catch (e) {
-    if (e instanceof HttpError) return json({ error: e.code }, e.status);
+    if (e instanceof HttpError) return json({ error: e.code, ...e.extra }, e.status);
     console.error(e);
     return json({ error: 'server_error' }, 500);
   }

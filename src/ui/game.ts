@@ -72,7 +72,7 @@ async function remote(kind: RunKind, id: string, start: Record<string, unknown>)
     if (e instanceof ApiError && e.status === 402) {
       syncFreeRuns(0);
       queueMicrotask(() => go(''));
-      setTimeout(showPaywall, 80);
+      setTimeout(() => showPaywall(e.data.resetAt as string | undefined), 80);
       return loading();
     }
     throw e;

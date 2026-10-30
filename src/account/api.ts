@@ -5,10 +5,13 @@ import { api, sessionToken } from './session.ts';
 export class ApiError extends Error {
   status: number;
   code: string;
-  constructor(status: number, code: string) {
+  /** The full error body (e.g. `resetAt` for a spent quota). */
+  data: Record<string, unknown>;
+  constructor(status: number, code: string, data: Record<string, unknown> = {}) {
     super(code);
     this.status = status;
     this.code = code;
+    this.data = data;
   }
 }
 
@@ -24,6 +27,6 @@ export async function callGame<T>(action: string, body: Record<string, unknown> 
       localStorage.removeItem('mortillion:auth');
       continue;
     }
-    throw new ApiError(res.status, data.error ?? 'server_error');
+    throw new ApiError(res.status, data.error ?? 'server_error', data);
   }
 }

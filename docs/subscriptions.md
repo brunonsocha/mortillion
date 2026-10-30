@@ -19,12 +19,17 @@ bundled packs for an empty module, so the answer banks never reach the browser.
 
 - **Daily Descent:** free for everyone, one per player per day. It's a unique index in the database,
   and restarting resumes the same run.
-- **Themes, Endless Abyss, Summon Signs, Archive:** 3 free runs per UTC day
-  (`FREE_RUNS_PER_DAY` on the server), then the paywall.
+- **Themes, Endless Abyss, Summon Signs, Archive:** 3 free runs (`FREE_RUNS_PER_DAY`), then the
+  paywall.
+  - They come back **24 hours after the run that used the last one**, and the paywall shows the countdown.
+  - A partly used allowance also lapses 24 hours after its first run.
+  - Only runs started without paid access count (`runs.free`).
 - **Paying requires a real account** (Google or email), so the purchase persists on every
   device. Anonymous players are asked to sign in first.
-- **Full access** is stored on the account (`profiles.full_access`) and never expires.
-  If the Stripe Price is recurring instead, an active subscription grants the same access.
+- **The Covenant of the Abyss** is a **monthly subscription** (19,99 zł or 5 € a month). It
+  grants access while Stripe reports the subscription `active` or `trialing`, mirrored into
+  `profiles.subscription_status`, and players can cancel in the Stripe portal. (A one-time Price
+  would also work: it sets `profiles.full_access`, and you'd set `VITE_PURCHASE=one-time` for the copy.)
 - **Achievements** (16) and **leaderboards** (daily per day, plus Endless best) are for
   signed-in players only. Runs played while anonymous count once you sign in, because linking
   keeps the same account.
@@ -63,6 +68,12 @@ purchase ─▶ create-checkout (PLN or EUR) ─▶ Stripe Checkout ─▶ webho
 
 ## Running it locally (no keys needed)
 
+The easiest way is `npm run play:local`. It starts Docker Supabase, the functions and the dev server
+on http://localhost:5173, and creates a test account **tester@mortillion.test** with an active
+Covenant. Sign in with a magic link and open the mail at http://127.0.0.1:54324.
+
+Manually:
+
 ```sh
 npx supabase start                       # Docker; first run downloads images
 npm run functions:sync
@@ -86,10 +97,11 @@ Confirmation emails land in Mailpit at http://127.0.0.1:54324.
    - Set up custom SMTP for real email volume. Optionally enable CAPTCHA (Turnstile) to rate-limit
      anonymous sign-ups.
 2. **Stripe**
-   - Create Product "Mortillion: full version" with a one-time Price of **19.99 PLN**,
+   - Create Product "Covenant of the Abyss" with a **recurring monthly** Price of **19.99 PLN**,
      plus a **currency option of 5.00 EUR** on the same Price.
-   - Payment methods: enable **BLIK** and **Przelewy24** for Polish players (one-time payments
-     only), and cards.
+   - Payment methods for subscriptions: cards, Apple Pay / Google Pay, Link, and SEPA Direct
+     Debit. **BLIK and Przelewy24 can't be used for recurring payments**, so Polish players
+     subscribe by card or wallet.
    - Turn on the Customer Portal.
    - Add a webhook endpoint `https://<ref>.supabase.co/functions/v1/stripe-webhook` with these events:
      - `checkout.session.completed`

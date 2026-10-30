@@ -72,7 +72,8 @@ function buyButtons(): HTMLElement {
   const order: Currency[] = app.lang === 'pl' ? ['pln', 'eur'] : ['eur', 'pln'];
   const status = h('p', { class: 'note', role: 'status' });
   const buttons = order.map((c, i) => {
-    const b = h('button', { class: `btn ${i === 0 ? 'primary' : ''}` }, `${t.buyFull} · ${PRICE_LABEL[c]}`);
+    const price = PURCHASE === 'subscription' ? `${PRICE_LABEL[c]} ${t.perMonth}` : PRICE_LABEL[c];
+    const b = h('button', { class: `btn ${i === 0 ? 'primary' : ''}` }, `${PURCHASE === 'subscription' ? t.joinCovenant : t.buyFull} · ${price}`);
     b.onclick = async () => {
       sfx.click();
       b.disabled = true;
@@ -89,15 +90,28 @@ function buyButtons(): HTMLElement {
   return h('div', { class: 'buy' }, buttons, status);
 }
 
-export function showPaywall() {
+/** "5 h 12 min" until a moment, in the player's language. */
+function untilLabel(at: number): string {
+  const mins = Math.max(1, Math.ceil((at - Date.now()) / 60000));
+  const hrs = Math.floor(mins / 60);
+  return hrs ? `${hrs} ${app.t.hoursShort} ${mins % 60} ${app.t.minutesShort}` : `${mins} ${app.t.minutesShort}`;
+}
+
+export function showPaywall(resetAt?: string) {
   const t = app.t;
   say('paywall');
+  const back = resetAt ? Date.parse(resetAt) : NaN;
+  const returns = Number.isFinite(back) ? h('p', { class: 'note' }, t.embersReturn.replace('{time}', untilLabel(back))) : null;
+  if (returns) {
+    const id = setInterval(() => (document.body.contains(returns) ? (returns.textContent = t.embersReturn.replace('{time}', untilLabel(back))) : clearInterval(id)), 30000);
+  }
   modal(
     t.embersSpent,
     h(
       'div',
       { class: 'account' },
       h('p', null, t.embersBody.replace('{n}', String(FREE_RUNS_PER_DAY))),
+      returns,
       h('p', { class: 'note' }, t.dailyStillFree),
       h('p', { class: 'covenant' }, PURCHASE === 'subscription' ? t.covenantPitchSub : t.covenantPitch),
       // Paying needs a real account so the purchase persists on any device.

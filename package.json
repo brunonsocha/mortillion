@@ -10,7 +10,8 @@
     "validate": "node --experimental-strip-types scripts/validate.ts",
     "test": "node --test scripts/engine.test.ts",
     "functions:sync": "node scripts/sync-functions.mjs",
-    "test:server": "node --test scripts/server.test.ts"
+    "test:server": "node --test scripts/server.test.ts",
+    "play:local": "node scripts/play-local.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

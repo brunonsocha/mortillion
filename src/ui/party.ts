@@ -106,7 +106,7 @@ function setup(themes: string[]): HTMLElement {
         syncFreeRuns(src.freeLeft);
       } catch (err) {
         start.disabled = false;
-        if (err instanceof ApiError && err.status === 402) showPaywall();
+        if (err instanceof ApiError && err.status === 402) showPaywall(err.data.resetAt as string | undefined);
         return;
       }
     } else {

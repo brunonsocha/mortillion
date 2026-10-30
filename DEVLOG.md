@@ -788,6 +788,45 @@ and her reaction to a tier-6 answer (box above the knight, Continue still reacha
 
 ---
 
+## 29. Monthly Covenant, a rolling 24-hour quota, and a local test account
+
+Your decisions (2026-10-30): a **monthly subscription**, and free runs that come back
+**24 h after the limit was used up**.
+
+**What**
+- **Rolling quota** (server, `quotaState` in `supabase/functions/game`):
+  - 3 free runs come back 24 hours after the run that used the last one.
+  - A partly used allowance lapses 24 h after its first run, so old runs never linger.
+  - Only runs started without paid access count (`runs.free`, migration `0004`), so a lapsed
+    subscriber isn't locked out by runs played while subscribed.
+  - The 402 response carries `resetAt`, and the paywall shows "The embers return in 5 h 12 min."
+    (EN/PL/UK, refreshed live).
+- **Monthly wording by default:**
+  - buttons read "Join the Covenant · 19,99 zł / mies." and "· 5 € / month"
+  - the pitch says "Cancel anytime"
+  - the free note reads "Free: 3 … descents, renewed 24 h after the last one"
+  - `VITE_PURCHASE=one-time` switches the copy back if you ever sell a one-time version.
+  The server already followed the Stripe Price type.
+- **`npm run play:local`:** one command for the full online version on your machine. It starts the
+  Docker Supabase stack, the functions and Vite on :5173, and creates a test account
+  **tester@mortillion.test** (Covenant active, name "Tester of Astora"). Sign in via a magic link,
+  with the mail at http://127.0.0.1:54324.
+- Docs: the Stripe setup is now a monthly recurring Price. Note that BLIK and Przelewy24 can't be used for
+  subscriptions, so Polish players pay by card, Apple/Google Pay or SEPA.
+
+**Verified:**
+- `npm run test:server` → **12/12**:
+  - the 4th run is refused with `resetAt` about 24 h after the 3rd, the daily is never limited, and the
+    embers return after 24 h
+  - a partial allowance lapses
+  - a monthly subscription: active → unlimited, cancelled → back on the quota
+- Playwright on `play:local`: the anonymous player signs in as the test account (the "email already has
+  an account" path → magic link), Settings shows "Covenant of the Abyss: active (renews
+  11/29/2026)", and runs continue past the free limit.
+
+
+---
+
 ## What I need from you
 
 ### Decisions (confirmed on 2026-10-30 / still open)
@@ -798,12 +837,8 @@ and her reaction to a tier-6 answer (box above the knight, Continue still reacha
 - ✅ Server-side enforcement (done: answers, timer, quota, one daily per day).
 - ✅ Achievements and leaderboards for signed-in players (done). No Firebase needed;
   Supabase covers it.
-- ❓ **One-time "full version" or a monthly subscription?** You wrote both "subscription"
-  and "full version". The code supports either: the Stripe Price type decides. I built and
-  worded it as a **one-time lifetime purchase** (it fits "full version" and "should persist", and
-  BLIK only supports one-time payments). Tell me if you want monthly instead.
-- ❓ Whether the 3 free runs reset per **UTC** day (current) or per player-local day.
-  UTC is cheat-proof.
+- ✅ **Monthly subscription** (decided 2026-10-30, built in entry 29).
+- ✅ Free runs come back **24 h after the limit was used up** (entry 29).
 
 ### Accounts and keys
 
@@ -814,7 +849,7 @@ and her reaction to a tier-6 answer (box above the knight, Continue still reacha
 | Supabase **access token**, so I can run `supabase link / db push / functions deploy` | your shell (`npx supabase login`) | **secret** |
 | **Google OAuth** client id and secret (Google Cloud → Credentials, Web app; redirect `https://<ref>.supabase.co/auth/v1/callback`) | Supabase dashboard → Auth → Google | **secret** |
 | **Stripe** secret key `sk_test_…` first (then `sk_live_…`) | `supabase secrets set STRIPE_SECRET_KEY=…` | **secret** |
-| Stripe **Price id** `price_…` (19.99 PLN + 5.00 EUR option) | `supabase secrets set STRIPE_PRICE_ID=…` | not secret |
+| Stripe **Price id** `price_…` (monthly: 19.99 PLN + 5.00 EUR option) | `supabase secrets set STRIPE_PRICE_ID=…` | not secret |
 | Stripe **webhook signing secret** `whsec_…` | `supabase secrets set STRIPE_WEBHOOK_SECRET=…` | **secret** |
 | Production **domain** | `SITE_URL` secret, Supabase redirect URLs | not secret |
 | SMTP for auth emails (e.g. Resend / Postmark), recommended | Supabase dashboard → Auth → SMTP | **secret** |
