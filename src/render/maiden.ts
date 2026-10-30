@@ -2,9 +2,9 @@
 // character maps like every other sprite, with her own palette.
 import type { Sprite } from './sprites.ts';
 
-export const MAIDEN_PALETTE: Record<string, string> = { k: '#0a060c', w: '#4a3d72', v: '#1e1830', j: '#0f0b18', s: '#f8ecef', S: '#d9b8c6', e: '#e2322c', l: '#4a2034', m: '#6a1236', b: '#ff8fa6', x: '#fff3ec', R: '#231a30', r: '#0e0a14', P: '#4a3a5e', g: '#f2c35e', o: '#ff6a1f', O: '#ffd46e', c: '#3a1830' };
+export const MAIDEN_PALETTE: Record<string, string> = { k: '#0a060c', w: '#ece6ea', v: '#b9b0b6', j: '#7a6f78', s: '#f6dccb', S: '#d9a891', e: '#ff9a3a', l: '#4a2034', m: '#c45a6a', b: '#ff8fa6', x: '#fff3ec', R: '#3a2218', r: '#1a0e0a', P: '#5e3a26', g: '#f2c35e', o: '#ff6a1f', O: '#ffd46e', c: '#3a1830' };
 
-/** Standing at the bonfire, 16×28, facing the knight: black hime-cut hair, off-shoulder black gown, gold belt, a slit skirt. */
+/** Standing at the bonfire, 16×28, facing the knight: long silver hair, off-shoulder dark robes, gold belt, a slit skirt. */
 export const MAIDEN: Sprite = [
   '....kkkkk.......',
   '...kwgOgwk......',

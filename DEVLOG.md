@@ -1345,6 +1345,38 @@ begins.
 It never closes on its own. The action that made her speak doesn't close her straight away.
 Verified: her greeting is open, clicking "Themed Paths" closes it.
 
+## 48. Liora's portrait from your artwork
+
+Your request (2026-10-30): "ive placed a maiden.jpeg in the project dir. make it Liora's portrait.
+if u can, remove the background (it has a white background)".
+
+**What**
+- **Source:** `maiden.jpeg` (1536×1024, a hooded Liora with long silver hair, amber eyes, a hand on
+  her cheek and an ember pendant), copied to `art/liora/maiden.jpeg`.
+- **Background removed** with a new script, `scripts/cutout.py`:
+  - It flood-fills from the image border through *near-white, low-saturation* pixels only, so her
+    pale hair isn't eaten.
+  - It then keeps only the largest shape, which drops stray decorations.
+  - It softens the fringe pixels.
+  - The artwork's thin decorative frame line touched the hood, so its pixels were whitened first
+    so the fill removes them.
+  - The cutout (`art/liora/maiden-cutout.png`) is cropped 4:5 around her face and shoulders.
+- **Pixelized** with `scripts/pixelize-portrait.py --colors 56` into `src/assets/liora-portrait.png`
+  (144×180): one shared palette, with a third of it kept for vivid accents, so her amber eyes and
+  the ember pendant stay bright.
+- **Bonfire sprite recoloured to match:** silver hair, dark brown robes, amber eyes.
+- **Animation:** the image has no closed-eye or open-mouth variant, so blink and talk reuse the
+  one frame and she simply doesn't animate. Drop in `her-blink.png` / `her-talk.png` (same crop) and
+  re-run the pixelizer to bring the animation back.
+- The vector goth version (`art/liora/liora.py`) stays in the repo but is no longer used.
+
+To redo it from a new image:
+
+```sh
+python3 scripts/cutout.py new.jpg art/liora/maiden-cutout.png --crop x,y,w,h
+python3 scripts/pixelize-portrait.py art/liora/maiden-cutout.png --colors 56
+```
+
 ---
 
 ## What I need from you
