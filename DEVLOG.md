@@ -592,6 +592,21 @@ and Food remain sealed.
 
 ---
 
+## 24. Clean Cyrillic in display text; final regression
+
+**What**
+- Pixelify Sans (the display font for banners, "YOU DIED" and "DESCENT COMPLETE") draws
+  Cyrillic "К" with a stray accent-like mark ("СПУСЌ"). In Ukrainian, display text now uses
+  Tiny5, which renders Cyrillic cleanly. English and Polish keep Pixelify.
+- README updated: current modes, `npm test`, and pointers to the docs.
+
+**Verified:** a full Daily Descent on mobile in Ukrainian (tiers 1, 2, 4, 5, 6 plus two
+deaths) → results (day #2, rank, share and image buttons) → home (streak 1, best depth)
+works. BONFIRE LIT renders cleanly in Ukrainian.
+
+
+---
+
 ## What I need from you: subscription keys
 
 The subscription is fully scaffolded but **switched off**: with no keys, the game behaves

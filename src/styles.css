@@ -16,6 +16,11 @@
   color-scheme: dark;
 }
 
+/* Pixelify's Cyrillic К carries a stray accent-like mark; Tiny5 is clean. */
+:root:lang(uk) {
+  --display: 'Tiny5', monospace;
+}
+
 * {
   box-sizing: border-box;
 }
