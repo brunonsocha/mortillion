@@ -4,6 +4,8 @@
 // low internal resolution and scaled up with nearest-neighbour filtering.
 
 import { ZONES, zoneAt, type Zone, type ZoneKind } from '../eggs.ts';
+import { sfx } from './sfx.ts';
+import { ENEMIES, ENEMY_OF, ENEMY_PALETTE } from './enemies.ts';
 import { MAIDEN, MAIDEN_PALETTE } from './maiden.ts';
 import { setAmbience } from './sfx.ts';
 import { BONFIRE, HOLLOW_PALETTE, KNIGHT_PRAISE, KNIGHT_SIDE, KNIGHT_SIT, KNIGHT_WALK, SKULL, bake } from './sprites.ts';
@@ -42,6 +44,46 @@ interface Particle {
   kind: 'mote' | 'ember' | 'flame' | 'spark' | 'blood' | 'firefly' | 'crow';
 }
 
+/** The foe the knight faces for the current question. */
+interface Enemy {
+  sprite: string[];
+  /** World x of its feet (left edge). */
+  x: number;
+  boss: boolean;
+  /** 0→1 as it walks in from the right. */
+  enter: number;
+  flash: number;
+  /** Lunge offset while striking the knight. */
+  dx: number;
+  alpha: number;
+  state: 'idle' | 'dying' | 'gone';
+}
+
+/** A crescent slash: a thick pixel arc that fades. */
+interface Arc {
+  x: number;
+  y: number;
+  r: number;
+  a0: number;
+  a1: number;
+  w: number;
+  color: string;
+  life: number;
+  max: number;
+}
+
+interface Ring {
+  x: number;
+  y: number;
+  r: number;
+  v: number;
+  color: string;
+  life: number;
+  max: number;
+}
+
+const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
 interface Light {
   x: number;
   y: number;
@@ -69,7 +111,10 @@ function zoneBlend(metres: number): { a: Zone; b: Zone; t: number } {
 
 export class Scene {
   private canvas: HTMLCanvasElement;
-  private g: CanvasRenderingContext2D;
+  /** The visible canvas; the world is drawn to `g` (a buffer) and composited. */
+  private out: CanvasRenderingContext2D;
+  private buf = document.createElement('canvas');
+  private g = this.buf.getContext('2d')!;
   private light = document.createElement('canvas');
   private lg = this.light.getContext('2d')!;
   private vignette = document.createElement('canvas');
@@ -97,6 +142,22 @@ export class Scene {
   private praising = 0;
   private hollow = false;
   private particles: Particle[] = [];
+  // ── combat
+  private enemy: Enemy | null = null;
+  private arcs: Arc[] = [];
+  private rings: Ring[] = [];
+  private pillars: { x: number; life: number; max: number }[] = [];
+  private ghosts: { x: number; life: number; max: number }[] = [];
+  /** Knight's sword pose and lunge toward the foe (world px). */
+  private pose: 'none' | 'windup' | 'strike' = 'none';
+  private lunge = 0;
+  private lungeTarget = 0;
+  /** Cinematic: letterbox bars, zoom on the duel, dimmed world (current and target). */
+  private cin = { bars: 0, zoom: 1, dim: 0 };
+  private cinTo = { bars: 0, zoom: 1, dim: 0 };
+  private shakeAmp = 1;
+  /** Slow motion for the finishing blow. */
+  private timeScale = 1;
   /** Opacity of the background layer being drawn (zone crossfade). */
   private layerAlpha = 1;
   /** Screen-space anchor (CSS px): the ground sits on its bottom edge. */
@@ -105,7 +166,7 @@ export class Scene {
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
-    this.g = canvas.getContext('2d')!;
+    this.out = canvas.getContext('2d')!;
     this.resize();
     addEventListener('resize', () => this.resize());
     requestAnimationFrame((t) => this.frame(t));
@@ -117,11 +178,12 @@ export class Scene {
     this.H = Math.ceil(innerHeight / this.scale);
     // Lets the DOM line things up with sprites (e.g. tapping the maiden).
     document.documentElement.style.setProperty('--ps', String(this.scale));
-    for (const c of [this.canvas, this.light, this.vignette]) {
+    for (const c of [this.canvas, this.light, this.vignette, this.buf]) {
       c.width = this.W;
       c.height = this.H;
     }
     this.g.imageSmoothingEnabled = false;
+    this.out.imageSmoothingEnabled = false;
     const vg = this.vignette.getContext('2d')!;
     const grad = vg.createRadialGradient(this.W / 2, this.H / 2, this.H * 0.3, this.W / 2, this.H / 2, Math.max(this.W, this.H) * 0.8);
     grad.addColorStop(0, 'rgba(0,0,0,0)');
@@ -135,7 +197,10 @@ export class Scene {
    * distance pitches camp there (the end of a run); without, at home.
    */
   setMode(mode: Mode, restMetres: number | null = null) {
-    if (mode === 'bonfire') this.restAt(restMetres);
+    if (mode === 'bonfire') {
+      this.restAt(restMetres);
+      this.enemy = null;
+    }
     this.mode = mode;
     setAmbience(mode === 'bonfire');
   }
@@ -261,14 +326,40 @@ export class Scene {
     const pan = this.camX - prevCam;
 
     this.shake = Math.max(0, this.shake - dt);
+    if (!this.shake) this.shakeAmp = 1;
     this.flash = Math.max(0, this.flash - dt * 1.4);
     this.glow = Math.max(0, this.glow - dt * 0.8);
     this.dead = Math.max(0, this.dead - dt);
     this.praising = Math.max(0, this.praising - dt);
 
+    // Combat: the foe walks in, flashes when hit; the knight lunges; the
+    // cinematic eases in and out; slashes, rings, pillars and ghosts fade.
+    const sdt = dt * this.timeScale;
+    const ease = (k: number) => 1 - Math.exp(-dt * k);
+    if (this.enemy) {
+      this.enemy.enter = Math.min(1, this.enemy.enter + dt * 2);
+      this.enemy.flash = Math.max(0, this.enemy.flash - dt * 6);
+      this.enemy.dx *= this.enemy.dx ? 1 - ease(14) : 1;
+    }
+    this.lunge += (this.lungeTarget - this.lunge) * ease(22);
+    this.cin.bars += (this.cinTo.bars - this.cin.bars) * ease(9);
+    this.cin.zoom += (this.cinTo.zoom - this.cin.zoom) * ease(7);
+    this.cin.dim += (this.cinTo.dim - this.cin.dim) * ease(7);
+    for (const a of this.arcs) a.life += sdt;
+    for (const r of this.rings) {
+      r.life += sdt;
+      r.r += r.v * sdt;
+    }
+    for (const p of this.pillars) p.life += sdt;
+    for (const gh of this.ghosts) gh.life += sdt;
+    this.arcs = this.arcs.filter((a) => a.life < a.max);
+    this.rings = this.rings.filter((r) => r.life < r.max);
+    this.pillars = this.pillars.filter((p) => p.life < p.max);
+    this.ghosts = this.ghosts.filter((gh) => gh.life < gh.max);
+
     if (this.motion) this.spawn(dt, pan);
     for (const p of this.particles) {
-      p.life += dt;
+      p.life += dt * this.timeScale;
       if (p.kind === 'mote') p.vx = Math.sin(this.t * 1.3 + p.max * 10) * 4 - 3;
       if (p.kind === 'firefly') {
         p.vx = Math.sin(this.t * 0.9 + p.max * 7) * 6;
@@ -280,8 +371,8 @@ export class Scene {
         p.vx *= 0.95;
         p.vy = p.vy * 0.95 - 12 * dt;
       }
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
+      p.x += p.vx * dt * this.timeScale;
+      p.y += p.vy * dt * this.timeScale;
     }
     this.particles = this.particles.filter((p) => p.life < p.max && p.x > this.camX - 60 && p.x < this.camX + this.W + 60);
   }
@@ -325,12 +416,167 @@ export class Scene {
     }
   }
 
+  // ───────────────────────────── combat ─────────────────────────────
+
+  /** A foe of the current biome steps onto the road ahead of the knight. */
+  spawnEnemy(boss = false) {
+    const x = this.targetX + 30;
+    const kind = ENEMY_OF[zoneAt(Math.max(0, x / PX_PER_M)).kind];
+    this.enemy = { sprite: ENEMIES[kind], x, boss, enter: this.motion ? 0 : 1, flash: 0, dx: 0, alpha: 1, state: 'idle' };
+  }
+
+  private enemyCentre() {
+    const e = this.enemy!;
+    const s = e.boss ? 2 : 1;
+    return { x: e.x + 8 * s, y: this.groundY - (e.sprite.length * s) / 2 };
+  }
+
+  private slash(tier: number, i: number) {
+    if (!this.enemy) return;
+    const c = this.enemyCentre();
+    const big = tier >= 5;
+    const colors = ['#ffffff', '#fff2b0', TIER_COLORS[tier], '#ffffff'];
+    const r = (big ? 16 : 11) + i * 2;
+    const flip = i % 2 ? -1 : 1;
+    this.arcs.push({
+      x: c.x - 2, y: c.y, r, a0: flip > 0 ? -2.4 : 2.4, a1: flip > 0 ? 0.9 : -0.9, w: big ? 3 : 2,
+      color: colors[Math.min(colors.length - 1, Math.floor(tier / 2))], life: 0, max: big ? 0.45 : 0.3,
+    });
+    if (tier >= 4) {
+      // A crossing stroke: the critical X.
+      this.arcs.push({ x: c.x - 2, y: c.y, r: r - 2, a0: -flip * 2.4, a1: -flip * 0.9, w: 2, color: TIER_COLORS[tier], life: 0, max: 0.4 });
+    }
+    this.enemy.flash = 1;
+    for (let k = 0; k < 6 + tier * 4; k++) {
+      const a = Math.random() * Math.PI * 2;
+      const v = 20 + Math.random() * 40 * (1 + tier / 3);
+      this.particles.push({ x: c.x, y: c.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 10, life: 0, max: 0.3 + Math.random() * 0.4, color: k % 3 ? '#fff2b0' : TIER_COLORS[tier], kind: 'spark' });
+    }
+  }
+
+  /** The foe bursts into its own pixels (and embers for the rare kills). */
+  private shatter(tier: number) {
+    const e = this.enemy;
+    if (!e) return;
+    const s = e.boss ? 2 : 1;
+    const base = this.groundY - e.sprite.length * s;
+    e.sprite.forEach((row, y) => {
+      for (let x = 0; x < row.length; x++) {
+        const ch = row[x];
+        if (ch === '.') continue;
+        const px = e.x + x * s;
+        const py = base + y * s;
+        const a = Math.atan2(py - (base + e.sprite.length * s * 0.5), px - (e.x + 8 * s)) + (Math.random() - 0.5);
+        const v = 15 + Math.random() * (25 + tier * 18);
+        this.particles.push({
+          x: px, y: py, vx: Math.cos(a) * v + 10, vy: Math.sin(a) * v - 20 - tier * 4,
+          life: 0, max: 0.6 + Math.random() * (0.4 + tier * 0.15), color: ENEMY_PALETTE[ch] ?? '#fff', kind: tier >= 4 ? 'spark' : 'blood',
+        });
+      }
+    });
+    e.state = 'dying';
+  }
+
+  /**
+   * The knight slays the foe. The rarer the answer, the grander the kill:
+   * 1–2 a single slash, 3 a double, 4 a critical X with shake and flash,
+   * 5 a cinematic (letterbox, zoom, dimmed world, triple slash), 6 the
+   * ultimate (slow motion, golden afterimages, white-out, light pillars).
+   */
+  async kill(tier: number): Promise<void> {
+    if (!this.enemy) return;
+    if (!this.motion) {
+      this.enemy.state = 'gone';
+      return;
+    }
+    const e = this.enemy;
+    const cinematic = tier >= 5;
+    if (cinematic) {
+      this.cinTo = { bars: 1, zoom: tier === 6 ? 2.1 : 1.7, dim: tier === 6 ? 0.75 : 0.45 };
+      await wait(380);
+    }
+    // Wind up, dash, strike.
+    this.pose = 'windup';
+    if (tier === 6) {
+      this.glow = 1;
+      this.glowColor = '#ffd75a';
+    }
+    await wait(tier >= 4 ? 240 : 140);
+    this.lungeTarget = Math.max(0, e.x - (this.knightX + 14) - 2);
+    if (tier === 6) for (let i = 0; i < 5; i++) this.ghosts.push({ x: this.knightX + (this.lungeTarget * i) / 5, life: 0, max: 0.5 + i * 0.05 });
+    await wait(110);
+    const hits = tier >= 5 ? 3 : tier >= 3 ? 2 : 1;
+    for (let i = 0; i < hits; i++) {
+      this.pose = 'strike';
+      this.slash(tier, i);
+      sfx.slash(tier >= 4);
+      if (i === hits - 1 && tier >= 4) sfx.crit();
+      if (tier >= 4) {
+        this.shake = 0.18 + tier * 0.04;
+        this.shakeAmp = tier >= 5 ? 1.6 : 1;
+      }
+      if (i === hits - 1 && tier >= 4) this.flashOnce('#ffffff', tier === 6 ? 0.9 : 0.45);
+      if (i === hits - 1 && tier === 6) this.timeScale = 0.3;
+      await wait(tier >= 5 ? 170 : 120);
+      if (i < hits - 1) {
+        this.pose = 'windup';
+        await wait(60);
+      }
+    }
+    this.timeScale = 1;
+    this.shatter(tier);
+    sfx.shatter();
+    const c = this.enemyCentre();
+    if (tier >= 4) this.rings.push({ x: c.x, y: c.y, r: 2, v: 60 + tier * 25, color: TIER_COLORS[tier], life: 0, max: 0.6 });
+    if (tier === 6) {
+      this.rings.push({ x: c.x, y: c.y, r: 2, v: 140, color: '#ffffff', life: 0, max: 0.8 });
+      for (let i = -2; i <= 2; i++) this.pillars.push({ x: c.x + i * 9, life: 0, max: 1.1 + Math.abs(i) * 0.1 });
+      this.shake = 0.6;
+      this.shakeAmp = 2;
+    }
+    await wait(tier >= 5 ? 650 : 320);
+    this.pose = 'none';
+    this.lungeTarget = 0;
+    this.cinTo = { bars: 0, zoom: 1, dim: 0 };
+    await wait(cinematic ? 380 : 120);
+    if (this.enemy === e) this.enemy = null;
+  }
+
+  /** Time ran out: the foe strikes the knight down. */
+  async enemyStrike(): Promise<void> {
+    const e = this.enemy;
+    if (!e || !this.motion) {
+      this.die();
+      return;
+    }
+    e.dx = -Math.max(0, e.x - (this.knightX + 16));
+    await wait(160);
+    this.arcs.push({ x: this.knightX + 7, y: this.groundY - 10, r: 10, a0: 2.4, a1: -0.9, w: 2, color: '#ff3a3a', life: 0, max: 0.35 });
+    sfx.hit();
+    this.die();
+    await wait(260);
+    e.dx = 0;
+  }
+
+  /** A skipped question: the foe fades into smoke. */
+  enemyFlee() {
+    const e = this.enemy;
+    if (!e) return;
+    const c = this.enemyCentre();
+    for (let i = 0; i < 24; i++) {
+      this.particles.push({ x: c.x + (Math.random() - 0.5) * 10, y: c.y + (Math.random() - 0.5) * 16, vx: (Math.random() - 0.5) * 12, vy: -6 - Math.random() * 10, life: 0, max: 0.8 + Math.random() * 0.6, color: '#6a6470', kind: 'mote' });
+    }
+    e.state = 'gone';
+    this.enemy = null;
+  }
+
   // ───────────────────────────── drawing ─────────────────────────────
 
   private draw() {
     const { g, W, H } = this;
-    const sx = this.shake > 0 ? Math.round((Math.random() - 0.5) * 12 * this.shake) : 0;
-    const sy = this.shake > 0 ? Math.round((Math.random() - 0.5) * 12 * this.shake) : 0;
+    const amp = 12 * this.shake * this.shakeAmp;
+    const sx = this.shake > 0 ? Math.round((Math.random() - 0.5) * amp) : 0;
+    const sy = this.shake > 0 ? Math.round((Math.random() - 0.5) * amp) : 0;
     const cam = Math.round(this.camX) + sx;
     const gy = this.groundY + sy;
     const here = zoneBlend(Math.max(0, (this.camX + W / 2) / PX_PER_M));
@@ -361,8 +607,10 @@ export class Scene {
     const lights: Light[] = [];
     this.drawCamp(cam, gy, lights);
     this.drawParticles(cam, 'back');
+    this.drawEnemy(cam, gy);
     this.drawKnight(cam, gy);
     this.drawParticles(cam, 'front');
+    this.drawCombatFx(cam, gy);
     this.collectLights(cam, gy, lights);
     lights.push({ x: this.knightX + 7 - cam, y: gy - 10, r: 22 + this.glow * 30 });
 
@@ -394,12 +642,110 @@ export class Scene {
 
     this.drawForeground(cam, gy);
     g.drawImage(this.vignette, 0, 0);
+
+    // Cinematic: the world falls dark while the duel stays lit.
+    if (this.cin.dim > 0.01) {
+      g.fillStyle = `rgba(4,2,8,${this.cin.dim})`;
+      g.fillRect(0, 0, W, H);
+      this.drawPillars(cam, gy);
+      this.drawEnemy(cam, gy);
+      this.drawKnight(cam, gy);
+      this.drawParticles(cam, 'front');
+      this.drawCombatFx(cam, gy);
+    } else this.drawPillars(cam, gy);
+
     if (this.flash > 0) {
-      g.globalAlpha = Math.min(0.7, this.flash);
+      g.globalAlpha = Math.min(0.85, this.flash);
       g.fillStyle = this.flashColor;
       g.fillRect(0, 0, W, H);
       g.globalAlpha = 1;
     }
+
+    // Composite to the screen, zoomed on the duel during a cinematic, with
+    // letterbox bars.
+    const o = this.out;
+    const z = this.cin.zoom;
+    if (z > 1.01 && this.enemy) {
+      const fx = (this.knightX + this.enemy.x) / 2 + 8 - cam;
+      const fy = gy - 12;
+      o.drawImage(this.buf, fx * (1 - 1 / z), fy * (1 - 1 / z), W / z, H / z, 0, 0, W, H);
+    } else o.drawImage(this.buf, 0, 0);
+    if (this.cin.bars > 0.01) {
+      const bh = Math.round(this.cin.bars * H * 0.13);
+      o.fillStyle = '#000';
+      o.fillRect(0, 0, W, bh);
+      o.fillRect(0, H - bh, W, bh);
+    }
+  }
+
+  private drawEnemy(cam: number, gy: number) {
+    const e = this.enemy;
+    if (!e || e.state !== 'idle') return;
+    const { g } = this;
+    const s = e.boss ? 2 : 1;
+    const sprite = bake(e.sprite, undefined, ENEMY_PALETTE);
+    const w = sprite.width * s;
+    const h = sprite.height * s;
+    const bob = this.motion ? Math.round(Math.sin(this.t * 3 + e.x) * 0.6) : 0;
+    const x = Math.round(e.x + e.dx + (1 - e.enter) * 30 - cam);
+    const y = gy - h + bob;
+    g.globalAlpha = e.enter;
+    if (e.boss) {
+      // A boss carries a dark aura.
+      g.fillStyle = 'rgba(120,20,30,0.25)';
+      g.fillRect(x - 2, y - 2, w + 4, h + 2);
+    }
+    g.drawImage(sprite, x, y, w, h);
+    if (e.flash > 0) {
+      g.globalAlpha = e.flash;
+      g.drawImage(bake(e.sprite, '#ffffff', ENEMY_PALETTE), x, y, w, h);
+    }
+    g.globalAlpha = 1;
+  }
+
+  /** Slashes, shockwave rings and afterimages. */
+  private drawCombatFx(cam: number, gy: number) {
+    const { g } = this;
+    for (const gh of this.ghosts) {
+      g.globalAlpha = (1 - gh.life / gh.max) * 0.5;
+      g.drawImage(bake(KNIGHT_SIDE, '#ffd75a'), Math.round(gh.x - cam), gy - 20);
+    }
+    for (const a of this.arcs) {
+      const k = a.life / a.max;
+      g.globalAlpha = 1 - k;
+      g.fillStyle = a.color;
+      const steps = 28;
+      for (let i = 0; i <= steps * (0.4 + k * 1.5) && i <= steps; i++) {
+        const ang = a.a0 + ((a.a1 - a.a0) * i) / steps;
+        const thick = Math.max(1, Math.round(a.w * Math.sin((i / steps) * Math.PI) + 0.5));
+        g.fillRect(Math.round(a.x - cam + Math.cos(ang) * a.r), Math.round(a.y + Math.sin(ang) * a.r), thick, thick);
+      }
+    }
+    for (const r of this.rings) {
+      g.globalAlpha = 1 - r.life / r.max;
+      g.fillStyle = r.color;
+      for (let i = 0; i < 48; i++) {
+        const ang = (i / 48) * Math.PI * 2;
+        g.fillRect(Math.round(r.x - cam + Math.cos(ang) * r.r), Math.round(r.y + Math.sin(ang) * r.r * 0.45), 1, 1);
+      }
+    }
+    g.globalAlpha = 1;
+  }
+
+  /** Pillars of light where a mortillion-tier foe fell. */
+  private drawPillars(cam: number, gy: number) {
+    if (!this.pillars.length) return;
+    const { g } = this;
+    g.globalCompositeOperation = 'lighter';
+    for (const p of this.pillars) {
+      const k = p.life / p.max;
+      const w = Math.max(1, Math.round(5 * (1 - k)));
+      g.fillStyle = `rgba(255,240,180,${0.55 * (1 - k)})`;
+      g.fillRect(Math.round(p.x - cam - w / 2), 0, w, gy);
+      g.fillStyle = `rgba(255,255,255,${0.7 * (1 - k)})`;
+      g.fillRect(Math.round(p.x - cam), 0, 1, gy);
+    }
+    g.globalCompositeOperation = 'source-over';
   }
 
   /** Sun, moon or eclipse for a zone, fading with its share of the sky. */
@@ -865,7 +1211,7 @@ export class Scene {
     const arrived = Math.abs(goal - this.knightX) < 0.5;
     const tint = this.dead > DEATH_TIME - 0.5 && Math.floor(this.t * 12) % 2 === 0 ? '#8a1010' : undefined;
     const pal = this.hollow ? HOLLOW_PALETTE : undefined;
-    const x = Math.round(this.knightX - cam);
+    const x = Math.round(this.knightX + this.lunge - cam);
 
     if (this.praising > 0) {
       const k = bake(KNIGHT_PRAISE, tint);
@@ -908,6 +1254,20 @@ export class Scene {
       g.drawImage(k, 0, y);
       g.restore();
     } else g.drawImage(k, x, y);
+    if (this.pose !== 'none') this.drawSword(x + 10, y + 10);
+  }
+
+  /** The knight's blade: raised behind for the windup, cutting down to strike. */
+  private drawSword(hx: number, hy: number) {
+    const { g } = this;
+    const ang = this.pose === 'windup' ? -2.3 : 0.5;
+    const len = 13;
+    g.fillStyle = '#e6e9ee';
+    for (let i = 3; i <= len; i++) g.fillRect(Math.round(hx + Math.cos(ang) * i), Math.round(hy + Math.sin(ang) * i), 1, 1);
+    g.fillStyle = '#ffffff';
+    g.fillRect(Math.round(hx + Math.cos(ang) * len), Math.round(hy + Math.sin(ang) * len), 1, 1);
+    g.fillStyle = '#c79a3e';
+    g.fillRect(Math.round(hx + Math.cos(ang) * 2) - 1, Math.round(hy + Math.sin(ang) * 2), 3, 1);
   }
 
   private drawParticles(cam: number, layer: 'back' | 'flame' | 'front') {

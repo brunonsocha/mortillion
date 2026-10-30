@@ -1026,6 +1026,48 @@ same seven prompts for everyone, which the leaderboard relies on). Tell me if yo
 - Browser, on the local online build: Sports and Movies start, then Sports again → the paywall names the path.
 
 
+## 36. Every question is a foe, slain in Fire Emblem style
+
+Your request (2026-10-30): "each question should be an enemy, and the enemy should depend on the
+biome. the better the question, the better the animation for killing the enemy should be - screen
+shake on rare+ answers, and a flashy animation - think fire emblem 8 kill animations."
+
+**What**
+- **One foe per question** (`src/render/enemies.ts`), chosen by the biome where it stands:
+
+  | Biome | Foe |
+  |---|---|
+  | Field | Hollow |
+  | Ruins | Skeleton |
+  | Cathedral | Deacon |
+  | Castle | Black Knight |
+  | Kiln of the First Flame | Lord of Cinder |
+  | Age of Dark | Wraith |
+
+  The last prompt of a pilgrimage or themed path, and every 10th on the Endless Road, is a
+  **boss**: double size, with a dark aura.
+- **The kill scales with the answer's rarity** (`Scene.kill(tier)`):
+  - **tiers 1–2:** wind-up, dash, a single slash, then the foe shatters into its own pixels
+  - **tier 3:** a double slash and more sparks
+  - **tier 4 (rare):** a **critical X-slash**, screen shake and a white flash
+  - **tier 5:** a **cinematic**: letterbox bars, zoom on the duel, the world dims, a triple
+    slash, heavy shake, a shockwave ring, and a "CRITICAL!" card that slams in sideways
+    (KRYTYCZNE! / КРИТИЧНИЙ!)
+  - **tier 6:** the full ultimate: golden afterimages along the dash, slow motion on the
+    final blow, a white-out, five pillars of light and a double shockwave
+- **Time runs out:** the foe lunges and strikes the knight down, then YOU DIED. **Skip:** the foe
+  dissolves into smoke.
+- **New sounds:** blade swish, critical sting, shatter and hit.
+- **Timing:** the question panel hides during the kill, and the reveal follows it. Liora steps
+  aside for rare kills and praises you after the blow, not over it.
+- **Summon Signs:** one foe per round, slain by the round's best answer.
+- **Reduced motion:** no kill animation; the foe simply vanishes.
+- **Rendering:** the scene now draws to an offscreen buffer and composites it, which makes the
+  zoom and letterbox possible without touching every draw call.
+
+**Verified:** Firefox screenshots of tiers 2, 4, 5 and 6, skip, and timeout (`shots/combat/`).
+`tsc` and `npm test` pass.
+
 ---
 
 ## What I need from you

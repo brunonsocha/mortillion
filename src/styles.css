@@ -1316,6 +1316,36 @@ body:not(:has(.home)) .brand {
   bottom: 12%;
 }
 
+/* The critical-hit card, Fire Emblem style: a slanted band slams in. */
+.banner.crit {
+  top: 58%;
+  animation: none;
+}
+
+.banner.crit span {
+  display: block;
+  font-family: var(--font);
+  font-size: clamp(28px, 9vw, 56px);
+  letter-spacing: 0.08em;
+  color: #fff2b0;
+  text-shadow: 3px 3px 0 #8a1020, -1px -1px 0 #000, 0 0 18px rgba(255, 215, 90, 0.8);
+  background: linear-gradient(90deg, transparent, rgba(138, 16, 32, 0.85) 12%, rgba(20, 4, 8, 0.9) 50%, rgba(138, 16, 32, 0.85) 88%, transparent);
+  padding: 6px 40px;
+  transform: skewX(-12deg);
+  animation: crit var(--ms) cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+@keyframes crit {
+  0% { opacity: 0; transform: skewX(-12deg) translateX(-60vw) scaleY(0.4); }
+  14% { opacity: 1; transform: skewX(-12deg) translateX(2vw) scaleY(1.15); }
+  22%, 80% { opacity: 1; transform: skewX(-12deg) translateX(0) scaleY(1); }
+  100% { opacity: 0; transform: skewX(-12deg) translateX(40vw) scaleY(0.6); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banner.crit span { animation: banner var(--ms) ease both; transform: none; }
+}
+
 @keyframes banner {
   0% { opacity: 0; transform: scale(0.97); }
   18%, 78% { opacity: 1; transform: scale(1); }

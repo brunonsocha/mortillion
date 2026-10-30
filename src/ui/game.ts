@@ -14,7 +14,7 @@ import { SKIP_COLOR, TIER_COLORS } from '../render/scene.ts';
 import { sfx } from '../render/sfx.ts';
 import { BONFIRE_LIT, PATCHES, SECRET_TEXT, quipFor, secretOf, zoneAt } from '../eggs.ts';
 import { gateRun, showPaywall } from './account.ts';
-import { say } from './maiden.ts';
+import { dismissMaiden, say } from './maiden.ts';
 import { app, banner, go, onLeave, route, tierBadge } from './app.ts';
 import { countUp, fmt, h, wait } from './dom.ts';
 import { icon } from './icons.ts';
@@ -266,6 +266,9 @@ function play(src: Source): HTMLElement {
     input.disabled = false;
     submit.disabled = false;
     reveal.hidden = true;
+    // A foe of this biome bars the road; the last one (every tenth on the
+    // Endless Road) is a boss.
+    app.scene.spawnEnemy(endless ? (pv.idx + 1) % 10 === 0 : pv.idx === (src.total ?? 0) - 1);
     ask.hidden = false;
     ask.classList.remove('enter');
     void ask.offsetWidth;
@@ -415,12 +418,23 @@ function play(src: Source): HTMLElement {
     let reason: string | null = null;
     // Liora reacts to the remarkable (and to the hopeless).
     const prevDead = src.turns.length > 1 && !src.turns[src.turns.length - 2].tier;
-    if (v.tier === 6) setTimeout(() => alive && say('rare', 'top'), 900);
-    else if (v.tier === 5 && Math.random() < 0.5) setTimeout(() => alive && say('lord', 'top'), 900);
-    else if (!v.tier && !v.skipped && prevDead && Math.random() < 0.5) setTimeout(() => alive && say('deaths', 'top'), 2500);
+    // (Praise for a rare answer waits until the kill has played out.)
+    const praise = () => {
+      if (v.tier === 6) setTimeout(() => alive && say('rare', 'top'), 500);
+      else if (v.tier === 5 && Math.random() < 0.5) setTimeout(() => alive && say('lord', 'top'), 500);
+    };
+    if (!v.tier && !v.skipped && prevDead && Math.random() < 0.5) setTimeout(() => alive && say('deaths', 'top'), 2500);
     if (v.skipped) {
       sfx.click();
+      app.scene.enemyFlee();
     } else if (v.tier) {
+      // The kill first: the rarer the answer, the grander the blow.
+      ask.hidden = true;
+      if (v.tier >= 4) dismissMaiden();
+      if (v.tier >= 5 && app.scene.motion) setTimeout(() => alive && void banner(t.critical, 'crit', 1500), v.tier === 6 ? 700 : 450);
+      await app.scene.kill(v.tier);
+      if (!alive) return;
+      praise();
       sfx.reward(v.tier);
       app.scene.reward(v.tier);
       app.scene.setDepth(points() * METRES_PER_POINT);
@@ -433,7 +447,9 @@ function play(src: Source): HTMLElement {
       reason = Math.random() < 0.04 ? PATCHES[lang] : null;
       app.scene.setHollow(deaths() >= 3);
       sfx.death();
-      app.scene.die();
+      ask.hidden = true;
+      await app.scene.enemyStrike();
+      if (!alive) return;
       died.hidden = false;
       died.classList.remove('show');
       void died.offsetWidth;

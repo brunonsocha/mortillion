@@ -252,6 +252,7 @@ function play(players: Player[], src: Source): HTMLElement {
         if (!alive) return;
         const pv = await src.next();
         if (!alive || !pv) return;
+        if (!q) app.scene.spawnEnemy(r === rounds - 1);
         q = pv.q;
         const v = await ask(pv, player);
         if (!alive || !v) return;
@@ -267,12 +268,16 @@ function play(players: Player[], src: Source): HTMLElement {
       }
       players.forEach((p, i) => (p.total += offerings[i].points));
       const best = Math.max(...offerings.map((o) => o.tier));
+      stage.replaceChildren();
       if (best) {
+        await app.scene.kill(best);
+        if (!alive) return;
         sfx.reward(best);
         app.scene.reward(best);
       } else {
         sfx.death();
-        app.scene.die();
+        await app.scene.enemyStrike();
+        if (!alive) return;
       }
       const leader = Math.max(...players.map((p) => p.total));
       app.scene.setDepth(leader * METRES_PER_POINT);

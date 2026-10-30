@@ -147,7 +147,7 @@ export function modal(title: string, body: HTMLElement): void {
   (dlg.querySelector<HTMLElement>('.modal-panel input') ?? dlg.querySelector<HTMLElement>('.modal-panel > .btn'))?.focus({ preventScroll: true });
 }
 
-export type BannerKind = 'zone' | 'lit' | 'sun' | 'quote' | 'victory';
+export type BannerKind = 'zone' | 'lit' | 'sun' | 'quote' | 'victory' | 'crit';
 
 /** A Dark Souls style announcement that fades in and out over the screen. */
 export function banner(text: string, kind: BannerKind, ms = 2800): Promise<void> {

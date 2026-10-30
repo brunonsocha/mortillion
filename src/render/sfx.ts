@@ -133,6 +133,27 @@ export const sfx = {
     tone(146.8, 0, 1.4, 'triangle', 0.06, 61);
     noise(0, 0.5, 0.2, 800, 80);
   },
+  /** A blade cutting air; `heavy` for the critical strokes. */
+  slash(heavy = false) {
+    noise(0, heavy ? 0.22 : 0.14, heavy ? 0.3 : 0.18, 5200, 900);
+    tone(heavy ? 330 : 520, 0, 0.08, 'square', 0.03, heavy ? 140 : 260);
+  },
+  /** The critical-hit sting: a bright stab and a low boom. */
+  crit() {
+    tone(1318.5, 0, 0.25, 'square', 0.05, 1760);
+    tone(65, 0.02, 0.7, 'sawtooth', 0.09, 32);
+    noise(0.02, 0.5, 0.3, 400, 60);
+  },
+  /** The foe shatters into fragments. */
+  shatter() {
+    for (let i = 0; i < 5; i++) tone(1400 + Math.random() * 1600, i * 0.03, 0.12, 'triangle', 0.025);
+    noise(0, 0.35, 0.18, 3000, 600);
+  },
+  /** The foe's blow lands on the knight. */
+  hit() {
+    noise(0, 0.2, 0.3, 1400, 200);
+    tone(120, 0, 0.25, 'square', 0.05, 60);
+  },
   complete() {
     [196, 246.9, 293.7, 392].forEach((f, i) => tone(f, i * 0.18, 1.2, 'triangle', 0.06));
   },
