@@ -94,6 +94,199 @@ interface Ring {
 
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
+// ───────────────────────── the home shrine ─────────────────────────
+// A ruined, overgrown sanctuary around the first bonfire: a comfortable
+// place to come back to. The static stonework is painted once into a canvas;
+// flames, the lit window and the swaying leaves are drawn live.
+
+/** Shrine canvas size; the bonfire sits at (SHRINE_FIRE, bottom row). */
+const SHRINE_W = 270;
+const SHRINE_H = 112;
+const SHRINE_FIRE = 206;
+/** Live details, relative to the bonfire: candle flames and the statue's bowl. */
+const SHRINE_CANDLES = [-150, -146, -142];
+const SHRINE_CANDLE_Y = 47;
+const SHRINE_BOWL = { x: -32, y: 20 };
+
+function buildShrine(): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = SHRINE_W;
+  c.height = SHRINE_H;
+  const g = c.getContext('2d')!;
+  const G = SHRINE_H; // ground line (exclusive)
+  const px = (x: number, y: number, w: number, h: number, col: string) => {
+    g.fillStyle = col;
+    g.fillRect(x, y, w, h);
+  };
+
+  // An old tree behind the wall, trunk twisting up into an amber canopy.
+  for (let y = 0; y < 70; y++) {
+    const x = 70 + Math.round(Math.sin(y * 0.09) * 4) - (y > 50 ? (y - 50) >> 1 : 0);
+    px(x, G - y, 7 - (y > 55 ? 2 : 0), 1, '#3a2618');
+    px(x, G - y, 2, 1, '#4e3422');
+  }
+  px(60, G - 60, 14, 2, '#3a2618'); // a bough reaching over the arches
+  px(88, G - 66, 18, 2, '#3a2618');
+  // Amber leaves in rounded clumps, each lit from the upper right: a shadowed
+  // underside, the body, and a bright cap, with a ragged edge.
+  const leaves = ['#5a3218', '#8a4e22', '#b86e2e', '#e0a050'];
+  const clumps = [
+    [56, 76, 16, 9], [78, 70, 18, 10], [100, 76, 15, 9], [66, 88, 15, 8],
+    [90, 88, 16, 8], [44, 84, 11, 7], [112, 86, 11, 7], [80, 96, 12, 6],
+  ];
+  for (const [cx, cyUp, rx, ry] of clumps) {
+    const cy = G - cyUp;
+    for (let y = -ry - 1; y <= ry + 1; y++) {
+      for (let x = -rx - 1; x <= rx + 1; x++) {
+        const d = (x / rx) ** 2 + (y / ry) ** 2;
+        const edge = d > 0.82 && hash(cx + x, cy + y) < 0.45;
+        if (d > 1.05 || edge) continue;
+        const light = -x / rx * 0.35 + y / ry * 0.75; // positive = shadowed (lower left)
+        const tone = light > 0.45 ? 0 : light > 0.05 ? 1 : light > -0.5 ? 2 : 3;
+        px(cx + x, cy + y, 1, 1, leaves[tone]);
+      }
+    }
+  }
+  // a few falling leaves below the canopy
+  for (let i = 0; i < 14; i++) px(40 + Math.floor(hash(i, 61) * 90), G - 20 - Math.floor(hash(i, 63) * 45), 1, 1, leaves[2 + (i % 2)]);
+
+  // The back wall: crumbling top, two arches open to the sky.
+  const stone = ['#5e5548', '#7a6f60', '#8e8370', '#a89b84'];
+  const arches = [
+    { x0: 92, x1: 116, top: 30 },
+    { x0: 126, x1: 150, top: 30 },
+  ];
+  const inArch = (x: number, y: number) =>
+    arches.some((a) => {
+      if (x < a.x0 || x >= a.x1) return false;
+      const cx = (a.x0 + a.x1) / 2;
+      const r = (a.x1 - a.x0) / 2;
+      const archTop = G - a.top - Math.sqrt(Math.max(0, r * r - (x + 0.5 - cx) ** 2));
+      return y >= archTop;
+    });
+  for (let x = 14; x < 222; x++) {
+    // height: tall in the middle, broken away towards both ends, jagged
+    let h = 58 - Math.max(0, 40 - (x - 14)) * 0.6 - Math.max(0, x - 176) * 0.9;
+    h += Math.round((hash(x >> 2, 5) - 0.5) * 6) + (hash(x, 9) < 0.1 ? -3 : 0);
+    h = Math.max(4, Math.round(h));
+    for (let y = G - h; y < G; y++) {
+      if (inArch(x, y)) continue;
+      const row = (G - y) % 7;
+      const joint = (x + ((Math.floor((G - y) / 7) % 2) * 6)) % 12 === 0;
+      let tone = 2;
+      if (row === 0 || joint) tone = 0;
+      else if (row === 6) tone = 3;
+      else if (hash(x, y) < 0.08) tone = 1;
+      if (y === G - h) tone = 3; // worn top edge catches the light
+      px(x, y, 1, 1, stone[tone]);
+    }
+  }
+  // arch rims
+  for (const a of arches) {
+    const cx = (a.x0 + a.x1) / 2;
+    const r = (a.x1 - a.x0) / 2;
+    for (let i = 0; i <= 40; i++) {
+      const ang = Math.PI + (i / 40) * Math.PI;
+      px(Math.round(cx + Math.cos(ang) * (r + 1)), Math.round(G - a.top + Math.sin(ang) * (r + 1)), 1, 1, '#a89b84');
+    }
+    px(a.x0 - 1, G - a.top, 1, a.top, '#a89b84');
+    px(a.x1, G - a.top, 1, a.top, '#5e5548');
+  }
+  // a niche with candles on its ledge
+  const nx = SHRINE_FIRE - 152;
+  px(nx, G - SHRINE_CANDLE_Y - 14, 14, 14, '#2a2420');
+  px(nx, G - SHRINE_CANDLE_Y, 14, 2, '#a89b84');
+  for (const c0 of SHRINE_CANDLES) px(SHRINE_FIRE + c0, G - SHRINE_CANDLE_Y - 4, 1, 4, '#ece4d0');
+  // ivy and moss creeping over the stones
+  for (let i = 0; i < 260; i++) {
+    const x = 14 + Math.floor(hash(i, 21) * 208);
+    const y = G - Math.floor(hash(i, 23) * hash(i, 29) * 56);
+    if (inArch(x, y)) continue;
+    px(x, y, 1 + (i % 2), 1 + ((i >> 1) % 2), hash(i, 31) < 0.6 ? '#3e5a2e' : '#567a3a');
+  }
+  for (let x = 92; x < 150; x += 3) if (hash(x, 41) < 0.6) px(x, G - 62 + Math.floor(hash(x, 43) * 8), 1, 4 + Math.floor(hash(x, 47) * 10), '#3e5a2e');
+
+  // Two columns: one whole with a capital, one broken off.
+  const column = (x: number, h: number, capital: boolean) => {
+    px(x, G - h, 8, h, '#8e8370');
+    px(x + 1, G - h, 2, h, '#a89b84');
+    px(x + 6, G - h, 2, h, '#5e5548');
+    for (let y = G - h + 4; y < G; y += 9) px(x, y, 8, 1, '#7a6f60');
+    if (capital) {
+      px(x - 2, G - h - 3, 12, 3, '#a89b84');
+      px(x - 1, G - h, 10, 1, '#5e5548');
+    } else {
+      px(x, G - h - 1, 3, 1, '#8e8370');
+      px(x + 5, G - h - 2, 2, 2, '#8e8370');
+    }
+    px(x - 1, G - 3, 10, 3, '#7a6f60');
+  };
+  column(84, 70, true);
+  column(156, 72, true);
+  column(232, 26, false);
+
+  // A kneeling stone maiden on a pedestal, cupping a bowl of fire.
+  const sx = SHRINE_FIRE - 40;
+  px(sx - 2, G - 12, 16, 12, '#7a6f60');
+  px(sx - 3, G - 13, 18, 2, '#a89b84');
+  const statue = [
+    '....aab.....',
+    '...aaabb....',
+    '...aaabb....',
+    '....abb.....',
+    '...aaabbb...',
+    '..aaaabbbcc.',
+    '..aaaabbccc.',
+    '..aaabbb.cc.',
+    '..aaabbb....',
+    '.aaaabbbb...',
+    '.aaaabbbbb..',
+    'aaaaabbbbbb.',
+  ];
+  const sc: Record<string, string> = { a: '#b4a890', b: '#8a7f6c', c: '#6a604f' };
+  statue.forEach((row, y) => {
+    for (let x = 0; x < row.length; x++) if (row[x] !== '.') px(sx + x, G - 13 - statue.length + y, 1, 1, sc[row[x]]);
+  });
+  px(sx + 8, G - 13 - 7, 4, 1, '#5e5548'); // the bowl
+
+  // Worn floor slabs and fallen blocks.
+  for (let x = 20; x < 250; x += 9) {
+    const w = 8 - (hash(x, 51) < 0.2 ? 2 : 0);
+    px(x, G - 2, w, 2, hash(x, 53) < 0.5 ? '#7a6f60' : '#8e8370');
+    px(x, G - 2, w, 1, '#a89b84');
+  }
+  px(240, G - 7, 10, 5, '#7a6f60');
+  px(241, G - 7, 8, 1, '#a89b84');
+  px(252, G - 4, 6, 2, '#8e8370');
+  for (let x = 22; x < 250; x += 4) if (hash(x, 57) < 0.35) px(x, G - 3, 1, 2, '#4a6a34');
+  return c;
+}
+
+/** The broken bell tower behind the shrine (drawn with a little parallax). */
+function buildTower(): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = 34;
+  c.height = 104;
+  const g = c.getContext('2d')!;
+  const px = (x: number, y: number, w: number, h: number, col: string) => {
+    g.fillStyle = col;
+    g.fillRect(x, y, w, h);
+  };
+  for (let x = 2; x < 32; x++) {
+    // the top has fallen in, leaving a jagged stump
+    const top = 12 + Math.round(Math.abs(Math.sin(x * 1.7)) * 6) + (x > 22 ? (x - 22) * 2 : 0);
+    px(x, top, 1, 104 - top, x < 6 ? '#5a5068' : x > 27 ? '#2e2838' : '#463e52');
+  }
+  for (let y = 26; y < 104; y += 8) px(2, y, 30, 1, '#3a3346');
+  // the belfry arch and a lit window below it
+  px(12, 22, 10, 14, '#1e1a28');
+  px(13, 21, 8, 1, '#1e1a28');
+  px(15, 30, 4, 6, '#2a2420'); // the bell, long silent
+  px(14, 80, 6, 9, '#1e1a28');
+  px(15, 79, 4, 1, '#1e1a28');
+  return c;
+}
+
 interface Light {
   x: number;
   y: number;
@@ -142,6 +335,8 @@ export class Scene {
   private campX = START_CAMP;
   /** An unlit bonfire is ash and a coiled sword; Liora appears once it burns. */
   private campLit = true;
+  private shrine: HTMLCanvasElement | null = null;
+  private tower: HTMLCanvasElement | null = null;
   /**
    * Rarity markers for the current prompt: where each tier would carry the
    * knight. Crossing one chimes; `fade` runs once the walk is over.
@@ -846,10 +1041,12 @@ export class Scene {
     }
     this.layerAlpha = 1;
     g.globalAlpha = 1;
+    this.drawShrine(cam, gy);
     this.drawGround(cam, gy, here);
     this.drawProps(cam, gy);
 
     const lights: Light[] = [];
+    this.shrineLife(cam, gy, lights);
     this.drawCamp(cam, gy, lights);
     this.drawParticles(cam, 'back');
     this.drawEnemy(cam, gy);
@@ -1351,6 +1548,7 @@ export class Scene {
     const skull = bake(SKULL);
     this.cells(cam, 1, 30, (k, x, kind, n) => {
       if (Math.abs(k * 30 - this.campX) < 50) return;
+      if (k * 30 < 20) return; // the home shrine stands here
       if (kind === 'meadow') {
         if (n < 0.08) {
           // A pilgrim's gravestone.
@@ -1478,6 +1676,42 @@ export class Scene {
       lg.fillRect(Math.floor(l.x - l.r), Math.floor(l.y - l.r), Math.ceil(l.r * 2), Math.ceil(l.r * 2));
     }
     this.g.drawImage(this.light, 0, 0);
+  }
+
+  /** The home shrine around the first bonfire (only near the start of the road). */
+  private drawShrine(cam: number, gy: number) {
+    const fx = START_CAMP - cam; // the home bonfire on screen
+    if (fx < -80 || fx - SHRINE_FIRE > this.W) return;
+    const { g } = this;
+    this.shrine ??= buildShrine();
+    this.tower ??= buildTower();
+    // The tower sits further back, so it drifts a little slower.
+    const homeCam = START_CAMP - this.W / 2;
+    const tx = Math.round(fx - 122 + (cam - homeCam) * 0.35);
+    g.drawImage(this.tower, tx, gy - this.tower.height);
+    // its window glows warm, flickering
+    g.fillStyle = Math.sin(this.t * 3.1) + Math.sin(this.t * 7.3) > 0.4 ? '#ffb35a' : '#e8823e';
+    g.fillRect(tx + 15, gy - this.tower.height + 81, 4, 7);
+    g.drawImage(this.shrine, Math.round(fx - SHRINE_FIRE), gy - SHRINE_H + 1);
+    // a few leaves sway at the canopy's edge
+    if (this.motion) {
+      g.fillStyle = '#e0a050';
+      for (let i = 0; i < 5; i++) {
+        const lx = fx - SHRINE_FIRE + 50 + i * 13 + Math.round(Math.sin(this.t * 1.4 + i) * 1.5);
+        g.fillRect(Math.round(lx), gy - SHRINE_H + 13 + (i % 3) * 4, 2, 2);
+      }
+    }
+  }
+
+  /** The shrine's little fires: candles in the niche and the statue's bowl. */
+  private shrineLife(cam: number, gy: number, lights: Light[]) {
+    const fx = START_CAMP - cam;
+    if (fx < -80 || fx - SHRINE_FIRE > this.W) return;
+    for (const c of SHRINE_CANDLES) this.flameAt(fx + c, gy - SHRINE_CANDLE_Y - 4, 0.4);
+    lights.push({ x: fx - 146, y: gy - SHRINE_CANDLE_Y - 6, r: 22, warm: true });
+    this.flameAt(fx + SHRINE_BOWL.x + 2, gy - SHRINE_BOWL.y - 1, 0.6);
+    lights.push({ x: fx + SHRINE_BOWL.x + 2, y: gy - SHRINE_BOWL.y - 3, r: 26, warm: true });
+    lights.push({ x: Math.round(fx - 122 + (cam - (START_CAMP - this.W / 2)) * 0.35) + 17, y: gy - 104 + 84, r: 18, warm: true });
   }
 
   /** The bonfire camp, with Liora tending it. */

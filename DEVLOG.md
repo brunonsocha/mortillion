@@ -1313,6 +1313,38 @@ all, he doesnt have to."
   - Switching it off also closes any open line.
   - She still stands by the fire as part of the scenery.
 
+## 47. The home shrine; Liora's line closes when you do something else
+
+Your requests (2026-10-30): "make the starting location a comforting ruin, like firelink shrine.
+don't copy it exactly tho" and "make the dialogue, however, disappear, if the player took a
+different action -> such as proceeding to the next question, or pressing some other button".
+
+**The shrine** (`buildShrine()`, `buildTower()`, `drawShrine()` and `shrineLife()` in
+`src/render/scene.ts`): a ruined, overgrown sanctuary around the first bonfire, before the road
+begins.
+- **Old tree:** leans over the wall, with **amber autumn leaves** in rounded, sunlit clumps and a
+  few falling leaves; some sway.
+- **Back wall:** crumbling at both ends, with mortar lines, two **arches** open to the dusk sky,
+  ivy and moss.
+- **Columns:** two whole ones with capitals and one broken stump.
+- **Niche:** set into the wall, with three **candles** burning.
+- **Statue:** a **kneeling stone maiden** on a pedestal, cupping a bowl with a small flame.
+- **Bell tower:** a broken tower behind, its top fallen in and its bell silent. A **warm window**
+  flickers through the left arch, and the tower drifts slowly with parallax.
+- **Ground:** worn floor slabs, fallen blocks, grass between the stones. The meadow's gravestones
+  stay out of the sanctuary.
+- **Warm light:** the candles, the bowl and the window all cast it.
+- **Cost:** the stonework is painted once into a cached canvas and drawn as a single image, so the
+  shrine costs almost nothing per frame.
+
+**Dialogue:** an open line from Liora now closes, as if dismissed, when the player:
+- clicks or taps anywhere else
+- presses Enter (offering an answer, continuing) or Escape
+- changes screens
+
+It never closes on its own. The action that made her speak doesn't close her straight away.
+Verified: her greeting is open, clicking "Themed Paths" closes it.
+
 ---
 
 ## What I need from you

@@ -97,7 +97,27 @@ export function say(event: MaidenEvent, place: 'top' | 'bottom' = 'bottom') {
   };
   raf = requestAnimationFrame(tick);
 
+  // Any other action closes her line, as if the player had dismissed it:
+  // a click or tap elsewhere, Enter (offering an answer, moving on), or
+  // leaving the screen. Armed a tick later so the action that made her speak
+  // doesn't close her at once.
+  const elsewhere = (e: Event) => {
+    if (!el.contains(e.target as Node)) stop();
+  };
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === 'Escape') stop();
+  };
+  const arm = setTimeout(() => {
+    addEventListener('pointerdown', elsewhere, true);
+    addEventListener('keydown', onKey, true);
+    addEventListener('hashchange', stop);
+  }, 0);
+
   const stop = () => {
+    clearTimeout(arm);
+    removeEventListener('pointerdown', elsewhere, true);
+    removeEventListener('keydown', onKey, true);
+    removeEventListener('hashchange', stop);
     cancelAnimationFrame(raf);
     el.classList.add('leaving');
     setTimeout(() => el.remove(), 260);
