@@ -55,12 +55,25 @@ export function say(event: MaidenEvent, place: 'top' | 'bottom' = 'bottom') {
   };
   paint(0);
 
+  // Persona-style: a slanted cut-in of her portrait at the screen's edge and
+  // a jagged, tilted speech bubble (layered black, ember and white shapes)
+  // that pops in beside it. It sits in the side margin, clear of the panels.
   const line = h('p', { class: 'maiden-line' });
+  const tilt = (Math.random() * 2 - 1) * 2.5;
   const el = h(
     'aside',
-    { class: `maiden-box ${place}`, role: 'status', 'aria-live': 'polite', 'aria-label': MAIDEN_NAME[app.lang] },
-    h('div', { class: 'maiden-frame' }, portrait),
-    h('div', { class: 'maiden-text' }, h('b', { class: 'maiden-name' }, MAIDEN_NAME[app.lang]), line, h('span', { class: 'maiden-more', 'aria-hidden': 'true' }, '▼')),
+    { class: `maiden-box ${place}`, role: 'status', 'aria-live': 'polite', 'aria-label': MAIDEN_NAME[app.lang], style: { '--tilt': `${tilt.toFixed(2)}deg` } },
+    h('div', { class: 'maiden-cut' }, h('span', { class: 'mc-dots', 'aria-hidden': 'true' }), portrait),
+    h(
+      'div',
+      { class: 'maiden-bubble' },
+      h('span', { class: 'mb-layer mb-red', 'aria-hidden': 'true' }),
+      h('span', { class: 'mb-layer mb-white', 'aria-hidden': 'true' }),
+      h('span', { class: 'mb-layer mb-black', 'aria-hidden': 'true' }),
+      h('b', { class: 'maiden-name' }, MAIDEN_NAME[app.lang]),
+      line,
+      h('span', { class: 'maiden-more', 'aria-hidden': 'true' }),
+    ),
   );
   document.body.appendChild(el);
   sfx.voice();

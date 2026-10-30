@@ -1255,6 +1255,30 @@ forever.
 spent), so `npm run test:server` is now 15/15 and `npm test` 12/12. Screenshot of the reveal
 after a common answer.
 
+## 44. Liora speaks Persona-style, from the side
+
+Your request (2026-10-30): "let's make the speech from our girlie more like from persona (not when
+it comes to the visual identity - we keep the pixelized one - but dynamic speech bubbles but also,
+on the side maybe? so that it doesn't cover the interface."
+
+**What** (`say()` in `src/ui/maiden.ts`, "Liora's dialogue" in `src/styles.css`)
+- **Cut-in:** her pixel portrait slides in from the left edge inside a slanted ember-red panel
+  with halftone dots and a black frame. It overshoots slightly, then settles.
+- **Speech bubble:** a jagged, tilted shape made of three stacked layers:
+  - a black face with white text
+  - a white edge
+  - an ember-red shadow that jitters slightly while she speaks
+  Each line gets its own small random tilt and pops in with a spin. Her name sits on a slanted
+  white tag above it, and a red triangle bobs when there's more to read.
+- **Placement:**
+  - **Wide screens (1100 px and up):** bottom-left, in the empty margin beside the 660 px central
+    column. It never covers the question, the answer box or any button.
+  - **Narrower screens:** a compact strip just under the header, over the title and scenery,
+    not the controls.
+- **Leaving:** the cut-in slides back out and the bubble spins away.
+- **Unchanged:** tap to finish or dismiss, typing, blinking and lip-flap.
+- **Reduced motion:** no pop and no jitter.
+
 ---
 
 ## What I need from you
