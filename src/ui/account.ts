@@ -1,16 +1,19 @@
-// Sign-in, the "embers are spent" paywall and the account section of
-// Settings. Everything here is inert unless accounts are configured.
+// Sign-in, the paywall and the account section of Settings. Inert unless
+// accounts are configured.
 
-import { ACCOUNTS_ENABLED, FREE_RUNS_PER_DAY, GATE, GOOGLE_ENABLED } from '../account/config.ts';
+import { ApiError, callGame } from '../account/api.ts';
+import { ACCOUNTS_ENABLED, FREE_RUNS_PER_DAY, GOOGLE_ENABLED, PRICE_LABEL, PURCHASE, REMOTE } from '../account/config.ts';
 import { canStartRun, freeRunsLeft, spendRun, unlimited } from '../account/gate.ts';
-import { currentAccount, openPortal, sendMagicLink, signInWithGoogle, signOut, startCheckout } from '../account/session.ts';
+import {
+  authNotice, currentAccount, openPortal, sendMagicLink, setDisplayName, signInWithGoogle, signOut, signedIn, startCheckout, type Currency,
+} from '../account/session.ts';
 import { sfx } from '../render/sfx.ts';
 import { app, modal } from './app.ts';
 import { h } from './dom.ts';
 
 /**
- * Call when a non-daily run is about to start. Spends a free run and returns
- * true, or shows the paywall and returns false.
+ * Local and mock builds only: spends a free run and returns true, or shows
+ * the paywall and returns false. With the game server, the server decides.
  */
 export function gateRun(): boolean {
   if (canStartRun()) {
@@ -35,15 +38,15 @@ function signInForm(): HTMLElement {
   const t = app.t;
   const input = h('input', { class: 'answer', type: 'email', required: true, autocomplete: 'email', placeholder: t.emailPlaceholder, 'aria-label': t.emailPlaceholder });
   const status = h('p', { class: 'note', role: 'status' });
-  const send = h('button', { class: 'btn primary', type: 'submit' }, t.sendLink);
+  const send = h('button', { class: 'btn', type: 'submit' }, t.sendLink);
   const form = h('form', { class: 'signin' }, input, send, status);
   form.onsubmit = async (e) => {
     e.preventDefault();
     send.disabled = true;
     try {
       await sendMagicLink(input.value.trim());
-      status.textContent = currentAccount() ? '' : t.linkSent;
-      if (currentAccount()) closeModals();
+      if (signedIn()) closeModals();
+      else status.textContent = t.linkSent;
     } catch {
       status.textContent = t.loadFailed;
       send.disabled = false;
@@ -52,8 +55,9 @@ function signInForm(): HTMLElement {
   return h(
     'div',
     { class: 'signin-wrap' },
+    GOOGLE_ENABLED ? h('button', { class: 'btn primary google', type: 'button', onclick: () => void signInWithGoogle() }, t.google) : null,
+    h('p', { class: 'or' }, t.orEmail),
     form,
-    GOOGLE_ENABLED ? h('button', { class: 'btn', type: 'button', onclick: () => signInWithGoogle() }, t.google) : null,
   );
 }
 
@@ -61,20 +65,31 @@ export function showSignIn() {
   modal(app.t.signIn, h('div', { class: 'account' }, h('p', { class: 'note' }, app.t.signInBody), signInForm()));
 }
 
+/** Two buttons, one per currency; the player's language picks the first. */
+function buyButtons(): HTMLElement {
+  const t = app.t;
+  const order: Currency[] = app.lang === 'pl' ? ['pln', 'eur'] : ['eur', 'pln'];
+  const status = h('p', { class: 'note', role: 'status' });
+  const buttons = order.map((c, i) => {
+    const b = h('button', { class: `btn ${i === 0 ? 'primary' : ''}` }, `${t.buyFull} · ${PRICE_LABEL[c]}`);
+    b.onclick = async () => {
+      sfx.click();
+      b.disabled = true;
+      try {
+        await startCheckout(c);
+        if (unlimited()) closeModals();
+      } catch {
+        status.textContent = t.loadFailed;
+        b.disabled = false;
+      }
+    };
+    return b;
+  });
+  return h('div', { class: 'buy' }, buttons, status);
+}
+
 export function showPaywall() {
   const t = app.t;
-  const a = currentAccount();
-  const join = h('button', { class: 'btn primary' }, t.joinCovenant);
-  join.onclick = async () => {
-    sfx.click();
-    join.disabled = true;
-    try {
-      await startCheckout();
-      if (unlimited()) closeModals();
-    } catch {
-      join.disabled = false;
-    }
-  };
   modal(
     t.embersSpent,
     h(
@@ -82,11 +97,30 @@ export function showPaywall() {
       { class: 'account' },
       h('p', null, t.embersBody.replace('{n}', String(FREE_RUNS_PER_DAY))),
       h('p', { class: 'note' }, t.dailyStillFree),
-      h('p', { class: 'covenant' }, t.covenantPitch),
-      // Sign-in comes first; with the 'login' gate it is all that's needed.
-      !a ? signInForm() : GATE === 'subscription' ? join : null,
+      h('p', { class: 'covenant' }, PURCHASE === 'subscription' ? t.covenantPitchSub : t.covenantPitch),
+      // Paying needs a real account so the purchase persists on any device.
+      signedIn() ? buyButtons() : [h('p', { class: 'note' }, t.signInToBuy), signInForm()],
     ),
   );
+}
+
+function nameEditor(): HTMLElement {
+  const t = app.t;
+  const a = currentAccount()!;
+  const input = h('input', { class: 'answer', maxlength: 24, value: a.displayName ?? '', placeholder: t.displayNamePh, 'aria-label': t.displayName });
+  const status = h('span', { class: 'note', role: 'status' });
+  const form = h('form', { class: 'name-row' }, input, h('button', { class: 'btn small', type: 'submit' }, t.save), status);
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const r = await callGame<{ displayName: string }>('profile', { displayName: input.value });
+      setDisplayName(r.displayName);
+      status.textContent = '✓';
+    } catch (err) {
+      status.textContent = err instanceof ApiError && err.code === 'bad_name' ? t.badName : err instanceof ApiError && err.code === 'name_taken' ? t.nameTaken : t.loadFailed;
+    }
+  };
+  return h('label', { class: 'name-field' }, h('span', null, t.displayName), form);
 }
 
 /** The account block inside Settings. */
@@ -95,31 +129,35 @@ export function accountSection(): HTMLElement | null {
   const t = app.t;
   const a = currentAccount();
   const quota = quotaLabel();
-  if (!a) {
+  if (!signedIn()) {
     return h(
       'div',
       { class: 'account-box' },
       h('h3', null, t.account),
+      authNotice ? h('p', { class: 'note warn' }, authNotice) : null,
+      h('p', { class: 'note' }, t.signInPerks),
       quota ? h('p', { class: 'note' }, quota) : null,
-      h('button', { class: 'btn small', onclick: () => (closeModals(), showSignIn()) }, t.signIn),
+      h('button', { class: 'btn small primary', onclick: () => (closeModals(), showSignIn()) }, t.signIn),
     );
   }
-  const until = a.periodEnd ? new Date(a.periodEnd).toLocaleDateString(app.lang) : '';
+  const until = a!.periodEnd ? new Date(a!.periodEnd).toLocaleDateString(app.lang) : '';
   return h(
     'div',
     { class: 'account-box' },
     h('h3', null, t.account),
-    h('p', null, t.signedInAs.replace('{email}', a.email)),
-    h('p', { class: a.subscribed ? 'covenant' : 'note' }, a.subscribed ? t.covenantActive.replace('{date}', until) : t.covenantNone),
+    h('p', null, t.signedInAs.replace('{email}', a!.email ?? '')),
+    REMOTE ? nameEditor() : null,
+    h(
+      'p',
+      { class: a!.fullAccess ? 'covenant' : 'note' },
+      a!.fullAccess ? (until ? t.covenantActive.replace('{date}', until) : t.fullOwned) : t.covenantNone,
+    ),
     quota ? h('p', { class: 'note' }, quota) : null,
+    a!.fullAccess ? null : buyButtons(),
     h(
       'div',
       { class: 'actions' },
-      a.subscribed
-        ? h('button', { class: 'btn small', onclick: () => void openPortal().catch(() => {}) }, t.manage)
-        : GATE === 'subscription'
-          ? h('button', { class: 'btn small primary', onclick: () => void startCheckout().then(closeModals, () => {}) }, t.joinCovenant)
-          : null,
+      a!.fullAccess && REMOTE ? h('button', { class: 'btn small', onclick: () => void openPortal().catch(() => {}) }, t.manage) : null,
       h('button', { class: 'btn small ghost', onclick: () => void signOut().then(closeModals) }, t.signOut),
     ),
   );

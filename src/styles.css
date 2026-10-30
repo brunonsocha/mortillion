@@ -1758,3 +1758,154 @@ body:not(:has(.home)) .brand {
   font-size: 13px;
   color: var(--ink-faint);
 }
+
+/* ───────────── leaderboard & achievements ───────────── */
+
+.iconbtn img {
+  width: 18px;
+  image-rendering: pixelated;
+  vertical-align: middle;
+}
+
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tab {
+  background: rgba(0, 0, 0, 0.6);
+  border: 0;
+  padding: 8px 14px;
+  color: var(--ink-dim);
+  box-shadow: 0 0 0 2px var(--line);
+}
+
+.tab.on {
+  color: var(--gold-hi);
+  background: var(--line);
+}
+
+.board-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.board-list li {
+  display: grid;
+  grid-template-columns: 4ch 1fr auto;
+  gap: 10px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.board-list li:nth-child(1) b {
+  color: #fff2b0;
+}
+
+.board-list li.me {
+  box-shadow: inset 0 0 0 2px var(--gold);
+}
+
+.board-list li em {
+  color: var(--ink-faint);
+  font-style: normal;
+}
+
+.board-list b {
+  color: var(--gold-hi);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.board-list.mine {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 2px dashed var(--line);
+}
+
+.center-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.ach-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px;
+}
+
+.ach-grid li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.ach-grid li b {
+  font-weight: 400;
+  font-size: 15px;
+}
+
+.ach-grid li.got {
+  box-shadow: inset 0 0 0 2px var(--gold), 0 0 12px rgba(242, 217, 140, 0.15);
+}
+
+.ach-grid li.got b {
+  color: var(--gold-hi);
+}
+
+.ach-grid li.locked {
+  opacity: 0.55;
+}
+
+.ach-grid li span {
+  color: var(--ink-dim);
+}
+
+.or {
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+.buy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.name-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.name-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.name-row .answer {
+  font-size: 16px;
+  padding: 6px 10px;
+}
+
+.note.warn {
+  color: #e06a6a;
+}

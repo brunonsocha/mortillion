@@ -3,16 +3,19 @@
 // then the round is revealed. Answers shared by several players are "echoes"
 // and score half, so the rarest offering wins.
 
-import { THEMES, loadAll, loadPack } from '../data/packs/index.ts';
-import type { Prompt, Tier } from '../data/types.ts';
-import { METRES_PER_POINT, SECONDS_PER_PROMPT, TIER_POINTS, byDifficulty, shuffle } from '../engine/game.ts';
-import { findAnswer } from '../engine/match.ts';
+import { REMOTE } from '../account/config.ts';
+import { syncFreeRuns } from '../account/gate.ts';
+import { loadAll, loadPack } from '../data/packs/index.ts';
+import type { L10n, Tier } from '../data/types.ts';
+import { METRES_PER_POINT, SECONDS_PER_PROMPT, byDifficulty, shuffle } from '../engine/game.ts';
 import { PACK_NAMES } from '../i18n/strings.ts';
+import { themeList } from '../play/catalog.ts';
+import { ApiError, localSource, remoteSource, type PromptView, type Source } from '../play/source.ts';
 import { TIER_COLORS } from '../render/scene.ts';
 import { sfx } from '../render/sfx.ts';
 import { app, banner, go, onLeave, route, tierBadge } from './app.ts';
 import { fmt, h } from './dom.ts';
-import { gateRun } from './account.ts';
+import { gateRun, showPaywall } from './account.ts';
 
 const ROUNDS = 5;
 const MIN_PLAYERS = 2;
@@ -22,8 +25,9 @@ const PHANTOMS = ['#e8e2d0', '#f0c95e', '#6fa8ff', '#e0473d', '#7fd08a', '#c58cf
 
 interface Offering {
   guess: string;
-  /** English name of the matched answer, or null. */
+  /** English name of the matched answer (compares echoes), or null. */
   answer: string | null;
+  names: L10n | null;
   tier: Tier | 0;
   points: number;
   echo: boolean;
@@ -37,9 +41,9 @@ interface Player {
 
 let lastSetup: { names: string[]; pack: string } | null = null;
 
-route('party', () => setup());
+route('party', async () => setup(await themeList()));
 
-function setup(): HTMLElement {
+function setup(themes: string[]): HTMLElement {
   const t = app.t;
   app.scene.setMode('bonfire');
   const names = lastSetup?.names.slice() ?? [`${t.phantom} 1`, `${t.phantom} 2`];
@@ -74,7 +78,7 @@ function setup(): HTMLElement {
     'select',
     { class: 'answer party-pack', 'aria-label': t.pack },
     h('option', { value: 'all' }, t.allThemes),
-    THEMES.map((id) => h('option', { value: id }, PACK_NAMES[id][app.lang])),
+    themes.map((id) => h('option', { value: id }, PACK_NAMES[id][app.lang])),
   );
   select.value = pack;
   select.onchange = () => (pack = select.value);
@@ -91,17 +95,31 @@ function setup(): HTMLElement {
   );
   form.onsubmit = async (e) => {
     e.preventDefault();
-    if (!gateRun()) return;
     const clean = names.map((n, i) => n.trim() || `${t.phantom} ${i + 1}`);
     lastSetup = { names: clean, pack };
-    const pool = pack === 'all' ? await loadAll() : await loadPack(pack);
-    if (!pool.length) return;
+    let src: Source;
+    if (REMOTE) {
+      // The server deals the prompts, judges every phantom and counts the run.
+      start.disabled = true;
+      try {
+        src = await remoteSource('party', 'party', { seats: clean.length, pack: pack === 'all' ? undefined : pack });
+        syncFreeRuns(src.freeLeft);
+      } catch (err) {
+        start.disabled = false;
+        if (err instanceof ApiError && err.status === 402) showPaywall();
+        return;
+      }
+    } else {
+      if (!gateRun()) return;
+      const pool = pack === 'all' ? await loadAll() : await loadPack(pack);
+      if (!pool.length) return;
+      src = localSource({ kind: 'party', id: 'party', prompts: byDifficulty(shuffle(pool).slice(0, ROUNDS)), seats: clean.length });
+    }
     sfx.kindle();
-    const prompts = byDifficulty(shuffle(pool).slice(0, ROUNDS));
     app.root.lastElementChild?.replaceWith(
       play(
         clean.map((name, i) => ({ name, color: PHANTOMS[i], total: 0 })),
-        prompts,
+        src,
       ),
     );
   };
@@ -115,7 +133,8 @@ function setup(): HTMLElement {
   );
 }
 
-function play(players: Player[], prompts: Prompt[]): HTMLElement {
+function play(players: Player[], src: Source): HTMLElement {
+  const rounds = src.total ?? ROUNDS;
   const t = app.t;
   const lang = app.lang;
   let alive = true;
@@ -129,7 +148,7 @@ function play(players: Player[], prompts: Prompt[]): HTMLElement {
 
   const paintHud = (round: number) =>
     hud.replaceChildren(
-      h('span', { class: 'hud-label' }, `${t.party} · ${t.round} ${round + 1}/${prompts.length}`),
+      h('span', { class: 'hud-label' }, `${t.party} · ${t.round} ${round + 1}/${rounds}`),
       h(
         'span',
         { class: 'party-scores' },
@@ -169,7 +188,7 @@ function play(players: Player[], prompts: Prompt[]): HTMLElement {
       onLeave(() => removeEventListener('keydown', onKey));
     });
 
-  const ask = (prompt: Prompt, player: Player) =>
+  const ask = (pv: PromptView, player: Player) =>
     new Promise<string | null>((resolve) => {
       const input = h('input', { class: 'answer', type: 'text', autocomplete: 'off', spellcheck: false, maxlength: 80, placeholder: t.placeholder, 'aria-label': t.placeholder });
       const bar = h('div', { class: 'stamina-fill' });
@@ -186,12 +205,12 @@ function play(players: Player[], prompts: Prompt[]): HTMLElement {
       };
       show(
         h('p', { class: 'prompt-kicker' }, h('span', { style: { color: player.color } }, player.name)),
-        h('h2', { class: 'question' }, prompt.q[lang]),
+        h('h2', { class: 'question' }, pv.q[lang]),
         form,
         h('div', { class: 'stamina' }, h('div', { class: 'stamina-track' }, bar)),
       );
       input.focus();
-      const start = performance.now();
+      const start = performance.now() - pv.elapsedMs;
       const tick = (now: number) => {
         if (done || !alive) return;
         const left = Math.max(0, SECONDS_PER_PROMPT - (now - start) / 1000);
@@ -204,21 +223,20 @@ function play(players: Player[], prompts: Prompt[]): HTMLElement {
     });
 
   const run = async () => {
-    for (let r = 0; r < prompts.length && alive; r++) {
-      const prompt = prompts[r];
+    for (let r = 0; r < rounds && alive; r++) {
+      let q = null as PromptView['q'] | null;
       paintHud(r);
       const offerings: Offering[] = [];
       for (const player of players) {
         await waitButton(t.ready, h('p', { class: 'handoff', style: { '--pc': player.color } }, t.yourTurn.replace('{name}', player.name)), h('p', { class: 'note' }, t.noPeeking));
         if (!alive) return;
-        const guess = await ask(prompt, player);
+        const pv = await src.next();
+        if (!alive || !pv) return;
+        q = pv.q;
+        const guess = await ask(pv, player);
         if (!alive) return;
-        const m = guess ? findAnswer(prompt, guess) : null;
-        offerings.push(
-          m
-            ? { guess: guess!, answer: m.answer.names.en, tier: m.answer.tier, points: TIER_POINTS[m.answer.tier], echo: false }
-            : { guess: guess ?? '', answer: null, tier: 0, points: 0, echo: false },
-        );
+        const v = await src.answer(guess);
+        offerings.push({ guess: v.guess, answer: v.answer?.en ?? null, names: v.answer, tier: v.tier, points: v.points, echo: false });
       }
 
       // Shared answers echo: half points each.
@@ -243,7 +261,7 @@ function play(players: Player[], prompts: Prompt[]): HTMLElement {
 
       const rows = players.map((p, i) => {
         const o = offerings[i];
-        const ans = o.answer ? prompt.answers.find((a) => a.names.en === o.answer)?.names[lang] ?? o.answer : null;
+        const ans = o.names?.[lang] ?? null;
         return h(
           'li',
           { style: { '--tc': TIER_COLORS[o.tier], '--pc': p.color } },
@@ -253,8 +271,8 @@ function play(players: Player[], prompts: Prompt[]): HTMLElement {
         );
       });
       await waitButton(
-        r === prompts.length - 1 ? t.finish : t.next,
-        h('p', { class: 'prompt-kicker' }, prompt.q[lang]),
+        r === rounds - 1 ? t.finish : t.next,
+        h('p', { class: 'prompt-kicker' }, q?.[lang] ?? ''),
         h('ol', { class: 'party-reveal' }, rows),
         offerings.some((o) => o.echo) ? h('p', { class: 'note' }, t.echo) : null,
       );

@@ -9,6 +9,7 @@ import { TIER_POINTS } from '../engine/game.ts';
 import { h } from './dom.ts';
 import { icon } from './icons.ts';
 import { accountSection } from './account.ts';
+import { REMOTE } from '../account/config.ts';
 
 export interface App {
   lang: Lang;
@@ -112,6 +113,9 @@ function header(): HTMLElement {
           h('button', { class: l === app.lang ? 'on' : '', 'aria-pressed': String(l === app.lang), title: LANG_LABELS[l], onclick: () => (sfx.click(), setLang(l)) }, l.toUpperCase()),
         ),
       ),
+      REMOTE
+        ? h('button', { class: 'iconbtn', title: app.t.leaderboard, 'aria-label': app.t.leaderboard, onclick: () => (sfx.click(), go('leaderboard')) }, h('img', { src: icon('history'), alt: '' }))
+        : null,
       h('button', { class: 'iconbtn', title: app.t.howTo, 'aria-label': app.t.howTo, onclick: () => showHelp() }, '?'),
       h('button', { class: 'iconbtn', title: app.t.settings, 'aria-label': app.t.settings, onclick: () => showSettings() }, '⚙'),
     ),

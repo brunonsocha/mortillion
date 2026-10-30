@@ -1,5 +1,7 @@
 import { loadAll } from '../data/packs/index.ts';
-import type { Lang, Prompt } from '../data/types.ts';
+import type { Lang } from '../data/types.ts';
+import { ACHIEVEMENTS } from '../achievements.ts';
+import { turnOf, viewOf, type TurnView } from '../play/source.ts';
 import { MAX_SCORE, METRES_PER_POINT, dayNumber, totalPoints, type Turn } from '../engine/game.ts';
 import { load } from '../engine/storage.ts';
 import { VICTORY } from '../eggs.ts';
@@ -7,7 +9,7 @@ import { PACK_NAMES } from '../i18n/strings.ts';
 import { shareCard } from './card.ts';
 import { TIER_COLORS } from '../render/scene.ts';
 import { sfx } from '../render/sfx.ts';
-import { app, go, route, tierBadge } from './app.ts';
+import { app, banner, go, route, tierBadge } from './app.ts';
 import { countdown } from './home.ts';
 import { countUp, fmt, h } from './dom.ts';
 import { lastRun, type RunKind } from './game.ts';
@@ -42,21 +44,38 @@ export function shareText(kind: RunKind, id: string, turns: Turn[], lang: Lang):
 route('results', async ([kind, id]) => {
   const t = app.t;
   const lang = app.lang;
-  let turns: Turn[] | undefined;
-  let prompts: Prompt[] | undefined;
+  let views: TurnView[] | undefined;
+  let unlocked: string[] = [];
 
-  if (kind === 'daily') {
-    turns = load().days.find((d) => d.day === Number(id))?.turns;
-    // Look prompts up by id: the pool may have grown since that day.
-    prompts = await loadAll();
-  } else if (lastRun && lastRun.kind === kind && lastRun.id === id) {
-    turns = lastRun.turns;
-    prompts = lastRun.prompts;
+  if (lastRun && lastRun.kind === kind && lastRun.id === id) {
+    views = lastRun.turns;
+    unlocked = lastRun.unlocked;
+    // Announce achievements once, not again on revisit.
+    lastRun.unlocked = [];
+  } else if (kind === 'daily') {
+    const rec = load().days.find((d) => d.day === Number(id));
+    if (rec?.views) views = rec.views;
+    else if (rec) {
+      // Older saves kept only compact turns: rebuild from bundled content.
+      const byId = new Map((await loadAll()).map((p) => [p.id, p]));
+      views = rec.turns.filter((x) => byId.has(x.promptId)).map((x) => viewOf(byId.get(x.promptId)!, x));
+    }
   }
-  if (!turns || !prompts) {
+  if (!views) {
     queueMicrotask(() => go(''));
     return h('main', { class: 'screen' });
   }
+  const turns: Turn[] = views.map(turnOf);
+  // Achievements earned by this run, announced one after another.
+  void (async () => {
+    await new Promise((r) => setTimeout(r, 2000));
+    for (const key of unlocked) {
+      const a = ACHIEVEMENTS.find((x) => x.key === key);
+      if (!a) continue;
+      sfx.reward(6);
+      await banner(`${t.achievementUnlocked}: ${a.name[lang]}`, 'victory', 2600);
+    }
+  })();
 
   const pts = totalPoints(turns);
   const allDead = kind !== 'endless' && turns.every((tn) => !tn.tier);
@@ -66,7 +85,6 @@ route('results', async ([kind, id]) => {
   const depthEl = h('span', { class: 'final-depth' }, `0 ${t.metres}`);
   setTimeout(() => countUp(depthEl, 0, pts * METRES_PER_POINT, 1800, (n) => `${fmt(n, lang)} ${t.metres}`), 500);
 
-  const byId = new Map(prompts.map((p) => [p.id, p]));
   const shareBtn = h('button', { class: 'btn primary' }, t.share);
   const toast = h('span', { class: 'toast', hidden: true }, t.copied);
   shareBtn.onclick = async () => {
@@ -140,33 +158,29 @@ route('results', async ([kind, id]) => {
       h(
         'ol',
         null,
-        turns.map((tn) => {
-          const p = byId.get(tn.promptId);
-          const ans = tn.answer && p?.answers.find((a) => a.names.en === tn.answer);
-          const common = p?.answers.filter((a) => a.tier === 1).slice(0, 3) ?? [];
-          const rare = p?.answers.filter((a) => a.tier === 6).slice(0, 3) ?? [];
-          return h(
+        views.map((v) =>
+          h(
             'li',
-            { style: { '--tc': TIER_COLORS[tn.tier] } },
+            { style: { '--tc': TIER_COLORS[v.tier] } },
             h(
               'details',
               null,
               h(
                 'summary',
                 null,
-                h('span', { class: 'tq' }, p?.q[lang] ?? tn.promptId),
-                h('span', { class: 'ta' }, ans ? ans.names[lang] : tn.guess ? h('s', null, tn.guess) : '—'),
-                h('span', { class: 'tt' }, tierBadge(tn.tier), h('b', null, tn.points ? `+${tn.points}` : '0')),
+                h('span', { class: 'tq' }, v.q[lang]),
+                h('span', { class: 'ta' }, v.answer ? v.answer[lang] : v.guess ? h('s', null, v.guess) : '—'),
+                h('span', { class: 'tt' }, tierBadge(v.tier), h('b', null, v.points ? `+${v.points}` : '0')),
               ),
               h(
                 'div',
                 { class: 'answer-lists' },
-                h('div', null, h('h4', null, t.commonest), h('ul', null, common.map((a) => h('li', null, a.names[lang])))),
-                h('div', null, h('h4', null, t.rarest), h('ul', null, rare.map((a) => h('li', { class: 'rare' }, a.names[lang])))),
+                h('div', null, h('h4', null, t.commonest), h('ul', null, v.common.slice(0, 3).map((a) => h('li', null, a[lang])))),
+                h('div', null, h('h4', null, t.rarest), h('ul', null, v.rare.slice(0, 3).map((a) => h('li', { class: 'rare' }, a[lang])))),
               ),
             ),
-          );
-        }),
+          ),
+        ),
       ),
     ),
   );

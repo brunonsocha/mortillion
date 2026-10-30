@@ -1,5 +1,5 @@
-// Account / subscription configuration, read from Vite env vars at build time.
-// With no Supabase keys the game runs fully free and no account UI appears.
+// Account / payment configuration, read from Vite env vars at build time.
+// With no Supabase keys the game runs fully local and free, with no account UI.
 
 const env = import.meta.env;
 
@@ -12,14 +12,19 @@ export const MOCK = env.VITE_ACCOUNTS_MOCK === '1';
 export const ACCOUNTS_ENABLED = MOCK || Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 /**
- * What unlocks unlimited runs:
- * - 'login': any signed-in account;
- * - 'subscription': an active paid subscription (signing in alone keeps the free quota).
+ * Remote play: the game server deals prompts and judges answers, and the
+ * answer banks are left out of the browser bundle entirely.
  */
-export const GATE: 'login' | 'subscription' = env.VITE_GATE === 'login' ? 'login' : 'subscription';
+export const REMOTE = !MOCK && Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
-/** Free non-daily runs per local day. The Daily Descent is always free. */
+/** Free non-daily runs per day (the server enforces its own copy). */
 export const FREE_RUNS_PER_DAY = Number(env.VITE_FREE_RUNS ?? 3) || 3;
 
-/** Show the Google button only when the provider is configured in Supabase. */
-export const GOOGLE_ENABLED = env.VITE_AUTH_GOOGLE === '1';
+/** Shown on the purchase buttons; the real price lives in Stripe. */
+export const PRICE_LABEL = { pln: env.VITE_PRICE_PLN ?? '19,99 zł', eur: env.VITE_PRICE_EUR ?? '5 €' };
+
+/** Copy only: whether the Stripe Price is a one-time "full version" or recurring. */
+export const PURCHASE: 'one-time' | 'subscription' = env.VITE_PURCHASE === 'subscription' ? 'subscription' : 'one-time';
+
+/** Show the Google button (needs the provider enabled in Supabase). */
+export const GOOGLE_ENABLED = env.VITE_AUTH_GOOGLE !== '0';

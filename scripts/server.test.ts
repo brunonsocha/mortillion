@@ -145,20 +145,20 @@ test('signed-in players earn achievements and reach the leaderboard; anonymous o
   const { token } = await userToken();
   const anon = await anonToken();
   const day = dayNumber();
-  await game(token, { action: 'profile', displayName: 'Solaire of Astora' });
+  const name = `Solaire ${Date.now() % 1e6}`;
+  await game(token, { action: 'profile', displayName: name });
   const run = (await game(token, { action: 'start', mode: 'daily', day })).body;
   const last = await playOut(token, run.runId, ['zzz']);
   assert.ok(last.unlocked.includes('first_descent'));
   assert.ok(last.unlocked.includes('hollowed'), 'seven deaths');
   const stats = (await game(token, { action: 'stats' })).body;
-  assert.equal(stats.displayName, 'Solaire of Astora');
+  assert.equal(stats.displayName, name);
   assert.ok(stats.achievements.some((a: { key: string }) => a.key === 'first_descent'));
 
   const anonRun = (await game(anon, { action: 'start', mode: 'daily', day })).body;
   await playOut(anon, anonRun.runId, ['zzz']);
   const board = (await game(token, { action: 'leaderboard', board: 'daily', day })).body;
-  assert.ok(board.top.some((r: { name: string; me: boolean }) => r.name === 'Solaire of Astora' && r.me));
-  assert.equal(board.top.some((r: { name: string }) => r.name.startsWith('Unkindled #') && false), false);
+  assert.ok(board.top.some((r: { name: string; me: boolean }) => r.name === name && r.me));
   const anonProfile = await game(anon, { action: 'profile', displayName: 'Patches' });
   assert.equal(anonProfile.status, 403, 'anonymous players cannot set a name');
 });
@@ -168,7 +168,12 @@ test('display names are validated', async (t) => {
   const { token } = await userToken();
   assert.equal((await game(token, { action: 'profile', displayName: 'x' })).status, 400);
   assert.equal((await game(token, { action: 'profile', displayName: '<script>alert(1)</script>' })).status, 400);
-  assert.equal((await game(token, { action: 'profile', displayName: 'Siegward z Catarinы' })).status, 200);
+  const name = `Siegward ${Date.now() % 1e6}`;
+  assert.equal((await game(token, { action: 'profile', displayName: name })).status, 200);
+  const other = await userToken();
+  const taken = await game(other.token, { action: 'profile', displayName: name.toUpperCase() });
+  assert.equal(taken.status, 409, 'names are unique, ignoring case');
+  assert.equal(taken.body.error, 'name_taken');
 });
 
 /** Sends an event signed the way Stripe signs webhooks. */

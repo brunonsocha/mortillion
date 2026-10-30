@@ -1,113 +1,116 @@
-# Accounts & the Covenant subscription
+# Accounts, the game server and payments
 
-Mortillion stays a static site. Accounts and payments are handled by **Supabase**
-(auth, a `profiles` table, three Edge Functions) and **Stripe** (Checkout,
-Customer Portal, webhooks). The browser talks to Supabase with plain `fetch`, so the
-bundle carries no SDK.
+Mortillion has two build modes.
 
-With no keys configured the game ships exactly as before: unlimited and free, with no
-account UI.
-
-## The rule
-
-| Player | Daily Descent | Themes / Endless / Summon Signs / Archive |
+| | Local build (no keys) | Remote build (Supabase keys set) |
 |---|---|---|
-| Anyone | always free | 3 free runs per local day |
-| Signed in (`VITE_GATE=login`) | free | unlimited |
-| Covenant member (`VITE_GATE=subscription`, default) | free | unlimited |
+| Content | bundled in the browser | **only on the server** (not one answer ships) |
+| Judging answers | browser | `game` Edge Function |
+| Quota, timer, one daily per day | browser (soft) | **server (enforced)** |
+| Accounts | none | anonymous for everyone; Google or email sign-in |
+| Leaderboards, achievements | none | yes (signed-in players) |
+| Offline | yes | needs a connection |
 
-A run is spent when it starts. Reloading mid-run starts a new run.
-- **Quota exhausted:** the "The embers are spent" modal appears. It offers sign-in (magic link,
-  plus Google if enabled), then **Join the Covenant** (Stripe Checkout).
-- **Settings:** shows the account, Covenant status with renewal date, runs left, Manage
-  subscription (Stripe portal), and Sign out.
+The mode is chosen at build time: setting `VITE_SUPABASE_URL` and
+`VITE_SUPABASE_ANON_KEY` produces a remote build. `vite.config.ts` then swaps the
+bundled packs for an empty module, so the answer banks never reach the browser.
+
+## Rules
+
+- **Daily Descent:** free for everyone, one per player per day. It's a unique index in the database,
+  and restarting resumes the same run.
+- **Themes, Endless Abyss, Summon Signs, Archive:** 3 free runs per UTC day
+  (`FREE_RUNS_PER_DAY` on the server), then the paywall.
+- **Paying requires a real account** (Google or email), so the purchase persists on every
+  device. Anonymous players are asked to sign in first.
+- **Full access** is stored on the account (`profiles.full_access`) and never expires.
+  If the Stripe Price is recurring instead, an active subscription grants the same access.
+- **Achievements** (16) and **leaderboards** (daily per day, plus Endless best) are for
+  signed-in players only. Runs played while anonymous count once you sign in, because linking
+  keeps the same account.
+- **Timer:** the server starts the clock when it serves a prompt. Answers later than 25 s plus 3 s
+  grace score 0.
 
 ## Flow
 
 ```
-browser ──magic link / Google──▶ Supabase Auth ──redirect #access_token──▶ browser
-browser ──GET /rest/v1/profiles (RLS: own row)──▶ subscription_status
-browser ──POST /functions/v1/create-checkout──▶ Stripe Checkout ──▶ ?checkout=success
-Stripe ──webhook──▶ /functions/v1/stripe-webhook ──service role──▶ profiles.subscription_status
-browser ──POST /functions/v1/customer-portal──▶ Stripe Billing Portal
+first visit ─▶ POST /auth/v1/signup (anonymous) ─▶ JWT ─▶ game server
+game server: start ▶ prompt (clock starts) ▶ answer (judged) … ▶ finish (achievements)
+
+sign in, anonymous player:
+  Google ─▶ /auth/v1/user/identities/authorize (links Google to the same account)
+  email  ─▶ PUT /auth/v1/user {email} ─▶ confirmation mail ─▶ same account, now permanent
+  (if that Google/email already has an account, it signs into that one instead)
+
+purchase ─▶ create-checkout (PLN or EUR) ─▶ Stripe Checkout ─▶ webhook ─▶ profiles.full_access
 ```
 
 ## Files
 
 | Path | What |
 |---|---|
-| `src/account/config.ts` | env flags: keys, gate mode, free runs, Google, mock |
-| `src/account/session.ts` | tokens from the URL hash, refresh, profile, magic link, Google, checkout, portal |
-| `src/account/gate.ts` | per-day quota in localStorage |
-| `src/ui/account.ts` | paywall, sign-in, Settings section |
-| `supabase/migrations/0001_profiles.sql` | `profiles` table, RLS (read own row), new-user trigger |
-| `supabase/functions/create-checkout` | creates a Stripe customer if needed and returns a Checkout URL |
-| `supabase/functions/customer-portal` | returns a Billing Portal URL |
-| `supabase/functions/stripe-webhook` | verifies the signature and mirrors subscription status and period end |
+| `supabase/functions/game` | authoritative game server: start, prompt, answer, state, stats, leaderboard, profile, catalog |
+| `supabase/functions/create-checkout` | Checkout for the full version (one-time or subscription, from the Price) |
+| `supabase/functions/customer-portal` | Stripe portal: receipts, payment method, cancellation |
+| `supabase/functions/stripe-webhook` | grants or revokes access (paid, async paid, refund, subscription events) |
+| `supabase/functions/_game` | generated copy of engine, packs and achievements (`npm run functions:sync`) |
+| `supabase/migrations/0001–0003` | profiles, runs, turns, achievements, RLS, unique names |
+| `supabase/config.toml` | local stack: anonymous sign-ins, identity linking, email confirmations |
+| `src/account/*` | session (anonymous + linking), API client, config, quota mirror |
+| `src/play/source.ts` | local and remote run sources behind one interface |
+| `src/ui/account.ts`, `src/ui/leaderboard.ts` | paywall, sign-in, settings, leaderboard, achievements |
+| `scripts/server.test.ts` | 10 integration tests against a local Supabase (`npm run test:server`) |
 
-## Setup checklist
+## Running it locally (no keys needed)
 
-### 1. Supabase project
-- Run `supabase/migrations/0001_profiles.sql`, either with `supabase db push` or in the SQL editor.
-- **Authentication → URL configuration:** set *Site URL* to the game's URL and
-  add it to *Redirect URLs*.
-- **Authentication → Providers:** Email (magic link) is on by default. Optionally enable Google
-  (needs a Google OAuth client id and secret) and set `VITE_AUTH_GOOGLE=1`.
-- For real volumes, configure custom SMTP, because Supabase's built-in mailer is rate-limited.
-
-### 2. Stripe
-- Create a Product ("Covenant of the Abyss") with a recurring Price (e.g. monthly)
-  and note the `price_…` id.
-- Turn on the **Customer Portal** (Settings → Billing → Customer portal).
-- Add a webhook endpoint
-  `https://<project>.supabase.co/functions/v1/stripe-webhook` with these events:
-  - `checkout.session.completed`
-  - `customer.subscription.created`
-  - `customer.subscription.updated`
-  - `customer.subscription.deleted`
-
-  Note its signing secret.
-
-### 3. Edge Function secrets and deploy
 ```sh
-supabase secrets set STRIPE_SECRET_KEY=sk_live_… STRIPE_PRICE_ID=price_… \
-  STRIPE_WEBHOOK_SECRET=whsec_… SITE_URL=https://your-domain
-supabase functions deploy create-checkout
-supabase functions deploy customer-portal
-supabase functions deploy stripe-webhook --no-verify-jwt
+npx supabase start                       # Docker; first run downloads images
+npm run functions:sync
+npx supabase functions serve --env-file supabase/functions/.env
+npm run test:server                      # 10 server tests
+VITE_SUPABASE_URL=http://127.0.0.1:54321 VITE_SUPABASE_ANON_KEY=<anon key from `supabase status`> \
+  VITE_AUTH_GOOGLE=0 npm run dev
 ```
-(`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided to functions automatically.)
 
-### 4. Build the site
-Copy `.env.example` to `.env`, fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
-(public values), pick `VITE_GATE`, then run `npm run build`.
+Confirmation emails land in Mailpit at http://127.0.0.1:54324.
+`supabase/functions/.env` (git-ignored) holds local placeholder secrets.
 
-## Keys needed
+## Production setup
 
-| Key | Where it goes | Secret? |
-|---|---|---|
-| Supabase project URL | `.env` → `VITE_SUPABASE_URL` | public |
-| Supabase anon key | `.env` → `VITE_SUPABASE_ANON_KEY` | public (RLS protects data) |
-| Stripe secret key `sk_…` | `supabase secrets` | **secret** |
-| Stripe price id `price_…` | `supabase secrets` | not secret |
-| Stripe webhook secret `whsec_…` | `supabase secrets` | **secret** |
-| Site URL | `supabase secrets` → `SITE_URL` | not secret |
-| Google OAuth client id/secret (optional) | Supabase dashboard | **secret** |
+1. **Supabase project**
+   - Run `npx supabase link --project-ref <ref>`, then `npx supabase db push` to apply the migrations.
+   - Authentication → Sign In / Providers: enable **Anonymous sign-ins**, **Manual
+     linking**, Email (with confirmations) and **Google** (OAuth client id and secret from Google
+     Cloud, with the redirect `https://<ref>.supabase.co/auth/v1/callback`).
+   - Authentication → URL configuration: set the Site URL and Redirect URLs to the game's domain.
+   - Set up custom SMTP for real email volume. Optionally enable CAPTCHA (Turnstile) to rate-limit
+     anonymous sign-ups.
+2. **Stripe**
+   - Create Product "Mortillion: full version" with a one-time Price of **19.99 PLN**,
+     plus a **currency option of 5.00 EUR** on the same Price.
+   - Payment methods: enable **BLIK** and **Przelewy24** for Polish players (one-time payments
+     only), and cards.
+   - Turn on the Customer Portal.
+   - Add a webhook endpoint `https://<ref>.supabase.co/functions/v1/stripe-webhook` with these events:
+     - `checkout.session.completed`
+     - `checkout.session.async_payment_succeeded`
+     - `charge.refunded`
+     - `customer.subscription.created`, `.updated`, `.deleted`
+3. **Secrets and deploy**
+   ```sh
+   npx supabase secrets set STRIPE_SECRET_KEY=sk_live_… STRIPE_PRICE_ID=price_… \
+     STRIPE_WEBHOOK_SECRET=whsec_… SITE_URL=https://your-domain FREE_RUNS_PER_DAY=3
+   npm run functions:sync
+   npx supabase functions deploy game
+   npx supabase functions deploy create-checkout
+   npx supabase functions deploy customer-portal
+   npx supabase functions deploy stripe-webhook --no-verify-jwt
+   ```
+4. **Site build**
+   - In `.env`, set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, then run `npm run build`
+     and deploy `dist/`.
+   - Optional: `VITE_PRICE_PLN` and `VITE_PRICE_EUR` (button labels), and
+     `VITE_PURCHASE=subscription` if the Price is recurring.
 
-Never put the Stripe secret key, the webhook secret or the Supabase **service
-role** key in `.env` or the browser bundle.
-
-## Limits worth knowing
-
-- **The quota is enforced in the browser.** Clearing site data resets it, and content
-  packs are static files anyone can download. That is normal for a casual web game's soft
-  paywall. To enforce it for real, serve the non-daily packs from an Edge Function that
-  checks the subscription, and keep only the daily mix public.
-- Implicit-flow tokens arrive in the URL hash. `session.ts` takes them before the
-  hash router reads the hash, then restores `#/`.
-
-## Testing without keys
-
-`VITE_ACCOUNTS_MOCK=1 npm run dev` uses a fake backend: any email signs in instantly,
-and "Join the Covenant" toggles membership. This mode tested the full paywall → sign-in → join →
-unlimited flow in Playwright.
+Never put the Stripe secret key, the webhook secret or the Supabase service-role key in
+`.env` or in the browser bundle.

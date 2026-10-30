@@ -283,6 +283,8 @@ async function awardAchievements(userId: string): Promise<string[]> {
 }
 
 async function stats(user: User) {
+  // Runs finished while anonymous count once the player signs in.
+  if (!user.is_anonymous) await awardAchievements(user.id);
   const { stats, days } = await playerStats(user.id);
   const { data: ach } = await admin.from('achievements').select('key, unlocked_at').eq('user_id', user.id);
   const { data: prof } = await admin.from('profiles').select('display_name').eq('id', user.id).single();
@@ -323,11 +325,14 @@ async function profile(user: User, body: { displayName?: string }) {
   if (user.is_anonymous) throw new HttpError(403, 'sign_in_required');
   const name = String(body.displayName ?? '').trim().replace(/\s+/g, ' ');
   if (!NAME_RE.test(name)) throw new HttpError(400, 'bad_name');
-  await admin.from('profiles').update({ display_name: name, updated_at: new Date().toISOString() }).eq('id', user.id);
+  const { error } = await admin.from('profiles').update({ display_name: name, updated_at: new Date().toISOString() }).eq('id', user.id);
+  // 23505: unique violation, someone already bears that name.
+  if (error) throw new HttpError(error.code === '23505' ? 409 : 500, error.code === '23505' ? 'name_taken' : 'update_failed');
   return { displayName: name };
 }
 
 const ACTIONS: Record<string, (u: User, b: Record<string, unknown>) => Promise<unknown>> = {
+  catalog: async () => ({ themes: THEMES }),
   start: (u, b) => start(u, b as never),
   prompt: (u, b) => prompt(u, b as never),
   answer: (u, b) => answer(u, b as never),

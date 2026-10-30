@@ -15,7 +15,7 @@ cpSync(`${root}src/engine`, `${out}/engine`, { recursive: true });
 cpSync(`${root}src/data/types.ts`, `${out}/data/types.ts`);
 cpSync(`${root}src/achievements.ts`, `${out}/achievements.ts`);
 
-const packs = readdirSync(`${root}src/data/packs`).filter((f) => f.endsWith('.ts') && f !== 'index.ts');
+const packs = readdirSync(`${root}src/data/packs`).filter((f) => f.endsWith('.ts') && !['index.ts', 'bundled.ts', 'none.ts'].includes(f));
 for (const f of packs) cpSync(`${root}src/data/packs/${f}`, `${out}/data/packs/${f}`);
 
 // Theme order comes from the client's pack index so both sides agree.

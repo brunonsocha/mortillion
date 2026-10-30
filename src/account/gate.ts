@@ -1,9 +1,9 @@
-// The free-run quota. The Daily Descent is always free; every other run
-// (themes, Endless, Summon Signs, archive) spends one of today's free runs
-// unless the player's account unlocks unlimited play.
+// The free-run quota as the browser sees it. With the game server (REMOTE)
+// the server is authoritative and this only mirrors it for display; in local
+// and mock builds it is the whole gate.
 
 import { dayNumber } from '../engine/game.ts';
-import { ACCOUNTS_ENABLED, FREE_RUNS_PER_DAY, GATE } from './config.ts';
+import { ACCOUNTS_ENABLED, FREE_RUNS_PER_DAY, REMOTE } from './config.ts';
 import { currentAccount } from './session.ts';
 
 const KEY = 'mortillion:runs';
@@ -23,29 +23,37 @@ function quota(): Quota {
   return { day: dayNumber(), used: 0 };
 }
 
+function store(q: Quota) {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(q));
+  } catch {
+    // Storage unavailable: the display resets on reload.
+  }
+}
+
 export function unlimited(): boolean {
-  if (!ACCOUNTS_ENABLED) return true;
-  const a = currentAccount();
-  return GATE === 'login' ? !!a : !!a?.subscribed;
+  return !ACCOUNTS_ENABLED || !!currentAccount()?.fullAccess;
 }
 
 export function freeRunsLeft(): number {
   return Math.max(0, FREE_RUNS_PER_DAY - quota().used);
 }
 
-/** Whether a new non-daily run may begin right now. */
+/** Whether a new non-daily run may begin (always true remotely: the server decides). */
 export function canStartRun(): boolean {
-  return unlimited() || freeRunsLeft() > 0;
+  return REMOTE || unlimited() || freeRunsLeft() > 0;
 }
 
-/** Spends one free run (no-op for unlimited players). */
+/** Spends one free run locally (no-op for paid players). */
 export function spendRun(): void {
   if (unlimited()) return;
   const q = quota();
   q.used++;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(q));
-  } catch {
-    // Storage unavailable: the quota resets on reload, which is acceptable.
-  }
+  store(q);
+}
+
+/** Mirrors the server's count after it starts a run. */
+export function syncFreeRuns(left: number | null): void {
+  if (left == null) return;
+  store({ day: dayNumber(), used: FREE_RUNS_PER_DAY - left });
 }

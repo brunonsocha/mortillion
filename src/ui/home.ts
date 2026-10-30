@@ -1,4 +1,5 @@
-import { SEALED, THEMES, loadAll } from '../data/packs/index.ts';
+import { THEME_ORDER, loadAll } from '../data/packs/index.ts';
+import { themeList } from '../play/catalog.ts';
 import { METRES_PER_POINT, dateOfDay, dayNumber, msUntilNextDay } from '../engine/game.ts';
 import { currentStreak, load } from '../engine/storage.ts';
 import { PACK_NAMES, PACK_SUBS, TIER_NAMES } from '../i18n/strings.ts';
@@ -9,6 +10,8 @@ import { app, banner, go, modal, onLeave, route, showHelp } from './app.ts';
 import { fmt, h } from './dom.ts';
 import { icon } from './icons.ts';
 import { quotaLabel } from './account.ts';
+import { achievementsSection } from './leaderboard.ts';
+import { ACCOUNTS_ENABLED } from '../account/config.ts';
 
 export function countdown(): HTMLElement {
   const el = h('span', { class: 'mono' });
@@ -193,6 +196,7 @@ function showStatus() {
       h('ol', { class: 'bars' }, rows),
       h('h3', null, t.collected),
       souls,
+      ACCOUNTS_ENABLED ? achievementsSection() : null,
     ),
   );
 }
@@ -201,7 +205,9 @@ function stat(label: string, value: string) {
   return h('div', { class: 'stat' }, h('b', null, value), h('span', null, label));
 }
 
-route('themes', () => {
+route('themes', async () => {
+  const themes = await themeList();
+  const sealed = THEME_ORDER.filter((id) => !themes.includes(id));
   const t = app.t;
   const s = load();
   app.scene.setMode('bonfire');
@@ -212,7 +218,7 @@ route('themes', () => {
     h(
       'div',
       { class: 'grid' },
-      THEMES.map((id) =>
+      themes.map((id) =>
         h(
           'button',
           { class: 'card theme', onclick: () => (sfx.kindle(), go(`pack/${id}`)) },
@@ -226,7 +232,7 @@ route('themes', () => {
           ),
         ),
       ),
-      SEALED.map((id) =>
+      sealed.map((id) =>
         h(
           'div',
           { class: 'card theme sealed', 'aria-disabled': 'true' },

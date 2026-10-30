@@ -1,5 +1,6 @@
 import type { Lang } from '../data/types.ts';
 import type { Turn } from './game.ts';
+import type { TurnView } from '../play/source.ts';
 
 const KEY = 'mortillion:v1';
 
@@ -7,6 +8,8 @@ export interface DayRecord {
   day: number;
   points: number;
   turns: Turn[];
+  /** Full turn views (questions, reveal lists), so results need no content. */
+  views?: TurnView[];
 }
 
 export interface PackRecord {
@@ -64,10 +67,10 @@ export function save(patch: Partial<Save> = {}): Save {
   return s;
 }
 
-export function recordDay(day: number, turns: Turn[], points: number): Save {
+export function recordDay(day: number, turns: Turn[], points: number, views?: TurnView[]): Save {
   const s = load();
   if (s.days.some((d) => d.day === day)) return s;
-  s.days.push({ day, points, turns });
+  s.days.push({ day, points, turns, views });
   s.days = s.days.slice(-400);
   s.streak = s.lastDay === day - 1 ? s.streak + 1 : 1;
   s.bestStreak = Math.max(s.bestStreak, s.streak);

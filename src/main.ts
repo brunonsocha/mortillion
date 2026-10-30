@@ -9,6 +9,7 @@ import './ui/home.ts';
 import './ui/game.ts';
 import './ui/results.ts';
 import './ui/party.ts';
+import './ui/leaderboard.ts';
 
 if (new URLSearchParams(location.search).has('og')) document.documentElement.classList.add('og');
 

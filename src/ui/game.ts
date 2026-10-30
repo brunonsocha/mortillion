@@ -1,38 +1,30 @@
+import { REMOTE } from '../account/config.ts';
+import { syncFreeRuns } from '../account/gate.ts';
 import { THEMES, loadAll, loadPack } from '../data/packs/index.ts';
 import type { Prompt } from '../data/types.ts';
 import {
-  METRES_PER_POINT, PROMPTS_PER_RUN, SECONDS_PER_PROMPT, TIER_POINTS, byDifficulty, dailyPrompts, endlessDealer, dayNumber, shuffle, totalPoints, type Turn,
+  METRES_PER_POINT, PROMPTS_PER_RUN, SECONDS_PER_PROMPT, byDifficulty, dailyPrompts, endlessDealer, dayNumber, shuffle,
 } from '../engine/game.ts';
-import { findAnswer } from '../engine/match.ts';
 import { load, recordDay, recordPack, save } from '../engine/storage.ts';
 import { PACK_NAMES } from '../i18n/strings.ts';
+import {
+  ApiError, localSource, remoteSource, turnOf, type PromptView, type RunKind, type Source, type TurnView, type Verdict,
+} from '../play/source.ts';
 import { TIER_COLORS } from '../render/scene.ts';
 import { sfx } from '../render/sfx.ts';
 import { BONFIRE_LIT, PATCHES, SECRET_TEXT, quipFor, secretOf, zoneAt } from '../eggs.ts';
+import { gateRun, showPaywall } from './account.ts';
 import { app, banner, go, onLeave, route, tierBadge } from './app.ts';
 import { countUp, fmt, h, wait } from './dom.ts';
 import { icon } from './icons.ts';
-import { gateRun } from './account.ts';
 
-export type RunKind = 'daily' | 'pack' | 'archive' | 'endless';
-
-export interface Run {
-  kind: RunKind;
-  /** Day number for daily/archive runs, pack id for pack runs, 'endless'. */
-  id: string;
-  prompts: Prompt[];
-  turns: Turn[];
-  /** Endless only: remaining Estus flasks and the source of further prompts. */
-  lives?: number;
-  draw?: () => Prompt;
-}
+export type { RunKind };
 
 /** Estus flasks at the start of an Endless Abyss run. */
 export const ENDLESS_LIVES = 3;
 
-
 /** The most recent finished run, for the results screen. */
-export let lastRun: Run | null = null;
+export let lastRun: { kind: RunKind; id: string; turns: TurnView[]; unlocked: string[] } | null = null;
 
 const recentPackPrompts = new Map<string, string[]>();
 
@@ -54,24 +46,6 @@ function empty(): HTMLElement {
   return h('main', { class: 'screen center' }, h('p', { class: 'empty' }, '…'), h('button', { class: 'btn', onclick: () => go('') }, app.t.home));
 }
 
-route('daily', async () => {
-  const today = dayNumber();
-  const s = load();
-  if (s.days.some((d) => d.day === today)) {
-    queueMicrotask(() => go(`results/daily/${today}`));
-    return loading();
-  }
-  const pool = await loadAll();
-  if (!pool.length) return empty();
-  // A run in progress keeps its prompts even if content changed meanwhile.
-  const resume = s.pending?.day === today && s.pending.ids?.length ? s.pending : null;
-  const byId = new Map(pool.map((p) => [p.id, p]));
-  const pinned = resume?.ids.map((id) => byId.get(id)).filter((p): p is Prompt => !!p);
-  const prompts = pinned?.length === PROMPTS_PER_RUN ? pinned : dailyPrompts(pool, today);
-  const turns = pinned?.length === PROMPTS_PER_RUN ? resume!.turns.slice(0, PROMPTS_PER_RUN) : [];
-  return play({ kind: 'daily', id: String(today), prompts, turns });
-});
-
 /** Sends the player home (with the paywall) if today's free runs are spent. */
 function blocked(): HTMLElement | null {
   if (gateRun()) return null;
@@ -79,35 +53,80 @@ function blocked(): HTMLElement | null {
   return loading();
 }
 
+/**
+ * Starts a run on the game server. A spent quota (402) sends the player home
+ * with the paywall; any other failure surfaces as the reload screen.
+ */
+async function remote(kind: RunKind, id: string, start: Record<string, unknown>): Promise<HTMLElement> {
+  try {
+    const src = await remoteSource(kind, id, start);
+    syncFreeRuns(src.freeLeft);
+    if (src.finished) {
+      // A daily already finished elsewhere (another tab or device).
+      finishRun(src, []);
+      return loading();
+    }
+    return play(src);
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 402) {
+      syncFreeRuns(0);
+      queueMicrotask(() => go(''));
+      setTimeout(showPaywall, 80);
+      return loading();
+    }
+    throw e;
+  }
+}
+
+route('daily', async () => {
+  const today = dayNumber();
+  const s = load();
+  if (s.days.some((d) => d.day === today)) {
+    queueMicrotask(() => go(`results/daily/${today}`));
+    return loading();
+  }
+  if (REMOTE) return remote('daily', String(today), { day: today });
+  const pool = await loadAll();
+  if (!pool.length) return empty();
+  // A run in progress keeps its prompts even if content changed meanwhile.
+  const resume = s.pending?.day === today && s.pending.ids?.length ? s.pending : null;
+  const byId = new Map(pool.map((p) => [p.id, p]));
+  const pinned = resume?.ids.map((id) => byId.get(id)).filter((p): p is Prompt => !!p);
+  const ok = pinned?.length === PROMPTS_PER_RUN;
+  return play(localSource({ kind: 'daily', id: String(today), prompts: ok ? pinned! : dailyPrompts(pool, today), turns: ok ? resume!.turns.slice(0, PROMPTS_PER_RUN) : [] }));
+});
+
 route('archive-run', async ([d]) => {
   const day = Number(d);
   if (!(day >= 1 && day < dayNumber())) return empty();
+  if (REMOTE) return remote('archive', String(day), { day });
   const stop = blocked();
   if (stop) return stop;
   const pool = await loadAll();
   if (!pool.length) return empty();
-  return play({ kind: 'archive', id: String(day), prompts: dailyPrompts(pool, day), turns: [] });
+  return play(localSource({ kind: 'archive', id: String(day), prompts: dailyPrompts(pool, day) }));
 });
 
 route('endless', async () => {
+  if (REMOTE) return remote('endless', 'endless', {});
   const stop = blocked();
   if (stop) return stop;
   const pool = await loadAll();
   if (!pool.length) return empty();
-  const draw = endlessDealer(pool, Math.random);
-  return play({ kind: 'endless', id: 'endless', prompts: [], turns: [], lives: ENDLESS_LIVES, draw });
+  return play(localSource({ kind: 'endless', id: 'endless', prompts: [], lives: ENDLESS_LIVES, draw: endlessDealer(pool, Math.random) }));
 });
 
 route('pack', async ([id]) => {
+  if (REMOTE) return remote('pack', id, { pack: id });
   if (!THEMES.includes(id)) return empty();
   const stop = blocked();
   if (stop) return stop;
   const prompts = await loadPack(id);
   if (!prompts.length) return empty();
-  return play({ kind: 'pack', id, prompts: drawFromPack(id, prompts), turns: [] });
+  return play(localSource({ kind: 'pack', id, prompts: drawFromPack(id, prompts) }));
 });
 
-function difficultyBadge(d: number): HTMLElement {
+export function difficultyBadge(d: number): HTMLElement {
   const label = app.t.difficulty[d];
   return h(
     'span',
@@ -117,21 +136,33 @@ function difficultyBadge(d: number): HTMLElement {
   );
 }
 
-function runLabel(run: Run): string {
-  if (run.kind === 'pack' || run.kind === 'endless') return PACK_NAMES[run.id][app.lang];
-  return `${app.t.day} #${run.id}${run.kind === 'archive' ? ' · ' + app.t.archive : ''}`;
+function runLabel(src: Source): string {
+  if (src.kind === 'pack' || src.kind === 'endless') return PACK_NAMES[src.id][app.lang];
+  return `${app.t.day} #${src.id}${src.kind === 'archive' ? ' · ' + app.t.archive : ''}`;
 }
 
-function play(run: Run): HTMLElement {
+/** Records a finished run locally and moves to its results. */
+function finishRun(src: Source, unlocked: string[]) {
+  const turns = src.turns.map(turnOf);
+  const pts = turns.reduce((a, t) => a + t.points, 0);
+  if (src.kind === 'daily') recordDay(Number(src.id), turns, pts, src.turns);
+  if (src.kind === 'pack' || src.kind === 'endless') recordPack(src.id, pts);
+  lastRun = { kind: src.kind, id: src.id, turns: src.turns, unlocked };
+  go(`results/${src.kind}/${src.id}`);
+}
+
+function play(src: Source): HTMLElement {
   const t = app.t;
   const lang = app.lang;
   let alive = true;
   onLeave(() => (alive = false));
 
+  const points = () => src.turns.reduce((a, x) => a + x.points, 0);
+  const deaths = () => src.turns.filter((x) => !x.tier).length;
   app.scene.setMode('descent');
-  app.scene.setDepth(totalPoints(run.turns) * METRES_PER_POINT, run.turns.length > 0);
+  app.scene.setDepth(points() * METRES_PER_POINT, src.turns.length > 0);
 
-  const endless = run.kind === 'endless';
+  const endless = src.total === null;
   const pips = endless
     ? h(
         'ol',
@@ -141,7 +172,7 @@ function play(run: Run): HTMLElement {
     : h(
         'ol',
         { class: 'pips', 'aria-label': t.prompt },
-        run.prompts.map(() => h('li', { class: 'pip' })),
+        Array.from({ length: src.total! }, () => h('li', { class: 'pip' })),
       );
   const depthEl = h('b', { class: 'depth-num' }, `0 ${t.metres}`);
   const kicker = h('span', { class: 'prompt-kicker' });
@@ -177,23 +208,22 @@ function play(run: Run): HTMLElement {
   const screen = h(
     'main',
     { class: 'screen game' },
-    h('div', { class: 'hud' }, h('span', { class: 'hud-label' }, runLabel(run)), pips, h('span', { class: 'hud-depth' }, t.depth, ' ', depthEl)),
+    h('div', { class: 'hud' }, h('span', { class: 'hud-label' }, runLabel(src)), pips, h('span', { class: 'hud-depth' }, t.depth, ' ', depthEl)),
     h('div', { class: 'anchor knight-gap', 'aria-hidden': 'true' }),
     ask,
     reveal,
     died,
   );
 
-  const points = () => totalPoints(run.turns);
   const paintPips = () => {
     if (endless) {
-      pips.querySelectorAll('li').forEach((li, i) => li.classList.toggle('empty', i >= run.lives!));
-      pips.setAttribute('title', `${t.estus}: ${run.lives}`);
+      pips.querySelectorAll('li').forEach((li, i) => li.classList.toggle('empty', i >= (src.lives ?? 0)));
+      pips.setAttribute('title', `${t.estus}: ${src.lives}`);
       return;
     }
     pips.querySelectorAll('.pip').forEach((p, i) => {
-      const turn = run.turns[i];
-      p.className = 'pip' + (i === run.turns.length ? ' current' : '');
+      const turn = src.turns[i];
+      p.className = 'pip' + (i === src.turns.length ? ' current' : '');
       if (turn) {
         p.classList.add('done');
         (p as HTMLElement).style.setProperty('--tc', TIER_COLORS[turn.tier]);
@@ -207,27 +237,25 @@ function play(run: Run): HTMLElement {
   paintDepth(points());
   paintPips();
 
-  const persistPending = (extra: Turn[] = []) => {
-    if (run.kind === 'daily') {
-      save({ pending: { day: Number(run.id), ids: run.prompts.map((p) => p.id), turns: [...run.turns, ...extra] } });
-    }
+  // Local dailies remember their progress so a reload can't reroll a prompt;
+  // remote ones are protected by the server.
+  const persistPending = (provisional: boolean) => {
+    if (src.kind !== 'daily' || REMOTE) return;
+    const turns = src.turns.map(turnOf);
+    if (provisional) turns.push({ promptId: src.promptIds()[turns.length], guess: '', answer: null, tier: 0, points: 0 });
+    save({ pending: { day: Number(src.id), ids: src.promptIds(), turns } });
   };
 
   async function next() {
     if (!alive) return;
-    const i = run.turns.length;
-    if (endless) {
-      if (run.lives! <= 0) return finish();
-      if (i >= run.prompts.length) run.prompts.push(run.draw!());
-    }
-    if (i >= run.prompts.length) return finish();
-    const prompt = run.prompts[i];
+    const pv = await src.next();
+    if (!alive) return;
+    if (!pv) return finish([]);
+    // Count the prompt as lost until answered.
+    persistPending(true);
 
-    // Count the prompt as lost until answered, so reloading can't reroll it.
-    persistPending([{ promptId: prompt.id, guess: '', answer: null, tier: 0, points: 0 }]);
-
-    kicker.replaceChildren(endless ? `${t.prompt} ${i + 1}` : `${t.prompt} ${i + 1} / ${run.prompts.length}`, difficultyBadge(prompt.d));
-    question.textContent = prompt.q[lang];
+    kicker.replaceChildren(endless ? `${t.prompt} ${pv.idx + 1}` : `${t.prompt} ${pv.idx + 1} / ${src.total}`, difficultyBadge(pv.d));
+    question.textContent = pv.q[lang];
     input.value = '';
     input.disabled = false;
     submit.disabled = false;
@@ -239,20 +267,21 @@ function play(run: Run): HTMLElement {
     paintPips();
     input.focus();
 
-    const guess = await countdown(prompt);
+    const guess = await countdown(pv);
     if (!alive) return;
-    await answer(prompt, guess);
+    await answer(guess);
   }
 
-  function countdown(prompt: Prompt): Promise<string | null> {
+  function countdown(pv: PromptView): Promise<string | null> {
     return new Promise((resolve) => {
-      let start = performance.now();
+      // A resumed remote prompt keeps the time already spent on it.
+      let start = performance.now() - pv.elapsedMs;
       let lastSec = SECONDS_PER_PROMPT;
-      // Practice modes pause while the tab is hidden; the daily keeps running
-      // so it can't be used to look answers up.
+      // Local practice runs pause while the tab is hidden. The daily, and
+      // every server-judged run, keep running.
       let hiddenAt = 0;
       const onVisibility = () => {
-        if (run.kind === 'daily') return;
+        if (src.kind === 'daily' || REMOTE) return;
         if (document.hidden) hiddenAt = performance.now();
         else if (hiddenAt) {
           start += performance.now() - hiddenAt;
@@ -281,7 +310,7 @@ function play(run: Run): HTMLElement {
         // Secret phrases trigger an easter egg instead of being offered,
         // unless they happen to be a valid answer for this prompt.
         const secret = secretOf(v);
-        if (secret && !findAnswer(prompt, v)) {
+        if (secret && !src.accepts(v)) {
           input.value = '';
           if (secret === 'sun') {
             app.scene.praise();
@@ -312,32 +341,27 @@ function play(run: Run): HTMLElement {
     });
   }
 
-  async function answer(prompt: Prompt, guess: string | null) {
+  async function answer(guess: string | null) {
     input.disabled = true;
     submit.disabled = true;
-    const match = guess ? findAnswer(prompt, guess) : null;
     const before = points();
-    const turn: Turn = match
-      ? { promptId: prompt.id, guess: guess!, answer: match.answer.names.en, tier: match.answer.tier, points: TIER_POINTS[match.answer.tier] }
-      : { promptId: prompt.id, guess: guess ?? '', answer: null, tier: 0, points: 0 };
-    run.turns.push(turn);
-    persistPending();
+    const v = await src.answer(guess);
+    if (!alive) return;
+    persistPending(false);
     paintPips();
 
     let reason: string | null = null;
-    if (match) {
-      sfx.reward(match.answer.tier);
-      app.scene.reward(match.answer.tier);
+    if (v.tier) {
+      sfx.reward(v.tier);
+      app.scene.reward(v.tier);
       app.scene.setDepth(points() * METRES_PER_POINT);
       paintDepth(before);
       const from = zoneAt(before * METRES_PER_POINT);
       const to = zoneAt(points() * METRES_PER_POINT);
       if (to !== from) void wait(700).then(() => { if (alive) void banner(to.name[lang], 'zone', 3000); });
     } else {
-      if (endless) run.lives! -= 1;
-      paintPips();
       reason = guess ? quipFor(guess, lang) ?? (Math.random() < 0.04 ? PATCHES[lang] : null) : null;
-      app.scene.setHollow(run.turns.filter((x) => !x.tier).length >= 3);
+      app.scene.setHollow(deaths() >= 3);
       sfx.death();
       app.scene.die();
       died.hidden = false;
@@ -349,32 +373,30 @@ function play(run: Run): HTMLElement {
       died.hidden = true;
     }
 
-    showReveal(prompt, turn, match?.answer.names[lang] ?? null, reason);
+    showReveal(v, reason);
   }
 
-  function showReveal(prompt: Prompt, turn: Turn, acceptedAs: string | null, reason: string | null) {
-    const last = endless ? run.lives! <= 0 : run.turns.length >= run.prompts.length;
-    const common = prompt.answers.filter((a) => a.tier === 1).slice(0, 4);
-    const rare = shuffle(prompt.answers.filter((a) => a.tier === 6)).slice(0, 4);
-    const cont = h('button', { class: 'btn primary' }, last ? t.finish : t.next);
-    const verdict = turn.tier
-      ? h('div', { class: `verdict stamp t${turn.tier}` }, tierBadge(turn.tier), h('span', { class: 'gain' }, `+${turn.points} ${t.points}`))
-      : h('div', { class: 'verdict dead' }, h('span', { class: 'dead-reason' }, reason ?? (turn.guess ? t.notFound : t.timeUp)));
+  function showReveal(v: Verdict, reason: string | null) {
+    const acceptedAs = v.answer?.[lang] ?? null;
+    const cont = h('button', { class: 'btn primary' }, v.finished ? t.finish : t.next);
+    const verdict = v.tier
+      ? h('div', { class: `verdict stamp t${v.tier}` }, tierBadge(v.tier), h('span', { class: 'gain' }, `+${v.points} ${t.points}`))
+      : h('div', { class: 'verdict dead' }, h('span', { class: 'dead-reason' }, reason ?? (v.guess ? t.notFound : t.timeUp)));
 
     reveal.replaceChildren(
-      h('p', { class: 'prompt-kicker' }, prompt.q[lang]),
+      h('p', { class: 'prompt-kicker' }, v.q[lang]),
       verdict,
       h(
         'p',
         { class: 'offered' },
-        turn.guess ? [t.youSaid, ': ', h('q', null, turn.guess)] : t.nothing,
-        acceptedAs && acceptedAs.toLowerCase() !== turn.guess.toLowerCase() ? [' → ', h('b', null, acceptedAs)] : null,
+        v.guess ? [t.youSaid, ': ', h('q', null, v.guess)] : t.nothing,
+        acceptedAs && acceptedAs.toLowerCase() !== v.guess.toLowerCase() ? [' → ', h('b', null, acceptedAs)] : null,
       ),
       h(
         'div',
         { class: 'answer-lists' },
-        h('div', null, h('h4', null, t.commonest), h('ul', null, common.map((a) => h('li', null, a.names[lang])))),
-        h('div', null, h('h4', null, t.rarest), h('ul', null, rare.map((a) => h('li', { class: 'rare' }, a.names[lang])))),
+        h('div', null, h('h4', null, t.commonest), h('ul', null, v.common.map((a) => h('li', null, a[lang])))),
+        h('div', null, h('h4', null, t.rarest), h('ul', null, v.rare.map((a) => h('li', { class: 'rare' }, a[lang])))),
       ),
       cont,
     );
@@ -387,7 +409,8 @@ function play(run: Run): HTMLElement {
     const proceed = () => {
       removeEventListener('keydown', onKey);
       sfx.click();
-      void next();
+      if (v.finished) finish(v.unlocked);
+      else void next();
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Enter') {
@@ -405,17 +428,13 @@ function play(run: Run): HTMLElement {
     onLeave(() => removeEventListener('keydown', onKey));
   }
 
-  function finish() {
-    const pts = points();
-    if (run.kind === 'daily') recordDay(Number(run.id), run.turns, pts);
-    if (run.kind === 'pack' || endless) recordPack(run.id, pts);
-    lastRun = run;
+  function finish(unlocked: string[]) {
     sfx.complete();
-    go(`results/${run.kind}/${run.id}`);
+    finishRun(src, unlocked);
   }
 
-  app.scene.setHollow(run.turns.filter((x) => !x.tier).length >= 3);
-  if (run.kind === 'daily' && run.turns.length === 0) {
+  app.scene.setHollow(deaths() >= 3);
+  if (src.kind === 'daily' && src.turns.length === 0) {
     sfx.kindle();
     void banner(BONFIRE_LIT[lang], 'lit', 2000).then(() => alive && void next());
   } else setTimeout(() => void next(), 350);

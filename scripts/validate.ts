@@ -11,7 +11,7 @@ import { LANGS, type PackSpec } from '../src/data/types.ts';
 const dir = fileURLToPath(new URL('../src/data/packs/', import.meta.url));
 const wanted = process.argv.slice(2);
 const files = readdirSync(dir).filter(
-  (f) => f.endsWith('.ts') && f !== 'index.ts' && (!wanted.length || wanted.includes(f.slice(0, -3))),
+  (f) => f.endsWith('.ts') && !['index.ts', 'bundled.ts', 'none.ts'].includes(f) && (!wanted.length || wanted.includes(f.slice(0, -3))),
 );
 
 let errors = 0;

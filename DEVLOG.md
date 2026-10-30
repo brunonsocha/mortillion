@@ -703,42 +703,91 @@ enforcement on the server.
 
 ---
 
-## What I need from you: subscription keys
+## 27. Client on the game server: anonymous accounts, sign-in linking, paywall, leaderboard, achievements
 
-The subscription is fully scaffolded but **switched off**: with no keys, the game behaves
-exactly as before. Full design, flow diagram and file map: `docs/subscriptions.md`.
+**What**
+- **Remote builds ship no answers.** With Supabase keys set, `vite.config.ts` aliases
+  `src/data/packs/bundled.ts` to an empty module. Every prompt is served and judged by the
+  `game` function. This was verified by searching the remote bundle for answer strings: none found.
+  Local builds (no keys) are unchanged and still work offline.
+- **`src/play/source.ts`:** game, results and Summon Signs now run on a *Source* (local or
+  remote) instead of reading packs directly. Results render from turn views, so they need no
+  content in the browser. Finished dailies store their views locally.
+- **Accounts (`src/account/session.ts`):**
+  - Every player silently gets an anonymous account on first play.
+  - **Google** links to that same account (identity linking), and so does **email** (an email change
+    plus a confirmation mail). Progress from before sign-in is kept: runs, today's daily, and
+    retroactive achievements.
+  - If that Google account or email already has a Mortillion account, the player is signed into
+    that one instead.
+- **Paywall:**
+  - Anonymous players are asked to sign in first (Google button, or email).
+  - Signed-in players see **"Unlock full version · 19,99 zł"** and **"· 5 €"**. Polish players get PLN
+    first, everyone else EUR.
+- **Settings:** account email, a leaderboard name editor (unique, case-insensitive; "Another soul
+  already bears that name"), full-version status, purchase buttons, Manage, and Sign out.
+- **Leaderboard** (crown button in the top bar, `#/leaderboard`): Today, Yesterday and Endless tabs,
+  top 50 with tied ranks, your own row highlighted, and your rank pinned below if you're outside the top 50.
+- **Achievements** in the Status screen: all 16 listed, earned ones lit in gold, and a banner
+  "ACHIEVEMENT UNLOCKED: …" on results for each new one.
+- **Server:** a `catalog` action (theme list for remote builds), retroactive achievement
+  evaluation on `stats`, and unique display names (`0003_unique_names.sql`).
+- Copy is updated for the one-time full version (EN/PL/UK).
 
-### Decisions to confirm
+**Verified (local Supabase in Docker, remote build in Playwright Firefox):**
+1. An anonymous daily was judged by the server (3,000 m).
+2. Three themed runs, then the fourth → "The embers are spent".
+3. Email sign-in from the paywall → confirmation mail in Mailpit → link → same account,
+   now permanent.
+4. Name set → today's daily (played while anonymous) ranks under the new name.
+5. Status shows achievements earned retroactively (Undead Pilgrim, Kindled, Spectrum of Souls).
+6. The paywall offers the buy buttons in both currencies.
+7. A simulated purchase (`full_access = true`) → a 5th themed run starts.
 
-1. **Gate rule.** Right now the Daily Descent is always free, and the other modes (themes, Endless
-   Abyss, Summon Signs, Archive) give **3 free runs per day**. Should *signing in* unlock
-   unlimited play (`VITE_GATE=login`), or only a *paid* Covenant subscription
-   (`VITE_GATE=subscription`, the current default)?
-2. **Price and interval** of the Covenant (e.g. monthly), and whether to offer a trial.
-3. **Google sign-in:** yes or no. Magic-link email works without it.
-4. **Hard enforcement:** today the quota is enforced in the browser (a soft paywall), and
-   theme packs are public static files. If you want it enforced on the server, the next step is to
-   serve non-daily packs from an Edge Function that checks the subscription. That needs about one more evening of work.
+`npm run test:server` 10/10, engine tests 12/12, `tsc` and build clean.
 
-### Keys and accounts
+
+---
+
+## What I need from you
+
+### Decisions (confirmed on 2026-10-30 / still open)
+
+- ✅ Paid access, only after signing in, persisting across devices (done).
+- ✅ Google sign-in (built; needs your Google OAuth client).
+- ✅ Price 19,99 PLN / 5 EUR (one Stripe Price with an EUR currency option).
+- ✅ Server-side enforcement (done: answers, timer, quota, one daily per day).
+- ✅ Achievements and leaderboards for signed-in players (done). No Firebase needed;
+  Supabase covers it.
+- ❓ **One-time "full version" or a monthly subscription?** You wrote both "subscription"
+  and "full version". The code supports either: the Stripe Price type decides. I built and
+  worded it as a **one-time lifetime purchase** (it fits "full version" and "should persist", and
+  BLIK only supports one-time payments). Tell me if you want monthly instead.
+- ❓ Whether the 3 free runs reset per **UTC** day (current) or per player-local day.
+  UTC is cheat-proof.
+
+### Accounts and keys
 
 | What | Where it goes | Secret? |
 |---|---|---|
-| Supabase project URL | `.env` → `VITE_SUPABASE_URL` | public |
-| Supabase anon (publishable) key | `.env` → `VITE_SUPABASE_ANON_KEY` | public (RLS protects data) |
-| Stripe secret key `sk_…` (test first, then live) | `supabase secrets set STRIPE_SECRET_KEY=…` | **secret** |
-| Stripe Price id `price_…` for the Covenant | `supabase secrets set STRIPE_PRICE_ID=…` | not secret |
-| Stripe webhook signing secret `whsec_…` | `supabase secrets set STRIPE_WEBHOOK_SECRET=…` | **secret** |
-| Production site URL | `supabase secrets set SITE_URL=…` | not secret |
-| Google OAuth client id/secret (optional) | Supabase dashboard → Auth → Providers | **secret** |
+| A Supabase project (free tier is fine to start), and its **project ref** | — | — |
+| Supabase **URL** and **anon (publishable) key** | `.env` → `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | public |
+| Supabase **access token**, so I can run `supabase link / db push / functions deploy` | your shell (`npx supabase login`) | **secret** |
+| **Google OAuth** client id and secret (Google Cloud → Credentials, Web app; redirect `https://<ref>.supabase.co/auth/v1/callback`) | Supabase dashboard → Auth → Google | **secret** |
+| **Stripe** secret key `sk_test_…` first (then `sk_live_…`) | `supabase secrets set STRIPE_SECRET_KEY=…` | **secret** |
+| Stripe **Price id** `price_…` (19.99 PLN + 5.00 EUR option) | `supabase secrets set STRIPE_PRICE_ID=…` | not secret |
+| Stripe **webhook signing secret** `whsec_…` | `supabase secrets set STRIPE_WEBHOOK_SECRET=…` | **secret** |
+| Production **domain** | `SITE_URL` secret, Supabase redirect URLs | not secret |
+| SMTP for auth emails (e.g. Resend / Postmark), recommended | Supabase dashboard → Auth → SMTP | **secret** |
 
-Please share secrets through `supabase secrets set` or a `.env` file on your machine.
-Don't paste them into chat or commit them. `.env` is git-ignored. With the keys in place, the remaining
-steps are:
-1. Run the migration.
-2. Deploy the three functions.
-3. Add the Stripe webhook.
-4. Set the Supabase redirect URLs.
-5. Test the whole flow in Stripe test mode.
+Please don't paste secrets into chat. Run `npx supabase login` and the `supabase secrets
+set …` commands yourself (or put them in a git-ignored `.env`), then tell me they're in
+place.
 
-Each step is in the checklist in `docs/subscriptions.md`.
+**What I'll do next:**
+1. `db push` the migrations.
+2. Deploy the four functions.
+3. Run the full flow against Stripe **test mode**: a test card, BLIK test codes and a refund.
+4. Switch to live keys.
+
+Every step is in `docs/subscriptions.md`.

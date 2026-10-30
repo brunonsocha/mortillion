@@ -1,13 +1,14 @@
+import { BUNDLED } from './bundled.ts';
 import { buildPack } from '../../engine/match.ts';
-import type { PackSpec, Prompt } from '../types.ts';
+import type { Prompt } from '../types.ts';
 
 /**
  * Themes in display order. A theme is playable as soon as its pack file
  * exists; the rest are teased as sealed. `general` only feeds the daily.
  */
-const THEME_ORDER = ['sports', 'movies', 'geography', 'videogames', 'music', 'history', 'science', 'literature', 'art', 'food'];
+export const THEME_ORDER = ['sports', 'movies', 'geography', 'videogames', 'music', 'history', 'science', 'literature', 'art', 'food'];
 
-const modules = import.meta.glob<{ default: PackSpec }>(['./*.ts', '!./index.ts']);
+const modules = BUNDLED;
 
 export const THEMES = THEME_ORDER.filter((id) => `./${id}.ts` in modules);
 export const SEALED = THEME_ORDER.filter((id) => !(`./${id}.ts` in modules));
