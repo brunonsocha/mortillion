@@ -857,6 +857,54 @@ player and let them keep guessing."
 
 ---
 
+## 31. The world turns: a side-scrolling pilgrimage instead of a descent
+
+Your request (2026-10-30): "not descend into a dungeon, but walk through a field, then ruins, a
+cathedral, a castle, and some fucked-up zone like the Soul of Cinder arena at the end.
+Horizontally."
+
+**What**
+- **`src/render/scene.ts` was rewritten** as a side-scroller. The knight walks right as the player
+  scores (0.3 px per metre, so a full 7,000 m run is about 8 screens of road).
+  - It has a 4-frame side-view walk cycle (`KNIGHT_WALK`) with a bob, turns to face the
+    way he walks, topples forward on death, and sits at camps.
+- **Zones** (`src/eggs.ts`; skies, light and background layers crossfade over 160 m):
+
+| From | Zone | Look |
+|---:|---|---|
+| 0 m | **The Pilgrim's Meadow** | dusk sky, a swollen setting sun, purple hills, swaying trees, fences, gravestones, flowers in the grass, fireflies |
+| 1,200 m | **Ruins of the Old Kingdom** | overcast sky with drifting clouds, broken columns with ivy, ruined arches, rubble, skulls, crows flying by |
+| 2,600 m | **Cathedral of the Deep** | a nave with tall leaded stained-glass windows, god rays, massive pillars, chandeliers, candelabras, a checkered marble floor and a red carpet |
+| 4,000 m | **The Ashen Castle** | blood moon, columns of smoke, conical towers, battlements with waving red banners, torches, barrels, embers |
+| 5,500 m | **Kiln of the First Flame** (final arena) | an eclipse with a burning corona, giant swords leaning in the ash, toppled arena pillars, pillars of flame, swords stuck in the ground, glowing cracks, heavy embers |
+| 9,000 m | **The Age of Dark** (Endless only) | stars, black ground, extinguished bonfires |
+
+- **Rendering layers:** sky, celestial body, far (0.15 parallax), mid (0.45), ground surface,
+  ground props, the camp, the knight, banded pixel lighting (torches, candles, bonfire), additive
+  warm glow, cathedral light shafts, foreground silhouettes (1.35), vignette.
+- **Camps:** the home screen is a camp at the start of the road (knight sitting, Liora standing
+  by the bonfire, crackling ambience). **At the end of every run the knight walks on to a new camp
+  where Liora waits**, and the results are shown there.
+- **Wording:** "descent/depth" became pilgrimage/journey/distance everywhere, in EN/PL/UK:
+  - *Daily Pilgrimage* (Codzienna Pielgrzymka / Щоденне Паломництво)
+  - *Endless Road* (Bezkresna Droga / Нескінченна Дорога)
+  - *Themed Paths*
+  - *Distance walked*, *JOURNEY COMPLETE*
+  - the help rules (including the new try-again rule), achievements (Abysswalker → **Ashen One**:
+    reach the Kiln), page title and description
+
+  The difficulty names (Shallow/Deep/Abyssal), the tier names and the Covenant of the Abyss keep
+  their names.
+- In code, the scene mode `'descent'` is now `'journey'`.
+
+**Verified:**
+- Screenshots of every zone via the dev hook, the home camp, a zone crossfade in motion, and a
+  full 6,700 m run ending at the Kiln camp with Liora (VICTORY ACHIEVED).
+- `tsc` is clean, and 12/12 engine tests pass with updated zone tests.
+
+
+---
+
 ## What I need from you
 
 ### Decisions (confirmed on 2026-10-30 / still open)

@@ -7,7 +7,7 @@ export const METRES_PER_POINT = 10;
 export const TIER_POINTS: Record<Tier, number> = { 1: 10, 2: 15, 3: 30, 4: 60, 5: 85, 6: 100 };
 export const MAX_SCORE = PROMPTS_PER_RUN * TIER_POINTS[6];
 
-/** Day 1 of the Daily Descent. Days roll over at local midnight. */
+/** Day 1 of the Daily Pilgrimage. Days roll over at local midnight. */
 const EPOCH = Date.UTC(2026, 9, 29);
 
 export function dayNumber(now = new Date()): number {
@@ -46,7 +46,7 @@ export function shuffle<T>(list: T[], rand: () => number = Math.random): T[] {
   return a;
 }
 
-/** Easy first, hard last: the deeper you descend, the harder it gets. Stable. */
+/** Easy first, hard last: the further you walk, the harder it gets. Stable. */
 export function byDifficulty(prompts: Prompt[]): Prompt[] {
   return prompts.map((p, i) => [p, i] as const).sort((a, b) => a[0].d - b[0].d || a[1] - b[1]).map(([p]) => p);
 }
@@ -109,7 +109,7 @@ export function dailyPrompts(pool: Prompt[], day: number): Prompt[] {
 }
 
 /**
- * Deals prompts for the Endless Abyss: easy ones first, then mostly medium,
+ * Deals prompts for the Endless Road: easy ones first, then mostly medium,
  * then mostly hard, never repeating a prompt until every prompt of that
  * difficulty has been seen.
  */

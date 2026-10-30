@@ -21,7 +21,7 @@ import { icon } from './icons.ts';
 
 export type { RunKind };
 
-/** Estus flasks at the start of an Endless Abyss run. */
+/** Estus flasks at the start of an Endless Road run. */
 export const ENDLESS_LIVES = 3;
 
 /** The most recent finished run, for the results screen. */
@@ -160,7 +160,7 @@ function play(src: Source): HTMLElement {
 
   const points = () => src.turns.reduce((a, x) => a + x.points, 0);
   const deaths = () => src.turns.filter((x) => !x.tier).length;
-  app.scene.setMode('descent');
+  app.scene.setMode('journey');
   app.scene.setDepth(points() * METRES_PER_POINT, src.turns.length > 0);
 
   const endless = src.total === null;

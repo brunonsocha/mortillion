@@ -2,7 +2,7 @@
 // PostgREST and Edge Functions with plain fetch: no SDK in the bundle.
 //
 // Every player gets a silent *anonymous* account the first time they play, so
-// the server can enforce quotas and one Daily Descent per day. Signing in
+// the server can enforce quotas and one Daily Pilgrimage per day. Signing in
 // with Google or email *links* to that same account (identity linking or
 // email change), so nothing played before signing in is lost. Paid access is
 // stored on the account and therefore persists across devices.

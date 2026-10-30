@@ -1,30 +1,32 @@
-// The animated abyss behind the UI. Everything is drawn at a low internal
-// resolution and scaled up with nearest-neighbour filtering.
+// The animated world behind the UI: a side-scrolling pilgrimage. The knight
+// walks right as the player scores, through a meadow, ruins, a cathedral, a
+// castle and finally the Kiln of the First Flame. Everything is drawn at a
+// low internal resolution and scaled up with nearest-neighbour filtering.
 
-import { ZONES, zoneAt } from '../eggs.ts';
-import { setAmbience } from './sfx.ts';
+import { ZONES, zoneAt, type Zone, type ZoneKind } from '../eggs.ts';
 import { MAIDEN, MAIDEN_PALETTE } from './maiden.ts';
-import { BONES, BONFIRE, CHAIN, HOLLOW_PALETTE, KNIGHT, KNIGHT_PRAISE, KNIGHT_SIT, SKULL, TORCH, bake } from './sprites.ts';
+import { setAmbience } from './sfx.ts';
+import { BONFIRE, HOLLOW_PALETTE, KNIGHT_PRAISE, KNIGHT_SIDE, KNIGHT_SIT, KNIGHT_WALK, SKULL, bake } from './sprites.ts';
 
-export type Mode = 'bonfire' | 'descent';
+/** 'bonfire': resting at a camp. 'journey': walking the road. */
+export type Mode = 'bonfire' | 'journey';
 
-/** World pixels per metre of depth. 7000 m ≈ 2100 px of shaft. */
+/** World pixels per metre. A full 7,000 m run is ~2,100 px of road. */
 const PX_PER_M = 0.3;
-const TORCH_GAP = 70;
-const DEEP = 2100;
+/** Where the home camp stands, just before the road begins. */
+const START_CAMP = -46;
 
 // Validated for adjacent-pair separation (normal + CVD) and 3:1 contrast on the
 // dark panels; the pale tiers are always shown with a text label.
+export const TIER_COLORS = ['#c83a3a', '#8a857b', '#d6d0b4', '#e8823e', '#c9284f', '#a66cf0', '#fff2b0'];
+
 /** Liora's offset from the bonfire's centre, in scene pixels. */
 export const MAIDEN_X = 13;
 
 /** Seconds the death animation lasts (topple, lie, respawn). */
 const DEATH_TIME = 1.6;
 
-/** ZONES indices, for zone-specific decor. */
-const Z = { depths: 2, blight: 3, catacombs: 4, tomb: 5, abyss: 6, kiln: 7 };
-
-export const TIER_COLORS = ['#c83a3a', '#8a857b', '#d6d0b4', '#e8823e', '#c9284f', '#a66cf0', '#fff2b0'];
+type RGB = [number, number, number];
 
 interface Particle {
   x: number;
@@ -34,13 +36,14 @@ interface Particle {
   life: number;
   max: number;
   color: string;
-  kind: 'ash' | 'ember' | 'flame' | 'spark' | 'blood';
+  kind: 'mote' | 'ember' | 'flame' | 'spark' | 'blood' | 'firefly' | 'crow';
 }
 
 interface Light {
   x: number;
   y: number;
   r: number;
+  warm?: boolean;
 }
 
 function hash(a: number, b: number): number {
@@ -49,42 +52,16 @@ function hash(a: number, b: number): number {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
-function brickTile(w: number, h: number, bw: number, bh: number, base: number[], seed: number) {
-  const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
-  const g = c.getContext('2d')!;
-  g.fillStyle = '#0d0c0f';
-  g.fillRect(0, 0, w, h);
-  for (let row = 0; row < h / bh; row++) {
-    const off = row % 2 ? bw / 2 : 0;
-    for (let col = -1; col <= w / bw; col++) {
-      const x = col * bw + off;
-      const y = row * bh;
-      const n = hash(col + seed, row * 7 + seed);
-      const k = 0.75 + n * 0.45;
-      const rgb = base.map((v) => Math.round(v * k));
-      g.fillStyle = `rgb(${rgb})`;
-      g.fillRect(x + 1, y + 1, bw - 1, bh - 1);
-      g.fillStyle = `rgba(255,240,220,${0.06 + n * 0.05})`;
-      g.fillRect(x + 1, y + 1, bw - 1, 1);
-      g.fillStyle = 'rgba(0,0,0,0.35)';
-      g.fillRect(x + 1, y + bh - 1, bw - 1, 1);
-      if (n > 0.86) {
-        // crack
-        g.fillStyle = 'rgba(0,0,0,0.55)';
-        const cx = x + 2 + Math.floor(n * 100) % (bw - 3);
-        g.fillRect(cx, y + 1, 1, 2);
-        g.fillRect(cx + 1, y + 2, 1, bh - 3);
-      } else if (n < 0.07) {
-        // moss
-        g.fillStyle = '#26301f';
-        g.fillRect(x + 1, y + 1, Math.ceil(bw / 2), 1);
-        g.fillRect(x + 2, y + 2, 1, 1);
-      }
-    }
-  }
-  return c;
+const rgb = (c: number[]) => `rgb(${c.map(Math.round).join(',')})`;
+const mixC = (a: number[], b: number[], t: number): RGB => a.map((v, i) => v + (b[i] - v) * t) as RGB;
+
+/** The zone at a distance, and how far (0–1) its look has blended in. */
+function zoneBlend(metres: number): { a: Zone; b: Zone; t: number } {
+  const z = zoneAt(metres);
+  const i = ZONES.indexOf(z);
+  const fade = 160;
+  if (i > 0 && metres - z.from < fade) return { a: ZONES[i - 1], b: z, t: Math.max(0, (metres - z.from) / fade) };
+  return { a: z, b: z, t: 1 };
 }
 
 export class Scene {
@@ -96,18 +73,18 @@ export class Scene {
   private W = 0;
   private H = 0;
   private scale = 3;
-  private side!: CanvasPattern;
-  private back!: CanvasPattern;
-  private sideTile = brickTile(32, 32, 8, 4, [58, 54, 52], 11);
-  private backTile = brickTile(48, 48, 16, 8, [30, 29, 34], 37);
 
   private mode: Mode = 'bonfire';
   private t = 0;
   private last = 0;
-  private cam = 0;
-  private knightY = -18;
-  private targetY = 0;
-  private floorAlpha = 1;
+  /** World x of the screen's left edge. */
+  private camX = START_CAMP - 120;
+  private knightX = START_CAMP - 24;
+  private targetX = 0;
+  private campX = START_CAMP;
+  private facing = 1;
+  private walkPhase = 0;
+  private groundY = 140;
   private shake = 0;
   private flash = 0;
   private flashColor = '#a01818';
@@ -116,12 +93,10 @@ export class Scene {
   private dead = 0;
   private praising = 0;
   private hollow = false;
-  /** Current zone look, eased toward the zone the camera is in. */
-  private tint = [...ZONES[0].tint];
-  private dark = ZONES[0].dark;
-  private wash = [...ZONES[0].wash];
   private particles: Particle[] = [];
-  /** Screen-space anchor (CSS px) for the floor or the knight's centre. */
+  /** Opacity of the background layer being drawn (zone crossfade). */
+  private layerAlpha = 1;
+  /** Screen-space anchor (CSS px): the ground sits on its bottom edge. */
   private anchor: { top: number; bottom: number } | null = null;
   motion = true;
 
@@ -136,47 +111,56 @@ export class Scene {
   private resize() {
     this.scale = Math.max(2, Math.round(innerHeight / 180));
     this.W = Math.ceil(innerWidth / this.scale);
+    this.H = Math.ceil(innerHeight / this.scale);
     // Lets the DOM line things up with sprites (e.g. tapping the maiden).
     document.documentElement.style.setProperty('--ps', String(this.scale));
-    this.H = Math.ceil(innerHeight / this.scale);
     for (const c of [this.canvas, this.light, this.vignette]) {
       c.width = this.W;
       c.height = this.H;
     }
     this.g.imageSmoothingEnabled = false;
-    this.side = this.g.createPattern(this.sideTile, 'repeat')!;
-    this.back = this.g.createPattern(this.backTile, 'repeat')!;
     const vg = this.vignette.getContext('2d')!;
-    const grad = vg.createRadialGradient(this.W / 2, this.H / 2, this.H * 0.25, this.W / 2, this.H / 2, Math.max(this.W, this.H) * 0.75);
+    const grad = vg.createRadialGradient(this.W / 2, this.H / 2, this.H * 0.3, this.W / 2, this.H / 2, Math.max(this.W, this.H) * 0.8);
     grad.addColorStop(0, 'rgba(0,0,0,0)');
-    grad.addColorStop(1, 'rgba(0,0,0,0.85)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.7)');
     vg.fillStyle = grad;
     vg.fillRect(0, 0, this.W, this.H);
   }
 
-  setMode(mode: Mode) {
+  /**
+   * Rest at a camp ('bonfire') or walk the road ('journey'). Resting with a
+   * distance pitches camp there (the end of a run); without, at home.
+   */
+  setMode(mode: Mode, restMetres: number | null = null) {
+    if (mode === 'bonfire') this.restAt(restMetres);
     this.mode = mode;
     setAmbience(mode === 'bonfire');
-    if (mode === 'bonfire') {
-      this.targetY = 0;
-      this.knightY = Math.min(this.knightY, 0);
-    }
   }
 
   /**
-   * Aligns the scene with a DOM element: in bonfire mode the floor sits on
-   * its bottom edge, while descending the knight is centred in it.
+   * Makes camp. `metres` null is the home camp before the road; a distance
+   * pitches the camp just ahead of where the knight stopped (results).
    */
+  restAt(metres: number | null) {
+    this.campX = metres === null ? START_CAMP : metres * PX_PER_M + 34;
+    // Far away (e.g. back home after a long run): jump rather than walk back.
+    if (Math.abs(this.knightX - (this.campX - 24)) > this.W) {
+      this.knightX = this.campX - 24;
+      this.camX = this.campX - this.W / 2;
+    }
+  }
+
+  /** Aligns the ground line with the bottom edge of a DOM element. */
   setAnchor(rect: { top: number; bottom: number } | null) {
     this.anchor = rect;
   }
 
-  /** Sets the depth (in metres) the knight should sink to. */
+  /** Sets how far (in metres) the knight should walk. */
   setDepth(metres: number, instant = false) {
-    this.targetY = metres * PX_PER_M;
+    this.targetX = metres * PX_PER_M;
     if (instant) {
-      this.knightY = this.targetY;
-      this.cam = this.camTarget();
+      this.knightX = this.targetX;
+      this.camX = this.camTarget();
     }
   }
 
@@ -185,15 +169,12 @@ export class Scene {
     this.glow = 1;
     this.glowColor = TIER_COLORS[tier];
     if (!this.motion) return;
-    const kx = this.W / 2;
-    const ky = this.knightY + 10;
+    const kx = this.knightX + 7;
+    const ky = this.groundY - 10;
     for (let i = 0; i < 10 + tier * 10; i++) {
       const a = Math.random() * Math.PI * 2;
       const v = 15 + Math.random() * (20 + tier * 12);
-      this.particles.push({
-        x: kx, y: ky, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 10,
-        life: 0, max: 0.6 + Math.random() * 0.8, color: TIER_COLORS[tier], kind: 'spark',
-      });
+      this.particles.push({ x: kx, y: ky, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 10, life: 0, max: 0.6 + Math.random() * 0.8, color: TIER_COLORS[tier], kind: 'spark' });
     }
     if (tier >= 5) this.flashOnce(TIER_COLORS[tier], 0.35);
   }
@@ -205,16 +186,11 @@ export class Scene {
     this.glowColor = '#ffd75a';
     this.flashOnce('#ffe9a0', 0.3);
     if (!this.motion) return;
-    const sitting = this.floorAlpha > 0.5;
-    const kx = sitting ? this.W / 2 - 17 : this.W / 2;
-    const ky = sitting ? -14 : this.knightY + 4;
+    const kx = this.knightX + 7;
     for (let i = 0; i < 60; i++) {
       const a = (i / 60) * Math.PI * 2;
       const v = 30 + Math.random() * 30;
-      this.particles.push({
-        x: kx, y: ky, vx: Math.cos(a) * v, vy: Math.sin(a) * v,
-        life: 0, max: 0.9 + Math.random() * 0.6, color: i % 2 ? '#ffd75a' : '#fff2b0', kind: 'spark',
-      });
+      this.particles.push({ x: kx, y: this.groundY - 14, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0, max: 0.9 + Math.random() * 0.6, color: i % 2 ? '#ffd75a' : '#fff2b0', kind: 'spark' });
     }
   }
 
@@ -228,11 +204,9 @@ export class Scene {
     this.flashOnce('#7a0b0b', 0.8);
     if (!this.motion) return;
     this.shake = 0.45;
-    const kx = this.W / 2;
-    const ky = this.knightY + 8;
     for (let i = 0; i < 30; i++) {
       this.particles.push({
-        x: kx + (Math.random() - 0.5) * 8, y: ky, vx: (Math.random() - 0.5) * 50, vy: -Math.random() * 40,
+        x: this.knightX + 7 + (Math.random() - 0.5) * 8, y: this.groundY - 10, vx: (Math.random() - 0.5) * 50, vy: -Math.random() * 40,
         life: 0, max: 0.8 + Math.random() * 0.6, color: Math.random() < 0.5 ? '#6e0d0d' : '#a01818', kind: 'blood',
       });
     }
@@ -243,13 +217,14 @@ export class Scene {
     this.flash = strength;
   }
 
+  private resting() {
+    return this.mode === 'bonfire';
+  }
+
   private camTarget(): number {
-    const a = this.anchor;
-    // Without an anchor the chamber floor sits just below the screen, so only
-    // the bonfire's glow rises behind the content.
-    if (this.mode === 'bonfire') return -Math.round(a ? a.bottom / this.scale : this.H + 4);
-    const centre = a ? (a.top + a.bottom) / 2 / this.scale : this.H * 0.3;
-    return this.knightY - Math.round(centre - KNIGHT.length / 2);
+    if (this.resting()) return Math.round(this.campX - this.W / 2);
+    // The knight walks a little left of centre, looking ahead.
+    return Math.round(this.knightX - this.W * 0.36);
   }
 
   private frame(now: number) {
@@ -265,31 +240,37 @@ export class Scene {
   }
 
   private update(dt: number) {
-    const ease = 1 - Math.exp(-dt * 2.6);
-    const prevCam = this.cam;
-    this.knightY += (this.targetY - this.knightY) * ease;
-    if (this.mode === 'bonfire') this.knightY = this.targetY;
-    // Track the knight tightly while descending; glide on mode changes.
-    const follow = this.mode === 'descent' && this.floorAlpha < 0.05 ? 14 : 3.2;
-    this.cam += (this.camTarget() - this.cam) * (1 - Math.exp(-dt * follow));
-    const camDelta = this.cam - prevCam;
-    // The chamber floor fades in gently but vanishes fast once the descent begins.
-    this.floorAlpha += ((this.mode === 'bonfire' ? 1 : 0) - this.floorAlpha) * (1 - Math.exp(-dt * (this.mode === 'bonfire' ? 4 : 12)));
+    const a = this.anchor;
+    this.groundY = Math.round(a ? a.bottom / this.scale : this.H * 0.94);
+
+    // Walk toward the goal at a steady pace (faster when far behind).
+    const goal = this.resting() ? this.campX - 24 : this.targetX;
+    const gap = goal - this.knightX;
+    const speed = Math.min(160, 28 + Math.abs(gap) * 1.6);
+    const step = Math.sign(gap) * Math.min(Math.abs(gap), speed * dt);
+    this.knightX += step;
+    if (Math.abs(step) > 0.01) {
+      this.facing = Math.sign(step);
+      this.walkPhase += Math.abs(step) / 3;
+    }
+    const prevCam = this.camX;
+    this.camX += (this.camTarget() - this.camX) * (1 - Math.exp(-dt * 6));
+    const pan = this.camX - prevCam;
+
     this.shake = Math.max(0, this.shake - dt);
     this.flash = Math.max(0, this.flash - dt * 1.4);
     this.glow = Math.max(0, this.glow - dt * 0.8);
     this.dead = Math.max(0, this.dead - dt);
     this.praising = Math.max(0, this.praising - dt);
-    const zone = this.mode === 'bonfire' ? ZONES[0] : zoneAt(Math.max(0, this.cam / PX_PER_M));
-    const zk = 1 - Math.exp(-dt * 1.5);
-    this.tint = this.tint.map((v, i) => v + (zone.tint[i] - v) * zk);
-    this.dark += (zone.dark - this.dark) * zk;
-    this.wash = this.wash.map((v, i) => v + (zone.wash[i] - v) * zk);
 
-    if (this.motion) this.spawn(dt, camDelta);
+    if (this.motion) this.spawn(dt, pan);
     for (const p of this.particles) {
       p.life += dt;
-      if (p.kind === 'ash') p.vx = Math.sin(this.t * 1.3 + p.max * 10) * 4;
+      if (p.kind === 'mote') p.vx = Math.sin(this.t * 1.3 + p.max * 10) * 4 - 3;
+      if (p.kind === 'firefly') {
+        p.vx = Math.sin(this.t * 0.9 + p.max * 7) * 6;
+        p.vy = Math.cos(this.t * 1.1 + p.max * 5) * 4;
+      }
       if (p.kind === 'flame') p.vx *= 0.96;
       if (p.kind === 'blood') p.vy += 90 * dt;
       if (p.kind === 'spark') {
@@ -299,196 +280,116 @@ export class Scene {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
     }
-    this.particles = this.particles.filter((p) => p.life < p.max && p.y > this.cam - 40 && p.y < this.cam + this.H + 40);
+    this.particles = this.particles.filter((p) => p.life < p.max && p.x > this.camX - 60 && p.x < this.camX + this.W + 60);
   }
 
-  private spawn(dt: number, camDelta: number) {
-    // Drifting ash: more of it when the camera is falling fast.
-    const rate = this.W * 0.06 + Math.abs(camDelta) * 2;
+  private zoneHere(): Zone {
+    return zoneAt(Math.max(0, (this.camX + this.W / 2) / PX_PER_M));
+  }
+
+  private spawn(dt: number, pan: number) {
+    const z = this.zoneHere();
+    const top = this.groundY - 90;
+    const rate = this.W * (z.kind === 'kiln' ? 0.14 : 0.05) + Math.abs(pan) * 0.5;
     for (let n = rate * dt; n > 0; n--) {
       if (n < 1 && Math.random() > n) break;
-      const fromBelow = camDelta > 0.4;
-      this.particles.push({
-        x: Math.random() * this.W,
-        y: fromBelow ? this.cam + this.H + 2 : this.cam - 2 + Math.random() * this.H * 0.2,
-        vx: 0, vy: 4 + Math.random() * 6, life: 0, max: 6 + Math.random() * 6,
-        color: this.motes()[Math.random() < 0.7 ? 0 : 1], kind: 'ash',
-      });
-    }
-    // Kiln of the First Flame: big cinders drifting up through the shaft.
-    if (this.mode === 'descent' && this.zoneIndexAt(this.cam + this.H / 2) === Z.kiln && Math.random() < dt * 6) {
-      this.particles.push({
-        x: Math.random() * this.W, y: this.cam + this.H + 2, vx: (Math.random() - 0.5) * 6, vy: -10 - Math.random() * 14,
-        life: 0, max: 4 + Math.random() * 3, color: Math.random() < 0.5 ? '#ff8a3a' : '#ffcf5a', kind: 'ember',
-      });
-    }
-    // Torch embers.
-    for (const l of this.torchLights()) {
-      if (Math.random() < dt * 3) {
+      const x = this.camX + Math.random() * this.W;
+      if (z.kind === 'meadow') {
+        if (Math.random() < 0.5) this.particles.push({ x, y: this.groundY - 4 - Math.random() * 40, vx: 0, vy: 0, life: 0, max: 3 + Math.random() * 4, color: z.motes[0], kind: 'firefly' });
+      } else if (z.kind === 'kiln' || z.kind === 'castle') {
+        const up = Math.random() < 0.6;
         this.particles.push({
-          x: l.x + (Math.random() - 0.5) * 2, y: l.y - 2, vx: (Math.random() - 0.5) * 6, vy: -8 - Math.random() * 10,
-          life: 0, max: 0.8 + Math.random() * 1.2, color: Math.random() < 0.5 ? '#ff6a1f' : '#ffcf5a', kind: 'ember',
+          x, y: up ? this.groundY : top + Math.random() * 30, vx: (Math.random() - 0.5) * 8, vy: up ? -10 - Math.random() * 18 : 6 + Math.random() * 6,
+          life: 0, max: 3 + Math.random() * 3, color: up ? z.motes[0] : z.motes[1], kind: up ? 'ember' : 'mote',
         });
+      } else {
+        this.particles.push({ x, y: top + Math.random() * 100, vx: 0, vy: 2 + Math.random() * 3, life: 0, max: 4 + Math.random() * 4, color: z.motes[Math.random() < 0.7 ? 0 : 1], kind: 'mote' });
       }
     }
-    // Bonfire flames and embers.
-    if (this.floorAlpha > 0.3) {
-      const bx = Math.round(this.W / 2);
+    // Crows over the ruins.
+    if (z.kind === 'ruins' && Math.random() < dt * 0.25) {
+      this.particles.push({ x: this.camX - 10, y: this.groundY - 70 - Math.random() * 30, vx: 22 + Math.random() * 10, vy: -1, life: 0, max: 14, color: '#141418', kind: 'crow' });
+    }
+    // Camp bonfire flames and embers.
+    if (Math.abs(this.campX - this.camX - this.W / 2) < this.W) {
       for (let i = 0; i < 150 * dt; i++) {
         const off = (Math.random() - 0.5) * 10;
-        this.particles.push({
-          x: bx + off, y: -4 - Math.random() * 2, vx: -off * 0.6 + (Math.random() - 0.5) * 4, vy: -12 - Math.random() * 14,
-          life: 0, max: 0.3 + Math.random() * 0.45, color: '', kind: 'flame',
-        });
+        this.particles.push({ x: this.campX + off, y: this.groundY - 4 - Math.random() * 2, vx: -off * 0.6 + (Math.random() - 0.5) * 4, vy: -12 - Math.random() * 14, life: 0, max: 0.3 + Math.random() * 0.45, color: '', kind: 'flame' });
       }
       if (Math.random() < dt * 8) {
-        this.particles.push({
-          x: bx + (Math.random() - 0.5) * 8, y: -14, vx: (Math.random() - 0.5) * 14, vy: -18 - Math.random() * 18,
-          life: 0, max: 1.5 + Math.random() * 1.5, color: Math.random() < 0.5 ? '#ff6a1f' : '#ffcf5a', kind: 'ember',
-        });
+        this.particles.push({ x: this.campX + (Math.random() - 0.5) * 8, y: this.groundY - 14, vx: (Math.random() - 0.5) * 14, vy: -18 - Math.random() * 18, life: 0, max: 1.5 + Math.random() * 1.5, color: Math.random() < 0.5 ? '#ff6a1f' : '#ffcf5a', kind: 'ember' });
       }
     }
   }
 
-  private motes(): string[] {
-    return this.mode === 'bonfire' ? ZONES[0].motes : zoneAt(Math.max(0, this.cam / PX_PER_M)).motes;
-  }
-
-  private wallWidth() {
-    return Math.max(14, Math.min(46, Math.floor(this.W * 0.16)));
-  }
-
-  private torchLights(): Light[] {
-    const out: Light[] = [];
-    const ww = this.wallWidth();
-    const first = Math.floor((this.cam - 40) / TORCH_GAP);
-    const lastK = Math.ceil((this.cam + this.H + 40) / TORCH_GAP);
-    for (let k = first; k <= lastK; k++) {
-      const left = k % 2 === 0;
-      // The bonfire chamber floor hides the shaft below it.
-      if (this.floorAlpha > 0.5 && k * TORCH_GAP + 18 > -6) continue;
-      const flick = 0.9 + Math.sin(this.t * 9 + k) * 0.05 + Math.sin(this.t * 23 + k * 3) * 0.05;
-      out.push({ x: left ? ww + 3 : this.W - ww - 3, y: k * TORCH_GAP + 18, r: 34 * flick });
-    }
-    return out;
-  }
+  // ───────────────────────────── drawing ─────────────────────────────
 
   private draw() {
     const { g, W, H } = this;
-    const depthT = Math.min(1, Math.max(0, this.cam / DEEP));
-    const sx = this.shake > 0 ? Math.round((Math.random() - 0.5) * 6 * this.shake * 2) : 0;
-    const sy = this.shake > 0 ? Math.round((Math.random() - 0.5) * 6 * this.shake * 2) : 0;
-    const cam = Math.round(this.cam) + sy;
-    const ww = this.wallWidth();
+    const sx = this.shake > 0 ? Math.round((Math.random() - 0.5) * 12 * this.shake) : 0;
+    const sy = this.shake > 0 ? Math.round((Math.random() - 0.5) * 12 * this.shake) : 0;
+    const cam = Math.round(this.camX) + sx;
+    const gy = this.groundY + sy;
+    const here = zoneBlend(Math.max(0, (this.camX + W / 2) / PX_PER_M));
 
-    g.save();
-    g.translate(sx, 0);
+    // Sky, crossfading between zones.
+    const top = mixC(here.a.sky[0], here.b.sky[0], here.t);
+    const bot = mixC(here.a.sky[1], here.b.sky[1], here.t);
+    const sky = g.createLinearGradient(0, 0, 0, gy);
+    sky.addColorStop(0, rgb(top));
+    sky.addColorStop(1, rgb(bot));
+    g.fillStyle = sky;
+    g.fillRect(0, 0, W, gy + 1);
+    if (here.t < 1) this.drawCelestial(here.a.kind, gy, 1 - here.t);
+    this.drawCelestial(here.b.kind, gy, here.t);
 
-    // Back wall with parallax.
-    g.fillStyle = `rgb(${this.tint.map(Math.round).join(',')})`;
-    g.fillRect(-4, 0, W + 8, H);
-    g.save();
-    const backOff = Math.round(cam * 0.6);
-    g.translate(0, -backOff);
-    g.globalAlpha = 0.55 - depthT * 0.15;
-    g.fillStyle = this.back;
-    g.fillRect(-4, backOff, W + 8, H);
-    g.restore();
-
-    this.drawBackDecor(cam, ww, depthT);
-
-    // Side walls.
-    g.save();
-    g.translate(0, -cam);
-    g.fillStyle = this.side;
-    g.fillRect(-4, cam, ww + 4, H);
-    g.fillRect(W - ww, cam, ww + 4, H);
-    g.restore();
-    g.fillStyle = '#060507';
-    g.fillRect(ww, 0, 1, H);
-    g.fillRect(W - ww - 1, 0, 1, H);
-    g.fillStyle = 'rgba(0,0,0,0.35)';
-    g.fillRect(ww + 1, 0, 2, H);
-    g.fillRect(W - ww - 3, 0, 2, H);
-
-    this.drawWallDecor(cam, ww);
-
-    // Recolour the stonework for the current zone, keeping its shading.
-    if (this.wash[3] > 0.01) {
-      g.globalCompositeOperation = 'color';
-      g.globalAlpha = this.wash[3];
-      g.fillStyle = `rgb(${this.wash.slice(0, 3).map(Math.round).join(',')})`;
-      g.fillRect(-4, 0, W + 8, H);
-      g.globalAlpha = 1;
-      g.globalCompositeOperation = 'source-over';
+    // Parallax layers, far to near; backgrounds crossfade between zones.
+    for (const [kind, alpha] of this.layers(here)) {
+      this.layerAlpha = alpha;
+      g.globalAlpha = alpha;
+      this.drawFar(cam, gy, kind);
+      this.drawMid(cam, gy, kind);
     }
+    this.layerAlpha = 1;
+    g.globalAlpha = 1;
+    this.drawGround(cam, gy, here);
+    this.drawProps(cam, gy);
 
-
-    // Torches.
-    const torch = bake(TORCH);
-    for (const l of this.torchLights()) {
-      g.drawImage(torch, Math.round(l.x - 2), Math.round(l.y - cam));
-      this.drawFlame(l.x, l.y - cam, 1);
-    }
-
-    // Floor and bonfire.
-    if (this.floorAlpha > 0.01) {
-      g.globalAlpha = this.floorAlpha;
-      const fy = -cam;
-      g.fillStyle = '#16141a';
-      g.fillRect(0, fy, W, H);
-      g.fillStyle = '#2c2a30';
-      g.fillRect(0, fy, W, 2);
-      g.fillStyle = '#3d3a40';
-      for (let x = 0; x < W; x += 12) g.fillRect(x + ((x / 12) % 2) * 3, fy + 4, 8, 1);
-      this.drawParticles(cam, 'flame');
-      const bf = bake(BONFIRE);
-      g.drawImage(bf, Math.round(W / 2 - bf.width / 2), fy - bf.height + 1);
-      // Liora keeps the fire on the far side, facing the knight.
-      const maiden = bake(MAIDEN, undefined, MAIDEN_PALETTE);
-      const sway = this.motion && Math.sin(this.t * 1.3) > 0.97 ? 1 : 0;
-      g.drawImage(maiden, Math.round(W / 2 + MAIDEN_X), fy - maiden.height + 1 - sway);
-      g.globalAlpha = 1;
-    }
-
+    const lights: Light[] = [];
+    this.drawCamp(cam, gy, lights);
     this.drawParticles(cam, 'back');
-    this.drawKnight(cam);
+    this.drawKnight(cam, gy);
     this.drawParticles(cam, 'front');
+    this.collectLights(cam, gy, lights);
+    lights.push({ x: this.knightX + 7 - cam, y: gy - 10, r: 22 + this.glow * 30 });
 
-    // Lighting: darkness with banded light holes.
-    const lights: Light[] = this.torchLights().map((l) => ({ ...l, y: l.y - cam }));
-    const kr = 26 + this.glow * 30;
-    lights.push({ x: W / 2, y: this.knightY - cam + 10, r: this.floorAlpha > 0.5 ? 18 : kr });
-    if (this.floorAlpha > 0.05) {
-      const f = 0.92 + Math.sin(this.t * 7) * 0.04 + Math.sin(this.t * 17) * 0.04;
-      lights.push({ x: W / 2, y: -cam - 8, r: 78 * f * this.floorAlpha });
-    }
-    this.drawLighting(lights, this.dark);
-    // Zone details glow faintly through the dark (slime, wisps, water).
-    this.drawZoneDecor(cam, ww);
-    g.restore();
+    const dark = here.a.dark + (here.b.dark - here.a.dark) * here.t;
+    this.drawLighting(lights, dark);
+    this.drawLightShafts(cam, gy);
 
     // Warm additive glow.
     g.globalCompositeOperation = 'lighter';
     for (const l of lights) {
+      if (!l.warm) continue;
       const gr = g.createRadialGradient(l.x, l.y, 0, l.x, l.y, l.r * 0.8);
-      gr.addColorStop(0, 'rgba(255,120,40,0.18)');
+      gr.addColorStop(0, 'rgba(255,120,40,0.16)');
       gr.addColorStop(1, 'rgba(255,120,40,0)');
       g.fillStyle = gr;
       g.fillRect(l.x - l.r, l.y - l.r, l.r * 2, l.r * 2);
     }
     if (this.glow > 0) {
-      const ky = this.knightY - cam + 10;
-      const gr = g.createRadialGradient(W / 2, ky, 0, W / 2, ky, 50);
+      const kx = this.knightX + 7 - cam;
+      const gr = g.createRadialGradient(kx, gy - 10, 0, kx, gy - 10, 50);
       gr.addColorStop(0, this.glowColor);
       gr.addColorStop(1, 'rgba(0,0,0,0)');
       g.globalAlpha = this.glow * 0.45;
       g.fillStyle = gr;
-      g.fillRect(W / 2 - 50, ky - 50, 100, 100);
+      g.fillRect(kx - 50, gy - 60, 100, 100);
       g.globalAlpha = 1;
     }
     g.globalCompositeOperation = 'source-over';
 
+    this.drawForeground(cam, gy);
     g.drawImage(this.vignette, 0, 0);
     if (this.flash > 0) {
       g.globalAlpha = Math.min(0.7, this.flash);
@@ -498,25 +399,441 @@ export class Scene {
     }
   }
 
+  /** Sun, moon or eclipse for a zone, fading with its share of the sky. */
+  private drawCelestial(kind: ZoneKind, gy: number, alpha: number) {
+    if (alpha <= 0.01) return;
+    const { g, W, t } = this;
+    g.globalAlpha = alpha;
+    const cx = Math.round(W * 0.72);
+    if (kind === 'meadow') {
+      // A low, swollen sunset sun.
+      const cy = gy - 26;
+      const halo = g.createRadialGradient(cx, cy, 2, cx, cy, 60);
+      halo.addColorStop(0, 'rgba(255,220,140,0.55)');
+      halo.addColorStop(1, 'rgba(255,140,80,0)');
+      g.fillStyle = halo;
+      g.fillRect(cx - 60, cy - 60, 120, 120);
+      this.disc(cx, cy, 13, '#ffd28a');
+      this.disc(cx, cy, 11, '#ffe6b0');
+    } else if (kind === 'ruins') {
+      // Clouds drifting over a washed-out sky.
+      for (let i = 0; i < 6; i++) {
+        const y = 12 + i * 9;
+        const x = ((i * 97 + t * (3 + i)) % (W + 120)) - 60;
+        g.fillStyle = `rgba(230,234,240,${0.12 + (i % 3) * 0.05})`;
+        g.fillRect(Math.round(x), y, 70 + (i % 3) * 30, 3);
+        g.fillRect(Math.round(x) + 12, y - 2, 40, 2);
+      }
+    } else if (kind === 'castle') {
+      // A blood moon behind columns of smoke.
+      const cy = 26;
+      this.disc(cx, cy, 12, '#7a1810');
+      this.disc(cx - 2, cy - 1, 10, '#b02a18');
+      for (let i = 0; i < 4; i++) {
+        const sx = Math.round(W * (0.15 + i * 0.25) + Math.sin(t * 0.3 + i) * 6);
+        g.fillStyle = 'rgba(20,10,12,0.45)';
+        for (let y = 0; y < gy - 30; y += 4) g.fillRect(sx + Math.round(Math.sin(y * 0.08 + t + i) * 4), y, 8 + ((y / 20) | 0), 4);
+      }
+    } else if (kind === 'kiln') {
+      // The dark sun: an eclipse with a burning corona.
+      const cy = 30;
+      for (let r = 26; r > 13; r -= 2) this.disc(cx, cy, r + Math.sin(t * 3 + r) * 0.8, `rgba(255,${90 + (26 - r) * 8},30,${0.05 + (26 - r) * 0.012})`);
+      this.disc(cx, cy, 12, '#ffb04a');
+      this.disc(cx, cy, 10, '#050405');
+    } else if (kind === 'dark') {
+      for (let i = 0; i < 60; i++) {
+        const tw = Math.sin(t * 2 + i * 3) > 0.6 ? 1 : 0.5;
+        g.fillStyle = `rgba(220,220,240,${0.3 * tw})`;
+        g.fillRect(Math.round(hash(i, 1) * W), Math.round(hash(i, 2) * (gy - 20)), 1, 1);
+      }
+    }
+    g.globalAlpha = 1;
+  }
+
+  private disc(cx: number, cy: number, r: number, color: string) {
+    const { g } = this;
+    g.fillStyle = color;
+    for (let y = -Math.floor(r); y <= r; y++) {
+      const w = Math.round(Math.sqrt(Math.max(0, r * r - y * y)));
+      g.fillRect(Math.round(cx - w), Math.round(cy + y), w * 2, 1);
+    }
+  }
+
+  /**
+   * Visits cells of a parallax layer. Ground-level layers (p = 1) take the
+   * zone at each cell's own position; slower background layers show the
+   * camera's zone (`kind`), crossfaded by the caller at boundaries.
+   */
+  private cells(cam: number, p: number, cw: number, fn: (k: number, x: number, kind: ZoneKind, n: number) => void, kind?: ZoneKind) {
+    const shift = cam * p;
+    const first = Math.floor((shift - cw * 2) / cw);
+    for (let k = first; k < first + Math.ceil(this.W / cw) + 4; k++) {
+      const n = hash(k, Math.round(cw * 31 + p * 100));
+      const worldX = k * cw;
+      fn(k, Math.round(worldX - shift + n * cw * 0.4), kind ?? zoneAt(Math.max(0, worldX / PX_PER_M)).kind, n);
+    }
+  }
+
+  /** Background layers for the zones in view, faded across a boundary. */
+  private layers(here: { a: Zone; b: Zone; t: number }): [ZoneKind, number][] {
+    return here.t < 1 ? [[here.a.kind, 1 - here.t], [here.b.kind, here.t]] : [[here.b.kind, 1]];
+  }
+
+  private drawFar(cam: number, gy: number, zone: ZoneKind) {
+    const { g } = this;
+    this.cells(cam, 0.15, 24, (k, x, kind, n) => {
+      if (kind === 'meadow') {
+        // Rolling hills.
+        const h1 = Math.round(22 + Math.sin(k * 0.6) * 8 + n * 6);
+        g.fillStyle = '#5a3a5e';
+        g.fillRect(x, gy - h1, 25, h1);
+        g.fillStyle = '#6e4a68';
+        g.fillRect(x, gy - h1, 25, 2);
+      } else if (kind === 'ruins') {
+        if (n < 0.35) {
+          g.fillStyle = '#6a7080';
+          const h = Math.round(30 + n * 60);
+          g.fillRect(x, gy - h, 8, h);
+          g.fillRect(x - 2, gy - h, 3, 4);
+          g.fillRect(x + 6, gy - h + 3, 4, 3);
+        }
+        g.fillStyle = '#7a808c';
+        g.fillRect(x, gy - 10 - (k % 3) * 2, 25, 12);
+      } else if (kind === 'cathedral') {
+        // The far wall with tall stained-glass windows.
+        g.fillStyle = '#1a1726';
+        g.fillRect(x - 2, 0, 28, gy);
+        if (k % 2 === 0) this.window(x + 4, gy - 84, k);
+      } else if (kind === 'castle') {
+        g.fillStyle = '#26121a';
+        const h = Math.round(40 + (k % 4) * 12 + n * 10);
+        g.fillRect(x, gy - h, 14, h);
+        if (k % 3 === 0) {
+          // Conical tower roof.
+          for (let i = 0; i < 7; i++) g.fillRect(x + i, gy - h - 7 + i, 14 - i * 2, 1);
+          g.fillRect(x + 6, gy - h - 12, 2, 6);
+        }
+        g.fillRect(x - 6, gy - 30, 26, 30);
+      } else if (kind === 'kiln') {
+        // Great swords driven into the ash, leaning.
+        if (n < 0.4) {
+          g.fillStyle = '#2a2420';
+          const h = Math.round(50 + n * 60);
+          const lean = n < 0.2 ? 1 : -1;
+          for (let y = 0; y < h; y++) g.fillRect(x + Math.round((y / h) * 8 * lean), gy - y, 4, 1);
+          g.fillRect(x - 4 + Math.round(8 * lean), gy - h, 12, 2);
+        }
+        g.fillStyle = '#3a302a';
+        g.fillRect(x, gy - 8 - (k % 2) * 3, 25, 10);
+      }
+    }, zone);
+  }
+
+  /** A gothic stained-glass window with leaded panes and a pointed arch. */
+  private window(x: number, y: number, k: number) {
+    const { g, t } = this;
+    const panes = ['#8a1a2a', '#1a3a8a', '#c79a3e', '#2a6a4a', '#5a2a8a'];
+    g.fillStyle = '#0c0a12';
+    g.fillRect(x - 1, y - 1, 16, 50);
+    for (let row = 0; row < 12; row++) {
+      for (let col = 0; col < 3; col++) {
+        g.fillStyle = panes[(row * 3 + col + k) % panes.length];
+        g.globalAlpha = this.layerAlpha * (0.7 + 0.3 * Math.sin(t * 0.8 + row + k));
+        g.fillRect(x + col * 5, y + row * 4, 4, 3);
+      }
+    }
+    g.globalAlpha = this.layerAlpha;
+    g.fillStyle = '#0c0a12';
+    for (let i = 0; i < 8; i++) g.fillRect(x - 1 + i, y - 8 + Math.max(0, 7 - i * 2), 16 - i * 2, 1);
+    g.fillStyle = panes[k % panes.length];
+    g.fillRect(x + 6, y - 5, 2, 4);
+  }
+
+  private drawMid(cam: number, gy: number, zone: ZoneKind) {
+    const { g, t } = this;
+    this.cells(cam, 0.45, 40, (k, x, kind, n) => {
+      if (kind === 'meadow') {
+        if (n < 0.55) {
+          // A tree: trunk and layered canopy, swaying.
+          const h = 24 + Math.round(n * 20);
+          g.fillStyle = '#3a2618';
+          g.fillRect(x + 8, gy - h + 10, 4, h - 10);
+          const sway = Math.round(Math.sin(t * 0.8 + k));
+          g.fillStyle = '#2a4226';
+          g.fillRect(x + sway, gy - h, 20, 12);
+          g.fillRect(x + 3 + sway, gy - h - 6, 14, 8);
+          g.fillStyle = '#3a5a30';
+          g.fillRect(x + 3 + sway, gy - h - 4, 10, 4);
+          g.fillRect(x + 1 + sway, gy - h + 2, 8, 3);
+        } else if (n > 0.85) {
+          // A wooden fence.
+          g.fillStyle = '#4a3220';
+          for (let i = 0; i < 4; i++) g.fillRect(x + i * 7, gy - 9, 2, 9);
+          g.fillRect(x, gy - 7, 23, 1);
+          g.fillRect(x, gy - 4, 23, 1);
+        }
+      } else if (kind === 'ruins') {
+        if (n < 0.6) {
+          // A broken column with ivy.
+          const h = 18 + Math.round(n * 40);
+          g.fillStyle = '#8a8578';
+          g.fillRect(x, gy - h, 8, h);
+          g.fillStyle = '#a8a294';
+          g.fillRect(x + 1, gy - h, 2, h);
+          g.fillStyle = '#5e5a50';
+          g.fillRect(x + 6, gy - h, 2, h);
+          g.fillStyle = '#9a9486';
+          g.fillRect(x - 1, gy - h, 10 - (k % 3), 2);
+          g.fillStyle = '#4a6a34';
+          for (let i = 0; i < h; i += 3) if (hash(k, i) < 0.5) g.fillRect(x + (i % 7), gy - h + i, 2, 2);
+        } else if (n > 0.8) {
+          // A ruined arch.
+          g.fillStyle = '#7a7568';
+          g.fillRect(x, gy - 34, 6, 34);
+          g.fillRect(x + 20, gy - 26, 6, 26);
+          for (let i = 0; i < 10; i++) g.fillRect(x + 4 + i, gy - 36 + Math.round(Math.abs(i - 5) * 0.8), 2, 3);
+        }
+      } else if (kind === 'cathedral') {
+        if (k % 2 === 0) {
+          // Massive pillars with carved capitals.
+          g.fillStyle = '#2e2a3a';
+          g.fillRect(x, 0, 12, gy);
+          g.fillStyle = '#3e3a4c';
+          g.fillRect(x + 2, 0, 3, gy);
+          g.fillStyle = '#1e1a28';
+          g.fillRect(x + 10, 0, 2, gy);
+          g.fillStyle = '#4a4458';
+          g.fillRect(x - 2, gy - 72, 16, 3);
+          g.fillRect(x - 2, gy - 4, 16, 4);
+        } else if (n < 0.5) {
+          // A hanging chandelier.
+          g.fillStyle = '#2a2420';
+          g.fillRect(x + 6, 0, 1, gy - 70);
+          g.fillStyle = '#5a4a2a';
+          g.fillRect(x + 1, gy - 70, 11, 2);
+          g.fillStyle = Math.sin(t * 9 + k) > 0 ? '#ffcf5a' : '#ff9a3a';
+          for (let i = 0; i < 3; i++) g.fillRect(x + 2 + i * 4, gy - 73, 1, 2);
+        }
+      } else if (kind === 'castle') {
+        // A crenellated wall with red banners.
+        g.fillStyle = '#4a3a3a';
+        g.fillRect(x - 2, gy - 44, 44, 44);
+        g.fillStyle = '#5a4848';
+        for (let i = 0; i < 44; i += 8) g.fillRect(x - 2 + i, gy - 50, 5, 6);
+        g.fillStyle = '#3a2c2c';
+        for (let y = gy - 40; y < gy; y += 6) g.fillRect(x - 2, y, 44, 1);
+        if (n < 0.6) {
+          const wave = Math.round(Math.sin(t * 2 + k));
+          g.fillStyle = '#7a1414';
+          g.fillRect(x + 14, gy - 42, 8, 20);
+          g.fillRect(x + 15 + wave, gy - 22, 6, 3);
+          g.fillStyle = '#c79a3e';
+          g.fillRect(x + 17, gy - 36, 2, 6);
+          g.fillRect(x + 16, gy - 34, 4, 2);
+        } else {
+          g.fillStyle = '#1a1010';
+          g.fillRect(x + 18, gy - 34, 2, 6);
+        }
+      } else if (kind === 'kiln') {
+        if (n < 0.4) {
+          // Toppled arena pillars.
+          g.fillStyle = '#6a6058';
+          const h = 16 + Math.round(n * 50);
+          g.fillRect(x, gy - h, 9, h);
+          g.fillStyle = '#857a70';
+          g.fillRect(x + 1, gy - h, 2, h);
+        } else if (n > 0.82) {
+          // A pillar of flame.
+          for (let y = 0; y < 50; y += 2) {
+            const w = 3 + Math.round(Math.sin(t * 8 + y * 0.4 + k) * 2);
+            g.fillStyle = y < 10 ? '#fff2b0' : y < 25 ? '#ffb04a' : '#ff6a1f';
+            g.globalAlpha = this.layerAlpha * (0.25 + (y / 50) * 0.5);
+            g.fillRect(Math.round(x + 6 - w / 2), gy - 50 + y, w, 2);
+          }
+          g.globalAlpha = this.layerAlpha;
+        }
+      } else if (kind === 'dark' && n < 0.15) {
+        // An extinguished bonfire: the age of fire has ended.
+        g.fillStyle = '#2a2a30';
+        g.fillRect(x, gy - 3, 10, 3);
+        g.fillRect(x + 4, gy - 14, 2, 11);
+      }
+    }, zone);
+  }
+
+  private drawGround(cam: number, gy: number, here: { a: Zone; b: Zone; t: number }) {
+    const { g, W, H } = this;
+    const [s, m, d] = [0, 1, 2].map((i) => mixC(here.a.ground[i], here.b.ground[i], here.t));
+    g.fillStyle = rgb(m);
+    g.fillRect(0, gy, W, 6);
+    g.fillStyle = rgb(d);
+    g.fillRect(0, gy + 6, W, H - gy);
+    g.fillStyle = rgb(s);
+    g.fillRect(0, gy, W, 2);
+    // Surface details, per column of world x.
+    for (let sx = 0; sx < W; sx++) {
+      const wx = sx + cam;
+      const kind = zoneAt(Math.max(0, wx / PX_PER_M)).kind;
+      const n = hash(wx, 7);
+      if (kind === 'meadow') {
+        if (n < 0.5) {
+          g.fillStyle = n < 0.25 ? '#6a9a46' : '#4a7034';
+          g.fillRect(sx, gy - 1 - (n < 0.1 ? 1 : 0), 1, 2);
+        }
+        if (n > 0.985) {
+          g.fillStyle = n > 0.995 ? '#f2e6a0' : '#e85a5a';
+          g.fillRect(sx, gy - 2, 1, 1);
+        }
+      } else if (kind === 'ruins' || kind === 'castle') {
+        if (((wx % 9) + 9) % 9 === 0) {
+          g.fillStyle = 'rgba(0,0,0,0.35)';
+          g.fillRect(sx, gy, 1, 6);
+        }
+        if (kind === 'ruins' && n < 0.12) {
+          g.fillStyle = '#4f6a3a';
+          g.fillRect(sx, gy - 1, 1, 2);
+        }
+      } else if (kind === 'cathedral') {
+        // Checkered marble and a red carpet down the nave.
+        g.fillStyle = Math.floor(wx / 6) % 2 ? '#4a445a' : '#2c2838';
+        g.fillRect(sx, gy + 2, 1, 4);
+        g.fillStyle = '#6a1418';
+        g.fillRect(sx, gy, 1, 2);
+      } else if (kind === 'kiln' && n < 0.03) {
+        // Glowing cracks in the ash.
+        g.fillStyle = Math.sin(this.t * 3 + wx) > 0 ? '#ff7a2a' : '#c84a1a';
+        g.fillRect(sx, gy + 2 + Math.round(n * 60), 1, 2);
+      }
+    }
+  }
+
+  private drawProps(cam: number, gy: number) {
+    const { g } = this;
+    const skull = bake(SKULL);
+    this.cells(cam, 1, 30, (k, x, kind, n) => {
+      if (Math.abs(k * 30 - this.campX) < 50) return;
+      if (kind === 'meadow') {
+        if (n < 0.08) {
+          // A pilgrim's gravestone.
+          g.fillStyle = '#6a6a72';
+          g.fillRect(x, gy - 8, 6, 8);
+          g.fillRect(x + 1, gy - 9, 4, 1);
+          g.fillStyle = '#4a4a52';
+          g.fillRect(x + 2, gy - 6, 2, 1);
+          g.fillRect(x + 2, gy - 5, 1, 2);
+        } else if (n > 0.9) {
+          g.fillStyle = '#3a5a2a';
+          for (let i = 0; i < 4; i++) g.fillRect(x + i * 2, gy - 3 - (i % 2) * 2, 1, 4 + (i % 2) * 2);
+        }
+      } else if (kind === 'ruins') {
+        if (n < 0.2) {
+          g.fillStyle = '#7a7568';
+          g.fillRect(x, gy - 4, 10, 4);
+          g.fillRect(x + 3, gy - 6, 4, 2);
+        } else if (n > 0.92) g.drawImage(skull, x, gy - 8);
+      } else if (kind === 'cathedral') {
+        if (n < 0.3) {
+          // A candelabra.
+          g.fillStyle = '#5a4a2a';
+          g.fillRect(x + 3, gy - 16, 1, 16);
+          g.fillRect(x, gy - 16, 7, 1);
+          g.fillRect(x + 1, gy - 1, 5, 1);
+          g.fillStyle = '#ece4d0';
+          for (const cx of [0, 3, 6]) g.fillRect(x + cx, gy - 19, 1, 3);
+          this.flameAt(x + 3, gy - 20, 0.5);
+        }
+      } else if (kind === 'castle') {
+        if (n < 0.3) {
+          // A torch on a post.
+          g.fillStyle = '#3a2618';
+          g.fillRect(x + 2, gy - 14, 2, 14);
+          this.flameAt(x + 3, gy - 15, 1);
+        } else if (n > 0.85) {
+          g.fillStyle = '#4a3220';
+          g.fillRect(x, gy - 7, 6, 7);
+          g.fillStyle = '#2a1a10';
+          g.fillRect(x, gy - 5, 6, 1);
+          g.fillRect(x, gy - 2, 6, 1);
+        }
+      } else if (kind === 'kiln') {
+        if (n < 0.35) {
+          // A sword stuck in the ash.
+          const lean = n < 0.17 ? 1 : 0;
+          g.fillStyle = '#9a9ea8';
+          for (let y = 0; y < 12; y++) g.fillRect(x + (y < 6 ? lean : 0), gy - y, 1, 1);
+          g.fillStyle = '#c79a3e';
+          g.fillRect(x - 1 + lean, gy - 12, 3, 1);
+          g.fillStyle = '#4a3220';
+          g.fillRect(x + lean, gy - 15, 1, 3);
+        } else if (n > 0.9) g.drawImage(skull, x, gy - 8);
+      }
+    });
+  }
+
+  /** Dark silhouettes passing in front (grass, rubble), for depth. */
+  private drawForeground(cam: number, gy: number) {
+    const { g, H } = this;
+    this.cells(cam, 1.35, 70, (_k, x, kind, n) => {
+      if (n > 0.35) return;
+      g.fillStyle = 'rgba(8,6,10,0.85)';
+      if (kind === 'meadow') for (let i = 0; i < 6; i++) g.fillRect(x + i * 2, H - 6 - (i % 3) * 4, 1, 12);
+      else g.fillRect(x, Math.max(gy + 8, H - 6), 16, 8);
+    });
+  }
+
+  private flameAt(x: number, y: number, size: number) {
+    const { g, t } = this;
+    const h = Math.max(2, Math.round((5 + Math.sin(t * 13 + x) * 1.2 + Math.sin(t * 29 + x) * 0.8) * size));
+    const rx = Math.round(x);
+    const ry = Math.round(y);
+    g.fillStyle = '#c2310f';
+    g.fillRect(rx - 1, ry - h + 2, 3, h - 1);
+    g.fillStyle = '#ff6a1f';
+    g.fillRect(rx - 1, ry - h, 2, h);
+    g.fillStyle = '#ffcf5a';
+    g.fillRect(rx, ry - h + 2, 1, Math.max(1, h - 2));
+  }
+
+  /** Torches and candles that cut through the darkness. */
+  private collectLights(cam: number, gy: number, lights: Light[]) {
+    this.cells(cam, 1, 30, (k, x, kind, n) => {
+      if (Math.abs(k * 30 - this.campX) < 50) return;
+      if (kind === 'cathedral' && n < 0.3) lights.push({ x: x + 3, y: gy - 20, r: 26, warm: true });
+      if (kind === 'castle' && n < 0.3) lights.push({ x: x + 3, y: gy - 17, r: 30, warm: true });
+    });
+    if (this.zoneHere().kind === 'kiln') lights.push({ x: this.W * 0.72, y: 30, r: 90 });
+  }
+
+  /** God rays falling from the cathedral's windows. */
+  private drawLightShafts(cam: number, gy: number) {
+    const { g, t } = this;
+    g.globalCompositeOperation = 'lighter';
+    this.cells(cam, 0.15, 24, (k, x, kind) => {
+      if (kind !== 'cathedral' || k % 2) return;
+      g.fillStyle = `rgba(255,220,160,${0.05 + 0.03 * Math.sin(t * 0.7 + k)})`;
+      for (let y = gy - 70; y < gy; y += 2) g.fillRect(x + 4 + Math.round((y - (gy - 70)) * 0.5), y, 12, 2);
+    }, this.zoneHere().kind);
+    g.globalCompositeOperation = 'source-over';
+  }
+
   private drawLighting(lights: Light[], darkness: number) {
     const { lg, W, H } = this;
+    if (darkness <= 0.02) return;
     lg.globalCompositeOperation = 'source-over';
     lg.clearRect(0, 0, W, H);
-    lg.fillStyle = `rgba(4,3,6,${darkness})`;
+    lg.fillStyle = `rgba(6,4,10,${darkness})`;
     lg.fillRect(0, 0, W, H);
     lg.globalCompositeOperation = 'destination-out';
     for (const l of lights) {
-      if (l.y < -l.r || l.y > H + l.r) continue;
+      if (l.x < -l.r || l.x > W + l.r) continue;
       const gr = lg.createRadialGradient(l.x, l.y, 0, l.x, l.y, l.r);
-      // Hard-edged bands give the light a dithered, pixel-art falloff.
+      // Hard-edged bands give the light a pixel-art falloff.
       gr.addColorStop(0, 'rgba(0,0,0,1)');
       gr.addColorStop(0.3, 'rgba(0,0,0,1)');
-      gr.addColorStop(0.31, 'rgba(0,0,0,0.78)');
-      gr.addColorStop(0.55, 'rgba(0,0,0,0.78)');
-      gr.addColorStop(0.56, 'rgba(0,0,0,0.5)');
-      gr.addColorStop(0.78, 'rgba(0,0,0,0.5)');
-      gr.addColorStop(0.79, 'rgba(0,0,0,0.22)');
-      gr.addColorStop(0.99, 'rgba(0,0,0,0.22)');
+      gr.addColorStop(0.31, 'rgba(0,0,0,0.7)');
+      gr.addColorStop(0.6, 'rgba(0,0,0,0.7)');
+      gr.addColorStop(0.61, 'rgba(0,0,0,0.35)');
+      gr.addColorStop(0.99, 'rgba(0,0,0,0.35)');
       gr.addColorStop(1, 'rgba(0,0,0,0)');
       lg.fillStyle = gr;
       lg.fillRect(Math.floor(l.x - l.r), Math.floor(l.y - l.r), Math.ceil(l.r * 2), Math.ceil(l.r * 2));
@@ -524,175 +841,52 @@ export class Scene {
     this.g.drawImage(this.light, 0, 0);
   }
 
-  private drawFlame(x: number, y: number, size: number) {
-    const { g, t } = this;
-    const h = Math.round((5 + Math.sin(t * 13 + x) * 1.2 + Math.sin(t * 29 + x) * 0.8) * size);
-    const rx = Math.round(x);
-    const ry = Math.round(y);
-    g.fillStyle = '#c2310f';
-    g.fillRect(rx - 2, ry - h + 2, 5, h - 1);
-    g.fillStyle = '#ff6a1f';
-    g.fillRect(rx - 1, ry - h, 3, h);
-    g.fillRect(rx + (Math.sin(t * 17 + x) > 0 ? 1 : -1), ry - h - 1, 1, 1);
-    g.fillStyle = '#ffcf5a';
-    g.fillRect(rx, ry - h + 2, 1, h - 2);
+  /** The bonfire camp, with Liora tending it. */
+  private drawCamp(cam: number, gy: number, lights: Light[]) {
+    const { g } = this;
+    const x = this.campX - cam;
+    if (x < -60 || x > this.W + 60) return;
+    this.drawParticles(cam, 'flame');
+    const bf = bake(BONFIRE);
+    g.drawImage(bf, Math.round(x - bf.width / 2), gy - bf.height + 1);
+    const maiden = bake(MAIDEN, undefined, MAIDEN_PALETTE);
+    const sway = this.motion && Math.sin(this.t * 1.3) > 0.97 ? 1 : 0;
+    g.drawImage(maiden, Math.round(x + MAIDEN_X), gy - maiden.height + 1 - sway);
+    const f = 0.92 + Math.sin(this.t * 7) * 0.04 + Math.sin(this.t * 17) * 0.04;
+    lights.push({ x, y: gy - 8, r: 70 * f, warm: true });
   }
 
-  private drawBackDecor(cam: number, ww: number, depthT: number) {
-    const { g, W, H, t } = this;
-    const p = 0.6;
-    const pc = cam * p;
-    // Hanging chains in the far layer.
-    const chain = bake(CHAIN);
-    const first = Math.floor((pc - 120) / 120);
-    for (let k = first; k < first + Math.ceil(H / 120) + 3; k++) {
-      const n = hash(k, 3);
-      if (n < 0.5) continue;
-      const x = Math.round(ww + 6 + n * (W - ww * 2 - 12));
-      const top = k * 120 - pc;
-      const len = 30 + Math.floor(hash(k, 9) * 60);
-      g.globalAlpha = 0.5;
-      for (let y = 0; y < len; y += 6) g.drawImage(chain, x, Math.round(top + y));
-      g.globalAlpha = 1;
-    }
-    // Watching eyes, deep down.
-    if (depthT > 0.3) {
-      const cell = 40;
-      const f = Math.floor((pc - cell) / cell);
-      for (let k = f; k < f + Math.ceil(H / cell) + 2; k++) {
-        const n = hash(k, 77);
-        if (n > depthT * 0.5) continue;
-        const x = Math.round(ww + 4 + hash(k, 5) * (W - ww * 2 - 10));
-        const y = Math.round(k * cell - pc + hash(k, 6) * cell);
-        const blink = Math.sin(t * 0.7 + n * 50) > -0.92;
-        if (!blink) continue;
-        g.fillStyle = n < 0.05 ? '#a66cf0' : '#ff2a2a';
-        g.globalAlpha = 0.5 + 0.4 * Math.sin(t * 2 + k);
-        g.fillRect(x, y, 1, 1);
-        g.fillRect(x + 3, y, 1, 1);
-        g.globalAlpha = 1;
-      }
-    }
-  }
-
-  /** Index into ZONES for a world y (pixels), so decor changes with depth. */
-  private zoneIndexAt(worldY: number): number {
-    return ZONES.indexOf(zoneAt(Math.max(0, worldY / PX_PER_M)));
-  }
-
-  /** Per-zone details drawn over the (already recoloured) stone. */
-  private drawZoneDecor(cam: number, ww: number) {
-    if (this.floorAlpha > 0.5) return;
-    const { g, W, H, t } = this;
-    const cells = (gap: number, fn: (k: number, y: number, n: number) => void) => {
-      const first = Math.floor((cam - gap) / gap);
-      for (let k = first; k < first + Math.ceil(H / gap) + 3; k++) fn(k, k * gap - cam, hash(k, gap));
-    };
-    const edge = (k: number, inset: number) => (hash(k, 5) < 0.5 ? ww - 1 - inset : W - ww + inset);
-
-    // The Depths: water drips down the inner walls.
-    cells(41, (k, y, n) => {
-      if (n > 0.55 || this.zoneIndexAt(k * 41) !== Z.depths) return;
-      const x = edge(k, 0) + (hash(k, 5) < 0.5 ? 2 : -2);
-      const fall = (t * 55 + n * 300) % 70;
-      g.fillStyle = 'rgba(140,200,220,0.85)';
-      g.fillRect(x, Math.round(y + fall), 1, 2);
-      if (fall > 64) g.fillRect(x - 1, Math.round(y + 70), 3, 1);
-    });
-
-    // Blightpit: slime trails on the stone, each with a swelling drop.
-    cells(29, (k, y, n) => {
-      if (n > 0.65 || this.zoneIndexAt(k * 29) !== Z.blight) return;
-      const x = edge(k, Math.floor(hash(k, 7) * 6));
-      const len = 4 + Math.floor(hash(k, 8) * 16);
-      g.fillStyle = '#5c8a22';
-      g.fillRect(x, y, 1, len);
-      g.fillStyle = '#9fd23a';
-      g.fillRect(x, y + len + (Math.sin(t * 2 + k) > 0.6 ? 1 : 0), 1, 1);
-    });
-
-    // Tomb of Giants: huge skulls half-seen in the far dark.
-    const pc = cam * 0.6;
-    const giant = bake(SKULL, '#26262e');
-    const first = Math.floor((pc - 160) / 160);
-    for (let k = first; k < first + Math.ceil(H / 160) + 2; k++) {
-      if (hash(k, 91) > 0.5 || this.zoneIndexAt(k * 160 / 0.6) !== Z.tomb) continue;
-      const x = Math.round(ww + 4 + hash(k, 92) * (W - ww * 2 - 40));
-      g.globalAlpha = 0.35;
-      g.drawImage(giant, x, Math.round(k * 160 - pc), giant.width * 4, giant.height * 4);
-      g.globalAlpha = 1;
-    }
-
-    // The Abyss: violet tendrils reaching out of the walls.
-    cells(47, (k, y, n) => {
-      if (n > 0.6 || this.zoneIndexAt(k * 47) !== Z.abyss) return;
-      const left = hash(k, 5) < 0.5;
-      const len = 6 + Math.floor(hash(k, 9) * 14);
-      for (let i = 0; i < len; i++) {
-        const x = left ? ww + i : W - ww - 1 - i;
-        const yy = Math.round(y + Math.sin(t * 1.6 + i * 0.45 + k) * (1 + i * 0.25));
-        g.fillStyle = i === len - 1 ? '#c99bff' : i > len - 4 ? '#8a4ad8' : '#4a1f78';
-        g.fillRect(x, yy, 1, i < 3 ? 2 : 1);
-      }
-    });
-  }
-
-  private drawWallDecor(cam: number, ww: number) {
-    const { g, W, H } = this;
-    const skull = bake(SKULL);
-    const bones = bake(BONES);
-    const gap = 53;
-    const first = Math.floor((cam - 20) / gap);
-    for (let k = first; k < first + Math.ceil(H / gap) + 2; k++) {
-      const n = hash(k, 21);
-      const y = k * gap - cam;
-      const left = hash(k, 22) < 0.5;
-      // The catacombs are lined with the dead.
-      const skulls = this.zoneIndexAt(k * gap) === Z.catacombs ? 0.62 : 0.28;
-      if (n < skulls && ww >= 12) {
-        const x = left ? Math.floor(ww / 2 - 4) : Math.floor(W - ww / 2 - 5);
-        g.drawImage(skull, x, y);
-      } else if (n > 0.85) {
-        // Stone ledge with remains.
-        const lw = 16;
-        const x = left ? ww : W - ww - lw;
-        g.fillStyle = '#3a3638';
-        g.fillRect(x, y + 5, lw, 3);
-        g.fillStyle = '#5a5558';
-        g.fillRect(x, y + 5, lw, 1);
-        g.fillStyle = 'rgba(0,0,0,0.5)';
-        g.fillRect(x, y + 8, lw, 2);
-        g.drawImage(bones, x + 2, y);
-      }
-    }
-  }
-
-  private drawKnight(cam: number) {
-    const { g, W } = this;
-    const sitting = this.floorAlpha > 0.5;
+  private drawKnight(cam: number, gy: number) {
+    const { g } = this;
+    const goal = this.resting() ? this.campX - 24 : this.targetX;
+    const arrived = Math.abs(goal - this.knightX) < 0.5;
     const tint = this.dead > DEATH_TIME - 0.5 && Math.floor(this.t * 12) % 2 === 0 ? '#8a1010' : undefined;
-    if (sitting && this.praising > 0) {
+    const pal = this.hollow ? HOLLOW_PALETTE : undefined;
+    const x = Math.round(this.knightX - cam);
+
+    if (this.praising > 0) {
       const k = bake(KNIGHT_PRAISE, tint);
-      g.drawImage(k, Math.round(W / 2 - 24), -cam - k.height);
+      g.drawImage(k, x, gy - k.height);
       return;
     }
-    if (sitting) {
-      const k = bake(KNIGHT_SIT, tint, this.hollow ? HOLLOW_PALETTE : undefined);
-      g.drawImage(k, Math.round(W / 2 - 24), -cam - k.height);
+    if (this.resting() && arrived) {
+      const k = bake(KNIGHT_SIT, tint, pal);
+      g.drawImage(k, x, gy - k.height);
       return;
     }
-    const k = bake(this.praising > 0 ? KNIGHT_PRAISE : KNIGHT, tint, this.hollow ? HOLLOW_PALETTE : undefined);
-    const bob = this.motion ? Math.round(Math.sin(this.t * 2.2) * 1) : 0;
-    const x = Math.round(W / 2 - k.width / 2);
-    const y = Math.round(this.knightY - cam) + bob;
+    const walking = this.motion && !arrived;
+    const sprite = walking ? KNIGHT_WALK[Math.floor(this.walkPhase) % KNIGHT_WALK.length] : KNIGHT_SIDE;
+    const k = bake(sprite, tint, pal);
+    const y = gy - k.height + (walking && Math.floor(this.walkPhase) % 2 ? -1 : 0);
+
     if (this.dead > 0 && this.motion) {
-      // Topple in three crisp steps, lie still, then fade back in standing:
-      // the respawn.
+      // Topple forward in three crisp steps, lie still, then fade back in
+      // standing: the respawn.
       const since = DEATH_TIME - this.dead;
       if (since < 1.1) {
         const steps = Math.min(3, Math.floor(since / 0.08));
         g.save();
-        g.translate(x + k.width / 2, y + k.height);
+        g.translate(x + k.width / 2, gy);
         g.rotate((steps * Math.PI) / 6);
         g.globalAlpha = since > 0.8 ? 1 - (since - 0.8) / 0.3 : 1;
         g.drawImage(k, -k.width / 2, -k.height);
@@ -702,18 +896,15 @@ export class Scene {
         g.drawImage(k, x, y);
       }
       g.globalAlpha = 1;
-    } else {
-      g.drawImage(k, x, y);
+      return;
     }
-    // Tattered cape fluttering upward while sinking.
-    const speed = this.targetY - this.knightY;
-    if (speed > 2 && this.motion) {
-      g.fillStyle = '#4a1c16';
-      for (let i = 0; i < 4; i++) {
-        const h = 2 + Math.round(Math.abs(Math.sin(this.t * 15 + i)) * Math.min(6, speed / 4));
-        g.fillRect(x + 4 + i * 2, y + 7 - h, 1, h);
-      }
-    }
+    if (this.facing < 0) {
+      g.save();
+      g.translate(x + k.width, 0);
+      g.scale(-1, 1);
+      g.drawImage(k, 0, y);
+      g.restore();
+    } else g.drawImage(k, x, y);
   }
 
   private drawParticles(cam: number, layer: 'back' | 'flame' | 'front') {
@@ -722,15 +913,32 @@ export class Scene {
       const l = p.kind === 'flame' ? 'flame' : p.kind === 'spark' || p.kind === 'blood' ? 'front' : 'back';
       if (l !== layer) continue;
       const k = p.life / p.max;
-      const x = Math.round(p.x);
-      const y = Math.round(p.y - cam);
+      const x = Math.round(p.x - cam);
+      const y = Math.round(p.y);
       if (p.kind === 'flame') {
         g.fillStyle = k < 0.2 ? '#fff2b0' : k < 0.45 ? '#ffcf5a' : k < 0.7 ? '#ff6a1f' : k < 0.9 ? '#c2310f' : '#3a1510';
         const s = k < 0.5 ? 2 : 1;
         g.fillRect(x, y, s, s);
         continue;
       }
-      g.globalAlpha = p.kind === 'ash' ? 0.8 : 1 - k * 0.7;
+      if (p.kind === 'crow') {
+        const flap = Math.floor(this.t * 6 + p.max) % 2;
+        g.fillStyle = p.color;
+        g.fillRect(x, y, 1, 1);
+        g.fillRect(x - 1, y - flap, 1, 1);
+        g.fillRect(x + 1, y - flap, 1, 1);
+        g.fillRect(x - 2, y - 1 + flap, 1, 1);
+        g.fillRect(x + 2, y - 1 + flap, 1, 1);
+        continue;
+      }
+      if (p.kind === 'firefly') {
+        g.globalAlpha = 0.5 + 0.5 * Math.sin(this.t * 4 + p.max * 9);
+        g.fillStyle = p.color;
+        g.fillRect(x, y, 1, 1);
+        g.globalAlpha = 1;
+        continue;
+      }
+      g.globalAlpha = p.kind === 'mote' ? 0.75 : 1 - k * 0.7;
       g.fillStyle = p.color;
       g.fillRect(x, y, 1, 1);
       if (p.kind === 'spark' && k < 0.4) g.fillRect(x - 1, y, 3, 1);

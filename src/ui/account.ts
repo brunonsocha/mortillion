@@ -25,7 +25,7 @@ export function gateRun(): boolean {
   return false;
 }
 
-/** "2/3 free descents left today", or null when play is unlimited. */
+/** "2/3 free journeys left", or null when play is unlimited. */
 export function quotaLabel(): string | null {
   if (unlimited()) return null;
   return app.t.freeLeft.replace('{n}', String(freeRunsLeft())).replace('{max}', String(FREE_RUNS_PER_DAY));

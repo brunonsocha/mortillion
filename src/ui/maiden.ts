@@ -30,7 +30,7 @@ export function dismissMaiden() {
 
 /**
  * Liora speaks. `place` keeps her clear of the controls: 'top' during a
- * descent (over the knight), 'bottom' elsewhere.
+ * journey (over the knight), 'bottom' elsewhere.
  */
 export function say(event: MaidenEvent, place: 'top' | 'bottom' = 'bottom') {
   if (!load().maiden) return;

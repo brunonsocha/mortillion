@@ -168,7 +168,7 @@ function showStatus() {
   const avg = s.days.length ? s.days.reduce((a, d) => a + d.points, 0) / s.days.length : 0;
   const m = (pts: number) => `${fmt(Math.round(pts * METRES_PER_POINT), app.lang)} ${t.metres}`;
 
-  // Rarest tier first, deaths last: the bars read as a descent.
+  // Rarest tier first, deaths last.
   const rows = [6, 5, 4, 3, 2, 1, 0].map((tier) => {
     const n = counts[tier];
     const pct = turns.length ? Math.round((n / turns.length) * 100) : 0;

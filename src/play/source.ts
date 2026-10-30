@@ -56,7 +56,7 @@ export const isRetry = (o: Outcome): o is Retry => 'retry' in o && o.retry === t
 export interface Source {
   kind: RunKind;
   id: string;
-  /** Prompts in the run; null for the Endless Abyss. */
+  /** Prompts in the run; null for the Endless Road. */
   total: number | null;
   seats: number;
   lives: number | null;

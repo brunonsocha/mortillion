@@ -136,9 +136,12 @@ test('easter-egg phrases', () => {
   assert.equal(quipFor('dog', 'en'), null);
 });
 
-test('depth zones', () => {
-  assert.equal(zoneAt(0).name.en, 'The Bonfire Shaft');
-  assert.equal(zoneAt(2600).name.en, 'Blightpit');
-  assert.equal(zoneAt(7000).name.en, 'Kiln of the First Flame');
-  assert.equal(zoneAt(99999).name.en, 'The Age of Dark');
+test('journey zones', () => {
+  assert.equal(zoneAt(0).kind, 'meadow');
+  assert.equal(zoneAt(1500).kind, 'ruins');
+  assert.equal(zoneAt(3000).kind, 'cathedral');
+  assert.equal(zoneAt(4500).kind, 'castle');
+  assert.equal(zoneAt(7000).kind, 'kiln');
+  assert.ok(zoneAt(7000).final);
+  assert.equal(zoneAt(99999).kind, 'dark');
 });

@@ -4,30 +4,55 @@
 import type { L10n, Lang } from './data/types.ts';
 import { exactKey } from './engine/normalize.ts';
 
+export type ZoneKind = 'meadow' | 'ruins' | 'cathedral' | 'castle' | 'kiln' | 'dark';
+
 export interface Zone {
-  /** Depth in metres where the zone begins. */
+  /** Distance in metres where the zone begins. */
   from: number;
+  kind: ZoneKind;
   name: L10n;
-  /** Back-wall tint, darkness of the unlit shaft, and drifting particle colours. */
-  tint: [number, number, number];
-  dark: number;
-  motes: string[];
   /** The last zone of a normal run (Liora remarks on reaching it). */
   final?: boolean;
-  /** Colour wash (r, g, b, strength) blended over the walls in 'color' mode. */
-  wash: [number, number, number, number];
+  /** Sky gradient, top and horizon. */
+  sky: [number, number, number][];
+  /** Ground: surface, soil, deep. */
+  ground: [number, number, number][];
+  /** How dark the unlit world is (0 = daylight). */
+  dark: number;
+  /** Drifting particle colours. */
+  motes: string[];
 }
 
+/**
+ * The pilgrimage, walked left to right: a meadow at dusk, the ruins of an
+ * old kingdom, a cathedral, a burning castle and, at the end, the Kiln of the
+ * First Flame. Only the Endless journey goes on into the Age of Dark.
+ */
 export const ZONES: Zone[] = [
-  { from: 0, name: { en: 'The Bonfire Shaft', pl: 'Szyb Ogniska', uk: 'Шахта Багаття' }, tint: [20, 20, 28], dark: 0.8, wash: [0, 0, 0, 0], motes: ['#4a4540', '#77706a'] },
-  { from: 600, name: { en: 'Undead Burrows', pl: 'Nory Nieumarłych', uk: 'Нори Немертвих' }, tint: [24, 21, 24], dark: 0.82, wash: [122, 106, 90, 0.18], motes: ['#4a4540', '#77706a'] },
-  { from: 1500, name: { en: 'The Depths', pl: 'Głębiny', uk: 'Глибини' }, tint: [16, 22, 24], dark: 0.85, wash: [58, 106, 120, 0.4], motes: ['#3c4a4c', '#5b6a6a'] },
-  { from: 2500, name: { en: 'Blightpit', pl: 'Zgniłodół', uk: 'Гнилояма' }, tint: [16, 27, 12], dark: 0.86, wash: [90, 160, 40, 0.55], motes: ['#5f7a2a', '#8fae3a'] },
-  { from: 3500, name: { en: 'Catacombs of the Hollow', pl: 'Katakumby Pustych', uk: 'Катакомби Порожніх' }, tint: [26, 22, 18], dark: 0.87, wash: [170, 145, 105, 0.35], motes: ['#7a6d58', '#a39478'] },
-  { from: 4500, name: { en: 'Tomb of Giants', pl: 'Grobowiec Olbrzymów', uk: 'Гробниця Велетнів' }, tint: [8, 8, 11], dark: 0.95, wash: [40, 40, 60, 0.3], motes: ['#2a2a30', '#3c3c44'] },
-  { from: 5500, name: { en: 'The Abyss', pl: 'Otchłań', uk: 'Безодня' }, tint: [18, 8, 28], dark: 0.91, wash: [122, 58, 208, 0.6], motes: ['#5a2a8a', '#a66cf0'] },
-  { from: 6500, name: { en: 'Kiln of the First Flame', pl: 'Piec Pierwszego Płomienia', uk: 'Горнило Першого Полум’я' }, tint: [52, 48, 44], dark: 0.62, wash: [235, 225, 210, 0.7], motes: ['#cfc8bc', '#f2ece0'] },
-  { from: 9000, name: { en: 'The Age of Dark', pl: 'Era Mroku', uk: 'Епоха Темряви' }, tint: [6, 6, 8], dark: 0.96, wash: [20, 20, 24, 0.65], motes: ['#d8d8e0', '#8a8a96'] },
+  {
+    from: 0, kind: 'meadow', name: { en: 'The Pilgrim’s Meadow', pl: 'Łąka Pielgrzymów', uk: 'Лука Прочан' },
+    sky: [[52, 36, 84], [255, 150, 92]], ground: [[86, 128, 58], [64, 44, 30], [36, 26, 20]], dark: 0.12, motes: ['#d8ff8a', '#fff2a8'],
+  },
+  {
+    from: 1200, kind: 'ruins', name: { en: 'Ruins of the Old Kingdom', pl: 'Ruiny Dawnego Królestwa', uk: 'Руїни Давнього Королівства' },
+    sky: [[62, 72, 90], [150, 158, 166]], ground: [[110, 106, 96], [70, 66, 60], [40, 38, 36]], dark: 0.26, motes: ['#b8b4a8', '#8a867c'],
+  },
+  {
+    from: 2600, kind: 'cathedral', name: { en: 'Cathedral of the Deep', pl: 'Katedra Głębin', uk: 'Собор Глибин' },
+    sky: [[18, 16, 30], [46, 40, 62]], ground: [[58, 52, 72], [40, 36, 50], [22, 20, 28]], dark: 0.55, motes: ['#f2d98c', '#c8b070'],
+  },
+  {
+    from: 4000, kind: 'castle', name: { en: 'The Ashen Castle', pl: 'Popielny Zamek', uk: 'Попелястий Замок' },
+    sky: [[34, 8, 16], [178, 64, 40]], ground: [[84, 74, 72], [52, 44, 44], [28, 22, 24]], dark: 0.36, motes: ['#ff8a3a', '#6a5a5a'],
+  },
+  {
+    from: 5500, kind: 'kiln', name: { en: 'Kiln of the First Flame', pl: 'Piec Pierwszego Płomienia', uk: 'Горнило Першого Полум’я' }, final: true,
+    sky: [[14, 12, 14], [70, 54, 44]], ground: [[168, 158, 146], [128, 118, 108], [70, 62, 56]], dark: 0.3, motes: ['#ff7a2a', '#ece6dc'],
+  },
+  {
+    from: 9000, kind: 'dark', name: { en: 'The Age of Dark', pl: 'Era Mroku', uk: 'Епоха Темряви' },
+    sky: [[2, 2, 6], [12, 12, 20]], ground: [[30, 30, 36], [18, 18, 22], [8, 8, 10]], dark: 0.82, motes: ['#c8c8d8', '#6a6a7a'],
+  },
 ];
 
 export function zoneAt(metres: number): Zone {
@@ -58,7 +83,7 @@ export function secretOf(input: string): Secret | null {
 
 export const SECRET_TEXT: Record<Secret, L10n> = {
   sun: { en: 'PRAISE THE SUN!', pl: 'CHWAŁA SŁOŃCU!', uk: 'СЛАВА СОНЦЮ!' },
-  gitgud: { en: 'Then descend, and get good.', pl: 'Więc schodź i bądź lepszy.', uk: 'То спускайся — і стань кращим.' },
+  gitgud: { en: 'Then walk on, and get good.', pl: 'Więc idź dalej i bądź lepszy.', uk: 'То йди далі — і стань кращим.' },
   bonfire: { en: 'No resting now. The flame still burns.', pl: 'Nie czas na odpoczynek. Płomień wciąż płonie.', uk: 'Не час відпочивати. Полум’я ще горить.' },
 };
 
@@ -124,5 +149,5 @@ export const FIRE_KEEPER: L10n[] = [
   { en: 'Welcome to the bonfire, Unkindled.', pl: 'Witaj przy ognisku, Nierozpalony.', uk: 'Ласкаво просимо до багаття, Нерозпалений.' },
   { en: 'Seek rarer answers, ashen one.', pl: 'Szukaj rzadszych odpowiedzi, popielny.', uk: 'Шукай рідкісніших відповідей, попелястий.' },
   { en: 'Don’t you dare go Hollow.', pl: 'Nie waż się stać Pustym.', uk: 'Не смій стати Порожнім.' },
-  { en: 'The fire fades… but the descent remains.', pl: 'Ogień gaśnie… ale zejście trwa.', uk: 'Вогонь згасає… але спуск триває.' },
+  { en: 'The fire fades… but the road remains.', pl: 'Ogień gaśnie… ale droga trwa.', uk: 'Вогонь згасає… але дорога лишається.' },
 ];

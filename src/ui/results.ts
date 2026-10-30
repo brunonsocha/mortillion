@@ -69,7 +69,7 @@ route('results', async ([kind, id]) => {
   }
   const turns: Turn[] = views.map(turnOf);
   // Achievements earned by this run, announced one after another, then
-  // Liora's verdict on the descent (only right after playing it).
+  // Liora's verdict on the journey (only right after playing it).
   const fresh = lastRun?.kind === kind && lastRun.id === id;
   void (async () => {
     await new Promise((r) => setTimeout(r, 2000));
@@ -84,8 +84,9 @@ route('results', async ([kind, id]) => {
 
   const pts = totalPoints(turns);
   const allDead = kind !== 'endless' && turns.every((tn) => !tn.tier);
-  app.scene.setMode('descent');
+  // The knight walks on to a camp at the end of the road, where Liora waits.
   app.scene.setDepth(pts * METRES_PER_POINT);
+  app.scene.setMode('bonfire', pts * METRES_PER_POINT);
 
   const depthEl = h('span', { class: 'final-depth' }, `0 ${t.metres}`);
   setTimeout(() => countUp(depthEl, 0, pts * METRES_PER_POINT, 1800, (n) => `${fmt(n, lang)} ${t.metres}`), 500);

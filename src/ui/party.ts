@@ -139,7 +139,7 @@ function play(players: Player[], src: Source): HTMLElement {
   const lang = app.lang;
   let alive = true;
   onLeave(() => (alive = false));
-  app.scene.setMode('descent');
+  app.scene.setMode('journey');
   app.scene.setDepth(0, true);
 
   const stage = h('section', { class: 'panel party-stage' });
