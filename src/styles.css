@@ -2039,8 +2039,8 @@ body:not(:has(.home)) .brand {
 
 @media (max-width: 520px) {
   .maiden-portrait {
-    width: 88px;
-    height: 110px;
+    width: 96px;
+    height: 120px;
   }
 
   .maiden-line {

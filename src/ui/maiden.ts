@@ -39,10 +39,10 @@ export function say(event: MaidenEvent, place: 'top' | 'bottom' = 'bottom') {
   const still = !app.scene.motion;
 
   const frames = [PORTRAIT, PORTRAIT_BLINK, PORTRAIT_TALK].map((s) => bake(s, undefined, PORTRAIT_PALETTE));
-  const portrait = h('canvas', { class: 'maiden-portrait', width: 80, height: 100, 'aria-hidden': 'true' });
+  const portrait = h('canvas', { class: 'maiden-portrait', width: 96, height: 120, 'aria-hidden': 'true' });
   const pg = portrait.getContext('2d')!;
   const paint = (f: number) => {
-    pg.clearRect(0, 0, 80, 100);
+    pg.clearRect(0, 0, 96, 120);
     pg.drawImage(frames[f], 0, 0);
   };
   paint(0);

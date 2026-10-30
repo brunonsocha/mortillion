@@ -1068,6 +1068,25 @@ shake on rare+ answers, and a flashy animation - think fire emblem 8 kill animat
 **Verified:** Firefox screenshots of tiers 2, 4, 5 and 6, skip, and timeout (`shots/combat/`).
 `tsc` and `npm test` pass.
 
+## 37. Liora's portrait in the style of VA-11 Hall-A
+
+Your request (2026-10-30): "for the portrait - be inspired from va-11 hall-a cyberpunk bartender action."
+
+**What** (`shots/liora4/draw.py` → `PORTRAIT*` in `src/render/maiden.ts`)
+- **Larger:** 96×120 instead of 80×100, shown at 144×180 on desktop and 96×120 on phones.
+- **Cel shading** the way Sukeban's portraits do it: flat base colours with hard-edged shadow
+  shapes (left cheek and jaw, the jaw's shadow on the neck, under each bang cluster, under the
+  bust), instead of soft banded gradients.
+- **Plum line art:** a dark plum outer outline, and inner lines where the hair meets the face.
+- **Two-colour rim light,** the bar-neon look carried over to the bonfire: warm ember on the
+  right, cool violet and cyan on the left, on skin, hair and gown.
+- **Hair:** clean pointed bang clusters (shadowed flank, highlight edge), a jagged angel-ring
+  shine, long locks falling in front of the shoulders with strand lines.
+- **Face:** big glossy amber eyes with a heavy lash line and an outer flick, pink eyeshadow,
+  fuller glossy lips, blush hatching, a beauty mark.
+- **Outfit:** the off-shoulder gown with gold trim and an ember brooch, the choker and the tiara.
+- **Blink and talk frames** are regenerated from the same source.
+
 ---
 
 ## What I need from you
