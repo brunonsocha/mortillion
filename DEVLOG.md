@@ -1171,6 +1171,30 @@ for v in base blink talk; do rsvg-convert -w 960 art/liora/$v.svg -o /tmp/$v.png
 python3 scripts/pixelize-portrait.py /tmp/base.png /tmp/blink.png /tmp/talk.png
 ```
 
+## 41. The road ends at a bonfire
+
+Your request (2026-10-30): "let's make the player encounter a bonfire and sit at it instead of
+meeting the enemy when he's exhausted the question pool without making answers rare enough to
+progress to the end".
+
+**How it fits Krillion's model:** a daily run has a fixed set of prompts, and the score is how far
+your answers carried you. The run ends when the prompts run out, not on a loss.
+
+**What** (`Scene.reachBonfire()`, `finish()` in `src/ui/game.ts`)
+- After the last prompt of a Daily Pilgrimage or a themed path, if you **haven't reached the
+  Kiln** (600 points / 6,000 m, now `VICTORY_POINTS` in `src/eggs.ts`), no foe waits.
+  - An **unlit bonfire** (ash and a coiled sword) stands on the road ahead.
+  - The knight walks to it and **sits**, and it **kindles** with a burst of embers, a warm flash
+    and "BONFIRE LIT".
+  - **Liora fades in** beside the fire, and the results open at the same camp, where she gives her
+    verdict.
+- A victorious run (Kiln reached) and the Endless Road (which ends in death) go straight to the
+  results, as before.
+- With reduced motion, the bonfire is simply lit.
+
+**Verified:** a themed path skipped through to the end (screenshots of the ashen bonfire, the
+kindling and the results). `tsc` and `npm test` pass.
+
 ---
 
 ## What I need from you

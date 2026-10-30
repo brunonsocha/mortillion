@@ -131,6 +131,9 @@ export class Scene {
   private knightX = START_CAMP - 24;
   private targetX = 0;
   private campX = START_CAMP;
+  /** An unlit bonfire is ash and a coiled sword; Liora appears once it burns. */
+  private campLit = true;
+  private maidenIn = 1;
   private facing = 1;
   private walkPhase = 0;
   private groundY = 140;
@@ -204,6 +207,7 @@ export class Scene {
     if (mode === 'bonfire') {
       this.restAt(restMetres);
       this.enemy = null;
+      this.campLit = true;
     }
     this.mode = mode;
     setAmbience(mode === 'bonfire');
@@ -451,8 +455,9 @@ export class Scene {
     if (z.kind === 'ruins' && Math.random() < dt * 0.25) {
       this.particles.push({ x: this.camX - 10, y: this.groundY - 70 - Math.random() * 30, vx: 22 + Math.random() * 10, vy: -1, life: 0, max: 14, color: '#141418', kind: 'crow' });
     }
-    // Camp bonfire flames and embers.
-    if (Math.abs(this.campX - this.camX - this.W / 2) < this.W) {
+    // Camp bonfire flames and embers; Liora fades in once it burns.
+    if (this.campLit && this.maidenIn < 1) this.maidenIn = Math.min(1, this.maidenIn + dt * 0.8);
+    if (this.campLit && Math.abs(this.campX - this.camX - this.W / 2) < this.W) {
       for (let i = 0; i < 150 * dt; i++) {
         const off = (Math.random() - 0.5) * 10;
         this.particles.push({ x: this.campX + off, y: this.groundY - 4 - Math.random() * 2, vx: -off * 0.6 + (Math.random() - 0.5) * 4, vy: -12 - Math.random() * 14, life: 0, max: 0.3 + Math.random() * 0.45, color: '', kind: 'flame' });
@@ -460,6 +465,43 @@ export class Scene {
       if (Math.random() < dt * 8) {
         this.particles.push({ x: this.campX + (Math.random() - 0.5) * 8, y: this.groundY - 14, vx: (Math.random() - 0.5) * 14, vy: -18 - Math.random() * 18, life: 0, max: 1.5 + Math.random() * 1.5, color: Math.random() < 0.5 ? '#ff6a1f' : '#ffcf5a', kind: 'ember' });
       }
+    }
+  }
+
+  /**
+   * The road runs out short of the Kiln: an unlit bonfire waits ahead. The
+   * knight walks to it, sits, and kindles it; then Liora appears.
+   */
+  async reachBonfire(onLit?: () => void): Promise<void> {
+    this.setMode('bonfire', this.targetX / PX_PER_M);
+    if (!this.motion) {
+      this.kindle();
+      onLit?.();
+      return;
+    }
+    this.campLit = false;
+    this.maidenIn = 0;
+    const start = performance.now();
+    while (Math.abs(this.campX - 24 - this.knightX) > 0.5 && performance.now() - start < 5000) await wait(60);
+    await wait(500);
+    this.kindle();
+    onLit?.();
+    await wait(1800);
+  }
+
+  private kindle() {
+    this.campLit = true;
+    sfx.kindle();
+    this.flashOnce('#ffb347', 0.35);
+    if (!this.motion) {
+      this.maidenIn = 1;
+      return;
+    }
+    this.shake = 0.15;
+    for (let i = 0; i < 50; i++) {
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2;
+      const v = 20 + Math.random() * 50;
+      this.particles.push({ x: this.campX, y: this.groundY - 6, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0, max: 0.6 + Math.random() * 0.9, color: Math.random() < 0.5 ? '#ff6a1f' : '#ffcf5a', kind: 'ember' });
     }
   }
 
@@ -1244,11 +1286,16 @@ export class Scene {
     const x = this.campX - cam;
     if (x < -60 || x > this.W + 60) return;
     this.drawParticles(cam, 'flame');
-    const bf = bake(BONFIRE);
+    const bf = bake(BONFIRE, this.campLit ? undefined : '#2e2a32');
     g.drawImage(bf, Math.round(x - bf.width / 2), gy - bf.height + 1);
-    const maiden = bake(MAIDEN, undefined, MAIDEN_PALETTE);
-    const sway = this.motion && Math.sin(this.t * 1.3) > 0.97 ? 1 : 0;
-    g.drawImage(maiden, Math.round(x + MAIDEN_X), gy - maiden.height + 1 - sway);
+    if (!this.campLit) return;
+    if (this.maidenIn > 0) {
+      const maiden = bake(MAIDEN, undefined, MAIDEN_PALETTE);
+      const sway = this.motion && Math.sin(this.t * 1.3) > 0.97 ? 1 : 0;
+      g.globalAlpha = this.maidenIn;
+      g.drawImage(maiden, Math.round(x + MAIDEN_X), gy - maiden.height + 1 - sway);
+      g.globalAlpha = 1;
+    }
     const f = 0.92 + Math.sin(this.t * 7) * 0.04 + Math.sin(this.t * 17) * 0.04;
     lights.push({ x, y: gy - 8, r: 70 * f, warm: true });
   }

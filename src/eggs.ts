@@ -141,6 +141,9 @@ export const SOAPSTONE: L10n[] = [
   { en: 'Behold, Lord of Cinder!', pl: 'Oto Władca Żaru!', uk: 'Узріть, Володар Жару!' },
 ];
 
+/** Points that carry a pilgrimage to the Kiln of the First Flame: a victory. */
+export const VICTORY_POINTS = 600;
+
 export const BONFIRE_LIT: L10n = { en: 'BONFIRE LIT', pl: 'OGNISKO ROZPALONE', uk: 'БАГАТТЯ РОЗПАЛЕНО' };
 export const VICTORY: L10n = { en: 'VICTORY ACHIEVED', pl: 'ZWYCIĘSTWO', uk: 'ПЕРЕМОГУ ЗДОБУТО' };
 

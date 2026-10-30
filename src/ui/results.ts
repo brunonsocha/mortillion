@@ -4,7 +4,7 @@ import { ACHIEVEMENTS } from '../achievements.ts';
 import { turnOf, viewOf, type TurnView } from '../play/source.ts';
 import { MAX_SCORE, METRES_PER_POINT, dayNumber, totalPoints, type Turn } from '../engine/game.ts';
 import { load } from '../engine/storage.ts';
-import { VICTORY } from '../eggs.ts';
+import { VICTORY, VICTORY_POINTS } from '../eggs.ts';
 import { PACK_NAMES } from '../i18n/strings.ts';
 import { shareCard } from './card.ts';
 import { SKIP_COLOR, TIER_COLORS } from '../render/scene.ts';
@@ -17,7 +17,6 @@ import { countUp, fmt, h } from './dom.ts';
 import { lastRun, type RunKind } from './game.ts';
 
 /** A score worthy of the Kiln: an average of Lord of Cinder or better. */
-const VICTORY_POINTS = 600;
 
 const TIER_EMOJI = ['💀', '🦴', '🎭', '🕯️', '🔥', '👑', '🌑'];
 

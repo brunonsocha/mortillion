@@ -12,7 +12,7 @@ import {
 } from '../play/source.ts';
 import { SKIP_COLOR, TIER_COLORS } from '../render/scene.ts';
 import { sfx } from '../render/sfx.ts';
-import { BONFIRE_LIT, PATCHES, SECRET_TEXT, quipFor, secretOf, zoneAt } from '../eggs.ts';
+import { BONFIRE_LIT, PATCHES, VICTORY_POINTS, SECRET_TEXT, quipFor, secretOf, zoneAt } from '../eggs.ts';
 import { gateRun, showPaywall } from './account.ts';
 import { dismissMaiden, say } from './maiden.ts';
 import { app, banner, go, onLeave, route, tierBadge } from './app.ts';
@@ -531,7 +531,15 @@ function play(src: Source): HTMLElement {
     onLeave(() => removeEventListener('keydown', onKey));
   }
 
-  function finish(unlocked: string[]) {
+  async function finish(unlocked: string[]) {
+    // The prompts ran out short of the Kiln: no foe waits, only a bonfire.
+    // The knight sits, kindles it, and the journey ends there.
+    if (!endless && points() < VICTORY_POINTS && src.turns.length) {
+      reveal.hidden = true;
+      ask.hidden = true;
+      await app.scene.reachBonfire(() => alive && void banner(BONFIRE_LIT[lang], 'lit', 2000));
+      if (!alive) return;
+    }
     sfx.complete();
     finishRun(src, unlocked);
   }
