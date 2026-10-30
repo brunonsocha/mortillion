@@ -1377,6 +1377,26 @@ python3 scripts/cutout.py new.jpg art/liora/maiden-cutout.png --crop x,y,w,h
 python3 scripts/pixelize-portrait.py art/liora/maiden-cutout.png --colors 56
 ```
 
+## 49. Liora's portrait pixelized further, to match the game
+
+Your request (2026-10-30): "you think u could pixelize it further, to fit the style of the rest of
+the whole game?"
+
+**What**
+- **Halved the resolution:** 72×90 instead of 144×180, shown at **2×** (each art pixel is a crisp
+  2×2 block) in the same 144×180 box. On phones it's shown 1:1.
+- **Fewer colours:** 32 instead of 56, for flatter, poster-like shading closer to the scene's
+  hand-made sprites.
+- **A little more saturation and contrast** (`--saturation 1.3 --contrast 1.15`, a new pixelizer
+  option), so the amber eyes, the pendant and the hood's ember trim don't go muddy at the lower
+  resolution.
+- **Sizes compared:** 72×90 and 48×60. 48×60 lost the face, so 72×90 it is.
+- **Sheet size:** the portrait sheet is now 6 KB (was 52 KB).
+
+```sh
+python3 scripts/pixelize-portrait.py art/liora/maiden-cutout.png --size 72x90 --colors 32 --saturation 1.3 --contrast 1.15
+```
+
 ---
 
 ## What I need from you

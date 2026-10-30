@@ -1,6 +1,6 @@
 # Turns any illustration of Liora into the game's pixel-art portrait.
 #
-#   python3 scripts/pixelize-portrait.py base.png [blink.png talk.png] [--size 144x180] [--colors 48]
+#   python3 scripts/pixelize-portrait.py base.png [blink.png talk.png] [--size 72x90] [--colors 32] [--saturation 1.3] [--contrast 1.15]
 #
 # The inputs can come from anywhere: the vector source in art/liora (rendered
 # with rsvg-convert), a commission, an AI image. Each frame is cropped to the
@@ -22,6 +22,7 @@ ap.add_argument('frames', nargs='+', help='base [blink [talk]] images')
 ap.add_argument('--size', default='144x180')
 ap.add_argument('--colors', type=int, default=48)
 ap.add_argument('--saturation', type=float, default=1.1)
+ap.add_argument('--contrast', type=float, default=1.0)
 ap.add_argument('--no-outline', action='store_true')
 ap.add_argument('--out', default=str(OUT))
 a = ap.parse_args()
@@ -39,6 +40,7 @@ def fit(path):
     # premultiply so transparent edges don't bleed dark fringes, then area-average
     small = im.resize((W, H), Image.BOX)
     rgb = ImageEnhance.Color(small.convert('RGB')).enhance(a.saturation)
+    rgb = ImageEnhance.Contrast(rgb).enhance(a.contrast)
     alpha = small.getchannel('A').point(lambda v: 255 if v >= 128 else 0)
     return rgb, alpha
 

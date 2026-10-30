@@ -9,10 +9,10 @@ import { sfx } from '../render/sfx.ts';
 import { app } from './app.ts';
 import { h } from './dom.ts';
 
-// The portrait: a sheet of three 144×180 frames (base, blink, talk) made by
-// scripts/pixelize-portrait.py from the illustration in art/liora.
-const PW = 144;
-const PH = 180;
+// The portrait: a sheet of three 72×90 frames (base, blink, talk) made by
+// scripts/pixelize-portrait.py from the artwork in art/liora, shown at 2×.
+const PW = 72;
+const PH = 90;
 const sheet = new Image();
 sheet.src = portraitUrl;
 
