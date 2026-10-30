@@ -14,6 +14,9 @@ const DEEP = 2100;
 
 // Validated for adjacent-pair separation (normal + CVD) and 3:1 contrast on the
 // dark panels; the pale tiers are always shown with a text label.
+/** Seconds the death animation lasts (topple, lie, respawn). */
+const DEATH_TIME = 1.6;
+
 /** ZONES indices, for zone-specific decor. */
 const Z = { depths: 2, blight: 3, catacombs: 4, tomb: 5, abyss: 6, kiln: 7 };
 
@@ -215,7 +218,7 @@ export class Scene {
   }
 
   die() {
-    this.dead = 1.6;
+    this.dead = DEATH_TIME;
     this.flashOnce('#7a0b0b', 0.8);
     if (!this.motion) return;
     this.shake = 0.45;
@@ -657,7 +660,7 @@ export class Scene {
   private drawKnight(cam: number) {
     const { g, W } = this;
     const sitting = this.floorAlpha > 0.5;
-    const tint = this.dead > 0 && Math.floor(this.t * 12) % 2 === 0 ? '#8a1010' : undefined;
+    const tint = this.dead > DEATH_TIME - 0.5 && Math.floor(this.t * 12) % 2 === 0 ? '#8a1010' : undefined;
     if (sitting && this.praising > 0) {
       const k = bake(KNIGHT_PRAISE, tint);
       g.drawImage(k, Math.round(W / 2 - 24), -cam - k.height);
@@ -672,9 +675,26 @@ export class Scene {
     const bob = this.motion ? Math.round(Math.sin(this.t * 2.2) * 1) : 0;
     const x = Math.round(W / 2 - k.width / 2);
     const y = Math.round(this.knightY - cam) + bob;
-    if (this.dead > 0) g.globalAlpha = 0.5 + 0.5 * Math.min(1, this.dead);
-    g.drawImage(k, x, y);
-    g.globalAlpha = 1;
+    if (this.dead > 0 && this.motion) {
+      // Topple in three crisp steps, lie still, then fade back in standing:
+      // the respawn.
+      const since = DEATH_TIME - this.dead;
+      if (since < 1.1) {
+        const steps = Math.min(3, Math.floor(since / 0.08));
+        g.save();
+        g.translate(x + k.width / 2, y + k.height);
+        g.rotate((steps * Math.PI) / 6);
+        g.globalAlpha = since > 0.8 ? 1 - (since - 0.8) / 0.3 : 1;
+        g.drawImage(k, -k.width / 2, -k.height);
+        g.restore();
+      } else {
+        g.globalAlpha = Math.min(1, (since - 1.1) / 0.4);
+        g.drawImage(k, x, y);
+      }
+      g.globalAlpha = 1;
+    } else {
+      g.drawImage(k, x, y);
+    }
     // Tattered cape fluttering upward while sinking.
     const speed = this.targetY - this.knightY;
     if (speed > 2 && this.motion) {

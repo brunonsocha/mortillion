@@ -508,3 +508,16 @@ instead of being swallowed by it.
 
 **Verified:** screenshots at 2,000 / 3,000 / 5,000 / 6,000 m with the dev scene hook.
 `tsc` and the build are clean.
+
+---
+
+## 22. Death animation: topple and respawn
+
+**What**
+- On a death, the knight now topples sideways in three crisp 30° steps (pixel-art
+  rotation, no smoothing). He flickers red while falling, lies still, fades out, then fades
+  back in standing: the series' respawn. Before, he only flashed red.
+- With Animations off, the knight simply stays put.
+
+**Verified:** frames at 0.25 s / 0.7 s / 1.4 s after `scene.die()` show fallen → lying
+→ respawned. The build is clean.
