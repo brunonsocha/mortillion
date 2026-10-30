@@ -1,0 +1,233 @@
+# Liora, the Ember Maiden: a high-resolution vector illustration (anime,
+# fantasy goth) written as SVG. Renders three variants (base, blink, talk)
+# that scripts/pixelize-portrait.py turns into the in-game portrait.
+#
+#   python3 art/liora/liora.py        → art/liora/{base,blink,talk}.svg
+import pathlib
+
+HERE = pathlib.Path(__file__).parent
+W, H = 480, 600
+
+DEFS = '''
+<defs>
+  <linearGradient id="skin" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#e9d2dc"/><stop offset="0.55" stop-color="#f8ecef"/><stop offset="1" stop-color="#ffe9e0"/>
+  </linearGradient>
+  <linearGradient id="hair" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#2a2140"/><stop offset="0.5" stop-color="#16121f"/><stop offset="1" stop-color="#0d0a14"/>
+  </linearGradient>
+  <linearGradient id="hairBack" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#1b1629"/><stop offset="1" stop-color="#09070e"/>
+  </linearGradient>
+  <linearGradient id="iris" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#2a0510"/><stop offset="0.35" stop-color="#8a0f22"/><stop offset="0.75" stop-color="#e2322c"/><stop offset="1" stop-color="#ff9a52"/>
+  </linearGradient>
+  <linearGradient id="dress" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#2a1d36"/><stop offset="0.6" stop-color="#140e1c"/><stop offset="1" stop-color="#0b0810"/>
+  </linearGradient>
+  <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#9a6a24"/><stop offset="0.5" stop-color="#f4cf74"/><stop offset="1" stop-color="#b07c2c"/>
+  </linearGradient>
+  <radialGradient id="gem"><stop offset="0" stop-color="#ffd0a0"/><stop offset="0.4" stop-color="#ff4a2a"/><stop offset="1" stop-color="#6a0614"/></radialGradient>
+  <radialGradient id="blush"><stop offset="0" stop-color="#ff7d9a" stop-opacity="0.55"/><stop offset="1" stop-color="#ff7d9a" stop-opacity="0"/></radialGradient>
+  <linearGradient id="lips" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a0a26"/><stop offset="1" stop-color="#8e1840"/></linearGradient>
+  <pattern id="lace" width="14" height="10" patternUnits="userSpaceOnUse">
+    <path d="M0 10 Q3.5 0 7 10 Q10.5 0 14 10" fill="none" stroke="#3a2c4a" stroke-width="1.6"/>
+    <circle cx="7" cy="6" r="1.4" fill="#3a2c4a"/>
+  </pattern>
+</defs>'''
+
+LINE = 'stroke="#120a14" stroke-linejoin="round" stroke-linecap="round"'
+
+
+def back_hair():
+    # Long straight black hair falling behind the shoulders to the bottom.
+    return f'''
+<path d="M120 170 C110 100 170 56 240 56 C310 56 370 100 360 170 L372 330 C380 430 400 520 410 600 L70 600 C80 520 100 430 108 330 Z"
+      fill="url(#hairBack)" {LINE} stroke-width="3"/>
+<path d="M150 260 C140 380 130 480 118 600" fill="none" stroke="#3a2f5a" stroke-width="3" opacity="0.7"/>
+<path d="M330 260 C340 380 352 480 362 600" fill="none" stroke="#3a2f5a" stroke-width="3" opacity="0.7"/>'''
+
+
+def body():
+    return f'''
+<!-- shoulders and chest -->
+<path d="M206 330 C206 360 196 378 160 392 C110 404 70 420 52 470 L36 600 L444 600 L428 470 C410 420 370 404 320 392 C284 378 274 360 274 330 Z"
+      fill="url(#skin)" {LINE} stroke-width="3"/>
+<!-- cel shadow: the left of the chest turns from the firelight -->
+<path d="M52 470 C70 420 110 404 160 392 C130 420 110 450 100 520 L90 600 L36 600 Z" fill="#d6b4c4" opacity="0.85"/>
+<!-- the jaw's shadow on the neck -->
+<path d="M206 300 C220 330 260 330 274 300 L274 345 C258 356 222 356 206 345 Z" fill="#d6b4c4"/>
+<!-- collarbones -->
+<path d="M168 410 C190 404 208 410 224 418" fill="none" stroke="#c99aae" stroke-width="2.5"/>
+<path d="M312 410 C290 404 272 410 256 418" fill="none" stroke="#c99aae" stroke-width="2.5"/>
+<!-- bust -->
+<path d="M130 486 C150 462 196 462 228 490" fill="none" stroke="#d2a8ba" stroke-width="2" opacity="0.8"/>
+<path d="M350 486 C330 462 284 462 252 490" fill="none" stroke="#d2a8ba" stroke-width="2" opacity="0.8"/>
+<path d="M234 478 C238 488 239 496 240 504 C241 496 242 488 246 478" fill="none" stroke="#b9879c" stroke-width="2.5"/>
+<ellipse cx="180" cy="470" rx="20" ry="7" fill="#fffaf8" opacity="0.8"/>
+<ellipse cx="300" cy="470" rx="20" ry="7" fill="#fffaf8" opacity="0.8"/>
+<!-- black corset dress: sweetheart neckline, lace trim -->
+<path d="M70 600 L84 500 C110 470 150 476 182 500 C206 516 228 512 240 498 C252 512 274 516 298 500 C330 476 370 470 396 500 L410 600 Z"
+      fill="url(#dress)" {LINE} stroke-width="3"/>
+<path d="M84 500 C110 470 150 476 182 500 C206 516 228 512 240 498 C252 512 274 516 298 500 C330 476 370 470 396 500"
+      fill="none" stroke="url(#gold)" stroke-width="5"/>
+<path d="M88 508 C112 482 150 486 182 510 C206 526 228 522 240 508 C252 522 274 526 298 510 C330 486 368 482 392 508 L394 520 C366 496 330 498 300 520 C276 536 252 532 240 520 C228 532 204 536 180 520 C150 498 114 496 86 520 Z"
+      fill="url(#lace)"/>
+<!-- corset lacing -->
+<path d="M240 520 L240 600" stroke="#3a2c4a" stroke-width="3"/>
+<path d="M228 540 L252 556 M252 540 L228 556 M228 570 L252 586 M252 570 L228 586" stroke="#8a6a3a" stroke-width="2.5"/>
+<!-- sheer off-shoulder sleeves -->
+<path d="M52 470 C70 450 96 452 116 468 L100 600 L36 600 Z" fill="#1a1222" opacity="0.88" {LINE} stroke-width="3"/>
+<path d="M428 470 C410 450 384 452 364 468 L380 600 L444 600 Z" fill="#1a1222" opacity="0.88" {LINE} stroke-width="3"/>
+<path d="M54 474 C72 456 96 458 114 472" fill="none" stroke="url(#gold)" stroke-width="4"/>
+<path d="M426 474 C408 456 384 458 366 472" fill="none" stroke="url(#gold)" stroke-width="4"/>
+<!-- ember rim light on the right shoulder -->
+<path d="M320 392 C370 404 410 420 428 470" fill="none" stroke="#ff9a5a" stroke-width="4" opacity="0.9"/>
+<path d="M160 392 C110 404 70 420 52 470" fill="none" stroke="#a99cff" stroke-width="3" opacity="0.7"/>
+<!-- ember brooch -->
+<circle cx="240" cy="500" r="9" fill="url(#gem)" stroke="url(#gold)" stroke-width="3"/>'''
+
+
+def neck_and_face():
+    return f'''
+<path d="M210 280 L206 345 C222 356 258 356 274 345 L270 280 Z" fill="url(#skin)" {LINE} stroke-width="3"/>
+<path d="M206 300 C220 330 260 330 274 300 L274 330 C258 342 222 342 206 330 Z" fill="#d6b4c4"/>
+<!-- velvet choker with a gem -->
+<path d="M204 318 C226 328 254 328 276 318 L276 332 C254 342 226 342 204 332 Z" fill="#120a16" stroke="#000" stroke-width="2"/>
+<path d="M206 322 C226 330 254 330 274 322" fill="none" stroke="url(#lace)" stroke-width="3"/>
+<path d="M240 336 L232 346 L240 362 L248 346 Z" fill="url(#gem)" stroke="url(#gold)" stroke-width="2.5"/>
+<!-- face: soft cheeks to a gentle point -->
+<path d="M160 160 C158 204 166 244 184 266 C200 288 222 304 240 308 C258 304 280 288 296 266 C314 244 322 204 320 160 Z"
+      fill="url(#skin)" {LINE} stroke-width="3"/>
+<!-- cel shadow on the left cheek and jaw -->
+<path d="M164 170 C164 210 170 240 184 262 C200 286 222 302 240 306 C224 294 204 276 192 252 C180 228 176 200 178 170 Z" fill="#dcbcca"/>
+<!-- ears -->
+<path d="M164 212 C150 206 150 236 166 242" fill="#f3e0e6" {LINE} stroke-width="2.5"/>
+<path d="M316 212 C330 206 330 236 314 242" fill="#f3e0e6" {LINE} stroke-width="2.5"/>
+<!-- earrings: little gothic crosses with an ember -->
+<path d="M158 246 L158 272 M150 256 L166 256" stroke="url(#gold)" stroke-width="3.5"/>
+<circle cx="158" cy="276" r="3.5" fill="url(#gem)"/>
+<path d="M322 246 L322 272 M314 256 L330 256" stroke="url(#gold)" stroke-width="3.5"/>
+<circle cx="322" cy="276" r="3.5" fill="url(#gem)"/>
+<!-- blush -->
+<ellipse cx="192" cy="250" rx="22" ry="10" fill="url(#blush)"/>
+<ellipse cx="288" cy="250" rx="22" ry="10" fill="url(#blush)"/>
+<path d="M180 252 l5 -6 M188 253 l5 -6 M196 253 l5 -6 M276 253 l5 -6 M284 253 l5 -6 M292 252 l5 -6" stroke="#f28aa2" stroke-width="2"/>
+<!-- nose -->
+<path d="M244 252 L240 260" stroke="#c48a9c" stroke-width="2.5"/>'''
+
+
+def eye(cx, flip):
+    """A big sultry anime eye: heavy upper lash with a wing, crimson iris."""
+    s = -1 if flip else 1
+
+    def X(dx):
+        return cx + s * dx
+    # drawn at 1× around (cx, 216), then scaled up and nudged down
+    return f'''<g transform="translate({cx} 222) scale(1.16) translate({-cx} -216)">'
+<g>
+  <!-- eyeshadow -->
+  <path d="M{X(-30)} 204 C{X(-20)} 184 {X(20)} 182 {X(34)} 196 L{X(30)} 208 C{X(14)} 196 {X(-14)} 196 {X(-28)} 212 Z" fill="#b0507e" opacity="0.45"/>
+  <!-- sclera -->
+  <path d="M{X(-26)} 214 C{X(-14)} 200 {X(16)} 198 {X(28)} 210 C{X(22)} 232 {X(-12)} 240 {X(-26)} 214 Z" fill="#fbf4f6"/>
+  <!-- iris, pupil, highlights -->
+  <clipPath id="eyeclip{cx}"><path d="M{X(-26)} 214 C{X(-14)} 200 {X(16)} 198 {X(28)} 210 C{X(22)} 232 {X(-12)} 240 {X(-26)} 214 Z"/></clipPath>
+  <g clip-path="url(#eyeclip{cx})">
+    <ellipse cx="{X(2)}" cy="219" rx="17" ry="21" fill="url(#iris)" stroke="#1a0408" stroke-width="2"/>
+    <ellipse cx="{X(2)}" cy="219" rx="5" ry="11" fill="#14020a"/>
+    <path d="M{X(-12)} 228 C{X(-4)} 236 {X(10)} 236 {X(16)} 228" fill="none" stroke="#ffb070" stroke-width="2.5" opacity="0.9"/>
+    <path d="M{X(-26)} 206 C{X(-14)} 198 {X(16)} 196 {X(28)} 204 L{X(28)} 212 C{X(16)} 206 {X(-14)} 206 {X(-26)} 216 Z" fill="#3a1a2a" opacity="0.35"/>
+  </g>
+  <ellipse cx="{X(-6)}" cy="210" rx="5.5" ry="4.5" fill="#ffffff"/>
+  <circle cx="{X(10)}" cy="228" r="2.5" fill="#ffffff"/>
+  <!-- heavy upper lash line with a winged flick -->
+  <path d="M{X(-30)} 216 C{X(-18)} 198 {X(14)} 194 {X(30)} 206 L{X(44)} 194 L{X(36)} 210 C{X(28)} 206 {X(16)} 202 {X(-2)} 202 C{X(-14)} 203 {X(-22)} 208 {X(-28)} 218 Z"
+        fill="#0e060c"/>
+  <path d="M{X(30)} 206 L{X(40)} 204 M{X(26)} 202 L{X(34)} 196" stroke="#0e060c" stroke-width="2.5"/>
+  <!-- lower lashes -->
+  <path d="M{X(-18)} 232 C{X(-6)} 238 {X(12)} 236 {X(24)} 226" fill="none" stroke="#5a2a3a" stroke-width="2"/>
+  <!-- brow, thin, showing through the bangs -->
+  <path d="M{X(-24)} 184 C{X(-8)} 176 {X(12)} 176 {X(28)} 182" fill="none" stroke="#2a1830" stroke-width="2.5" opacity="0.8"/>
+</g></g>'''
+
+
+def eyes_closed(cx, flip):
+    s = -1 if flip else 1
+
+    def X(dx):
+        return cx + s * dx
+    return f'''<g transform="translate({cx} 222) scale(1.16) translate({-cx} -216)">
+<path d="M{X(-30)} 204 C{X(-20)} 192 {X(20)} 190 {X(34)} 200 L{X(30)} 214 C{X(14)} 206 {X(-14)} 206 {X(-28)} 216 Z" fill="#b0507e" opacity="0.4"/>
+<path d="M{X(-28)} 218 C{X(-14)} 230 {X(16)} 230 {X(32)} 216" fill="none" stroke="#0e060c" stroke-width="5"/>
+<path d="M{X(-18)} 226 l-3 7 M{X(-6)} 229 l-2 7 M{X(8)} 229 l1 7 M{X(20)} 225 l3 6 M{X(32)} 216 l8 -4" stroke="#0e060c" stroke-width="2.5"/>
+<path d="M{X(-24)} 184 C{X(-8)} 176 {X(12)} 176 {X(28)} 182" fill="none" stroke="#2a1830" stroke-width="2.5" opacity="0.8"/></g>'''
+
+
+def mouth(talking):
+    if talking:
+        return '''
+<path d="M226 276 C232 272 248 272 254 276 C252 290 228 290 226 276 Z" fill="#3a0616" stroke="#2a0410" stroke-width="2"/>
+<path d="M230 284 C236 288 244 288 250 284" fill="none" stroke="#c23a5a" stroke-width="3"/>
+<path d="M222 275 C232 268 248 268 258 275" fill="none" stroke="url(#lips)" stroke-width="4"/>'''
+    return '''
+<path d="M222 276 C230 280 250 280 258 274" fill="none" stroke="#3a0618" stroke-width="3"/>
+<path d="M226 278 C234 286 246 286 254 277 C246 281 234 281 226 278 Z" fill="url(#lips)"/>
+<path d="M222 276 C230 270 238 272 240 274 C242 272 250 270 258 274" fill="none" stroke="url(#lips)" stroke-width="3.5"/>
+<path d="M236 282 L242 282" stroke="#ff9ab4" stroke-width="2"/>
+<!-- a knowing smirk at one corner -->
+<path d="M258 274 L263 270" stroke="#3a0618" stroke-width="2.5"/>
+<circle cx="276" cy="270" r="2" fill="#2a0a14"/>'''
+
+
+def front_hair():
+    return f'''
+<!-- crown -->
+<path d="M150 190 C140 110 186 66 240 66 C294 66 340 110 330 190 L312 172 L168 172 Z" fill="url(#hair)" {LINE} stroke-width="3"/>
+<!-- blunt hime-cut bangs, cut straight just over the eyes -->
+<path d="M164 108 C190 80 290 80 316 108 L324 178 L312 172 L300 180 L288 173 L276 181 L262 174 L250 182 L240 175 L228 182 L216 174 L204 181 L192 173 L180 180 L168 172 L156 178 Z"
+      fill="url(#hair)" {LINE} stroke-width="3"/>
+<!-- the bangs' inner strands -->
+<path d="M200 104 L194 174 M222 96 L218 176 M244 94 L244 176 M266 96 L270 176 M288 104 L294 174" stroke="#3b2f5c" stroke-width="2.5" opacity="0.9"/>
+<!-- hime sidelocks, cut straight at the jaw -->
+<path d="M146 170 C142 220 144 270 146 312 L178 312 C174 270 168 220 164 172 Z" fill="url(#hair)" {LINE} stroke-width="3"/>
+<path d="M334 170 C338 220 336 270 334 312 L302 312 C306 270 312 220 316 172 Z" fill="url(#hair)" {LINE} stroke-width="3"/>
+<path d="M156 186 L158 306 M324 186 L322 306" stroke="#3b2f5c" stroke-width="2.5"/>
+<!-- angel ring: a violet sheen across the crown -->
+<path d="M178 126 C206 112 226 110 236 112 M246 112 C258 110 278 112 302 126" fill="none" stroke="#8f7fd6" stroke-width="5" opacity="0.9"/>
+<path d="M186 134 C210 122 228 120 236 122 M246 122 C256 120 272 122 294 134" fill="none" stroke="#4e4180" stroke-width="3" opacity="0.9"/>
+<!-- rim light: ember on the right, violet on the left -->
+<path d="M330 172 C334 220 332 270 330 312" fill="none" stroke="#ff8a4a" stroke-width="3" opacity="0.8"/>
+<path d="M150 172 C146 220 148 270 150 312" fill="none" stroke="#9d8cff" stroke-width="3" opacity="0.6"/>
+<!-- a black-and-gold tiara with an ember -->
+<path d="M178 96 C210 80 270 80 302 96" fill="none" stroke="url(#gold)" stroke-width="4"/>
+<path d="M232 84 L240 64 L248 84 Z" fill="url(#gold)" stroke="#5a3a10" stroke-width="2"/>
+<circle cx="240" cy="86" r="7" fill="url(#gem)" stroke="url(#gold)" stroke-width="2.5"/>
+<path d="M206 88 L210 76 L214 88 M266 88 L270 76 L274 88" fill="url(#gold)" stroke="#5a3a10" stroke-width="1.5"/>
+<!-- a black rose tucked over the left ear -->
+<g transform="translate(150 150)">
+  <path d="M10 12 C22 18 26 26 22 32 C16 26 12 22 6 18 Z" fill="#1c2a14" stroke="#0a0206" stroke-width="1.5"/>
+  <path d="M-20 0 C-22 -16 -6 -24 4 -20 C18 -24 24 -8 20 4 C22 16 8 24 -2 20 C-16 22 -24 12 -20 0 Z" fill="#3a0818" stroke="#0a0206" stroke-width="2.5"/>
+  <path d="M-14 2 C-16 -10 -4 -16 4 -12 C14 -14 16 -2 12 6 C8 14 -6 14 -14 2 Z" fill="#6a1026" stroke="#20040c" stroke-width="2"/>
+  <path d="M-8 2 C-8 -6 6 -8 6 0 C6 6 -4 8 -8 2 Z" fill="#9a1a36" stroke="#20040c" stroke-width="1.5"/>
+  <path d="M-3 0 C-2 -3 2 -3 2 0" fill="none" stroke="#e04a60" stroke-width="2"/>
+</g>'''
+
+
+def svg(variant):
+    # `flip` puts the winged flick on the outer corner of each eye
+    eyes = (eyes_closed(198, True) + eyes_closed(282, False)) if variant == 'blink' else (eye(198, True) + eye(282, False))
+    return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}">
+{DEFS}
+{back_hair()}
+{body()}
+{neck_and_face()}
+{eyes}
+{mouth(variant == 'talk')}
+{front_hair()}
+</svg>'''
+
+
+for v in ('base', 'blink', 'talk'):
+    (HERE / f'{v}.svg').write_text(svg(v))
+print('wrote', [f'{v}.svg' for v in ('base', 'blink', 'talk')])

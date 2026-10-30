@@ -2041,6 +2041,7 @@ body:not(:has(.home)) .brand {
   .maiden-portrait {
     width: 96px;
     height: 120px;
+    image-rendering: auto;
   }
 
   .maiden-line {

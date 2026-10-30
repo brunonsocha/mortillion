@@ -1129,6 +1129,48 @@ after receiving a hit (timer running out)".
 - `npm test` 12/12, `npm run test:server` 14/14.
 - Screenshots of the wound (2 flasks left, no YOU DIED) and the drinking frames.
 
+## 40. Liora reborn: an anime fantasy-goth illustration, pixelized
+
+Your request (2026-10-30): "the girl still looks horrible - i want her to look like an anime
+fantasy goth chick. pixel art comes second - use something that will make her, and then pixelize her."
+
+**How:** this machine has no image-generation model (no GPU driver, no generator API keys), so
+I drew her as a **vector illustration** at 5× size and wrote a **pixelizer** that turns any
+illustration into the game portrait.
+- **`art/liora/liora.py`** writes `base.svg`, `blink.svg` and `talk.svg` (480×600). The look:
+  - black hime-cut hair with blunt bangs, jaw-length sidelocks and a violet sheen
+  - pale skin with cel shadows
+  - big crimson eyes with winged liner and plum eyeshadow
+  - dark plum lips with a smirk and a beauty mark
+  - a velvet choker with an ember gem, gothic cross earrings, a black rose over the ear, and
+    a black-and-gold tiara
+  - an off-shoulder black corset gown with lace trim, gold edging and sheer sleeves
+  - ember rim light on the right, violet on the left
+- **`scripts/pixelize-portrait.py`** crops to the portrait's aspect and area-averages down to
+  144×180. It then reduces to 48 colours **without dithering**, sharing one palette across all
+  frames. Two-thirds of the palette comes from median cut and **a third is reserved for vivid
+  accents**, because plain median cut turned her red eyes, lips and gems brown. Last, it snaps
+  alpha to on/off and adds a dark outline. Output: `src/assets/liora-portrait.png` (14 KB, 3 frames).
+- **In game:** the dialogue now draws frames from that PNG (`src/ui/maiden.ts`), shown 1:1 at
+  144×180 on desktop and smoothed down to 96×120 on phones. The old character-map portrait is
+  removed from `src/render/maiden.ts`.
+- **Bonfire sprite** recoloured to match: black hair, black gown, crimson eyes, dark lips.
+
+**Swapping in other art:** any image works, e.g. a commission or an AI-generated picture (a
+transparent background is best):
+
+```sh
+python3 scripts/pixelize-portrait.py her.png [her-blink.png her-talk.png] [--size 144x180] [--colors 48]
+```
+
+To redo the vector version:
+
+```sh
+python3 art/liora/liora.py
+for v in base blink talk; do rsvg-convert -w 960 art/liora/$v.svg -o /tmp/$v.png; done
+python3 scripts/pixelize-portrait.py /tmp/base.png /tmp/blink.png /tmp/talk.png
+```
+
 ---
 
 ## What I need from you

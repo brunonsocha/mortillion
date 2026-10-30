@@ -4,11 +4,17 @@
 
 import { load } from '../engine/storage.ts';
 import { LINES, MAIDEN_NAME, type MaidenEvent } from '../maiden-lines.ts';
-import { PORTRAIT, PORTRAIT_BLINK, PORTRAIT_PALETTE, PORTRAIT_TALK } from '../render/maiden.ts';
-import { bake } from '../render/sprites.ts';
+import portraitUrl from '../assets/liora-portrait.png';
 import { sfx } from '../render/sfx.ts';
 import { app } from './app.ts';
 import { h } from './dom.ts';
+
+// The portrait: a sheet of three 144×180 frames (base, blink, talk) made by
+// scripts/pixelize-portrait.py from the illustration in art/liora.
+const PW = 144;
+const PH = 180;
+const sheet = new Image();
+sheet.src = portraitUrl;
 
 const last = new Map<MaidenEvent, number>();
 
@@ -38,12 +44,14 @@ export function say(event: MaidenEvent, place: 'top' | 'bottom' = 'bottom') {
   const text = pick(event);
   const still = !app.scene.motion;
 
-  const frames = [PORTRAIT, PORTRAIT_BLINK, PORTRAIT_TALK].map((s) => bake(s, undefined, PORTRAIT_PALETTE));
-  const portrait = h('canvas', { class: 'maiden-portrait', width: 96, height: 120, 'aria-hidden': 'true' });
+  const portrait = h('canvas', { class: 'maiden-portrait', width: PW, height: PH, 'aria-hidden': 'true' });
   const pg = portrait.getContext('2d')!;
+  let painted = -1;
   const paint = (f: number) => {
-    pg.clearRect(0, 0, 96, 120);
-    pg.drawImage(frames[f], 0, 0);
+    if (f === painted || !sheet.complete) return;
+    painted = f;
+    pg.clearRect(0, 0, PW, PH);
+    pg.drawImage(sheet, f * PW, 0, PW, PH, 0, 0, PW, PH);
   };
   paint(0);
 
