@@ -1231,6 +1231,30 @@ knight. Each is a dashed line in the tier colour with a pennant and one pip per 
 - The knight stops exactly on the post of the tier he earned. The posts fade once the walk ends.
 - Liora's rare-answer praise now waits until the walk is over, so she doesn't hide it.
 
+## 43. The Endless Road ends for players who only give common answers
+
+Your report (2026-10-30): "why is the game unlimited again? i just answered like 15 questions,
+making only common answers."
+
+**Cause:** that was an Endless Road run (16 prompts, one flask left). There, flasks were spent
+only by wounds (time ran out) and skips. Any accepted answer, however obvious, kept the run going
+forever.
+
+**What:**
+- On the Endless Road, a **common (tier 1) answer costs a flask** too. The blow glances off, the
+  foe flinches, strikes back, and the knight drinks Estus. The foe then slinks away and the knight
+  walks the short distance he earned. With three flasks, three weak answers end the run.
+- If it was the last flask, it's a real loss: YOU DIED.
+- The reveal says so: "Too common: the foe shrugged it off and struck back. One Estus spent."
+- Enforced on the server (`game` function: `tier <= 1` spends a flask on the Endless Road) and in
+  local runs.
+- The Endless card and the how-to-play rules mention it (EN/PL/UK).
+- The Daily Pilgrimage and themed paths are unchanged: they end after their 7 prompts.
+
+**Verified:** a new server test (a common answer: 3 flasks → 2; a tier-3 answer: no flask
+spent), so `npm run test:server` is now 15/15 and `npm test` 12/12. Screenshot of the reveal
+after a common answer.
+
 ---
 
 ## What I need from you

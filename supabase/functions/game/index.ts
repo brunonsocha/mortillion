@@ -249,9 +249,9 @@ async function answer(user: User, body: { runId?: string; guess?: string; giveUp
       cursor++;
     }
   } else cursor++;
-  // Skipping costs no flask; only a real death does.
-  // On the Endless Road a skip spends a flask too (the knight drinks to pass).
-  if (run.mode === 'endless' && !tier) lives = (lives ?? 1) - 1;
+  // On the Endless Road a flask is spent by a wound, a skip (the knight drinks
+  // to pass), and a common answer (too weak a blow: the foe strikes back).
+  if (run.mode === 'endless' && tier <= 1) lives = (lives ?? 1) - 1;
   const finished = run.mode === 'endless' ? (lives ?? 0) <= 0 || cursor >= run.prompt_ids.length : cursor >= run.prompt_ids.length;
   const total = run.points + points;
 

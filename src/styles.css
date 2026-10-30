@@ -781,6 +781,13 @@ body:not(:has(.home)) .brand {
   60% { transform: scale(0.94); opacity: 1; }
 }
 
+.verdict .struck {
+  flex-basis: 100%;
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: #d0705a;
+}
+
 .verdict.dead .dead-reason {
   color: #d04a4a;
   font-size: 22px;

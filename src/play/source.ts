@@ -149,7 +149,8 @@ export function localSource(o: LocalOptions): Source {
         tier, points: tier ? TIER_POINTS[tier as Tier] : 0, ...revealLists(p),
       };
       turns.push(view);
-      if (lives !== null && !tier) lives--;
+      // A wound, or a common answer (the foe survives and strikes back), costs a flask.
+      if (lives !== null && tier <= 1) lives--;
       return { ...view, timedOut: false, finished: done(), lives, unlocked: [] };
     },
     async skip() {

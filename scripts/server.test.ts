@@ -6,7 +6,17 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { execSync } from 'node:child_process';
+import { readdirSync } from 'node:fs';
 import { dayNumber } from '../src/engine/game.ts';
+
+// The bundled packs, to look up a real answer of a given tier for a served prompt.
+const packDir = new URL('../src/data/packs/', import.meta.url);
+const specs: { prompts: { q: { en: string }; answers: Record<string, string[]> }[] }[] = [];
+for (const f of readdirSync(packDir)) if (!['index.ts', 'bundled.ts', 'none.ts'].includes(f)) specs.push((await import(new URL(f, packDir).href)).default);
+function answerOfTier(q: string, tier: number): string {
+  for (const sp of specs) for (const p of sp.prompts) if (p.q.en === q) return (p.answers[tier] ?? [])[0]?.split('|')[0] ?? 'zzz';
+  return 'zzz';
+}
 
 const API = 'http://127.0.0.1:54321';
 let ANON = '';
@@ -183,6 +193,20 @@ test('re-requesting a prompt does not restart its clock', async (t) => {
   await new Promise((r) => setTimeout(r, 1200));
   const again = (await game(token, { action: 'prompt', runId: run.runId })).body;
   assert.ok(again.elapsedMs >= 1000, `elapsed ${again.elapsedMs}`);
+});
+
+test('on the endless road a common answer costs a flask; a rarer one does not', async (t) => {
+  if (!up) return t.skip('local Supabase stack is not running');
+  const token = await anonToken();
+  const run = (await game(token, { action: 'start', mode: 'endless' })).body;
+  let pv = (await game(token, { action: 'prompt', runId: run.runId })).body;
+  const common = (await game(token, { action: 'answer', runId: run.runId, guess: answerOfTier(pv.q.en, 1) })).body;
+  assert.equal(common.tier, 1);
+  assert.equal(common.lives, 2, 'too weak a blow: the foe strikes back');
+  pv = (await game(token, { action: 'prompt', runId: run.runId })).body;
+  const rarer = (await game(token, { action: 'answer', runId: run.runId, guess: answerOfTier(pv.q.en, 3) })).body;
+  assert.equal(rarer.tier, 3);
+  assert.equal(rarer.lives, 2);
 });
 
 test('endless ends when three flasks are spent', async (t) => {

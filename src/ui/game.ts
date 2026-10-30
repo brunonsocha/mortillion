@@ -434,12 +434,20 @@ function play(src: Source): HTMLElement {
       await app.scene.drinkEstus();
       if (!alive) return;
     } else if (v.tier) {
-      // The kill first: the rarer the answer, the grander the blow.
       ask.hidden = true;
-      if (v.tier >= 4) dismissMaiden();
-      if (v.tier >= 5 && app.scene.motion) setTimeout(() => alive && void banner(t.critical, 'crit', 1500), v.tier === 6 ? 700 : 450);
-      await app.scene.kill(v.tier);
-      if (!alive) return;
+      if (weak(v)) {
+        // Too common on the Endless Road: the blow glances off, the foe
+        // strikes back (a flask), then slinks away.
+        await app.scene.clash();
+        if (!alive || !(await struck(v.lives === 0))) return;
+        app.scene.enemyFlee();
+      } else {
+        // The kill: the rarer the answer, the grander the blow.
+        if (v.tier >= 4) dismissMaiden();
+        if (v.tier >= 5 && app.scene.motion) setTimeout(() => alive && void banner(t.critical, 'crit', 1500), v.tier === 6 ? 700 : 450);
+        await app.scene.kill(v.tier);
+        if (!alive) return;
+      }
       praise();
       sfx.reward(v.tier);
       app.scene.reward(v.tier);
@@ -453,36 +461,45 @@ function play(src: Source): HTMLElement {
       reason = Math.random() < 0.04 ? PATCHES[lang] : null;
       app.scene.setHollow(deaths() >= 3);
       ask.hidden = true;
-      // Only a real loss (the last flask spent) is a death; otherwise the
-      // foe's blow just wounds the knight and the journey goes on.
-      const fatal = v.lives === 0;
-      await app.scene.enemyStrike(fatal);
-      if (!alive) return;
-      if (fatal) {
-        sfx.death();
-        died.hidden = false;
-        died.classList.remove('show');
-        void died.offsetWidth;
-        died.classList.add('show');
-        await wait(app.scene.motion ? 2300 : 900);
-        if (!alive) return;
-        died.hidden = true;
-      } else {
-        // Wounded, the knight drinks a flask and stands firm.
-        await wait(app.scene.motion ? 350 : 0);
-        if (!alive) return;
-        await app.scene.drinkEstus();
-      }
+      if (!(await struck(v.lives === 0))) return;
     }
 
     showReveal(v, reason, tries);
+  }
+
+  /** A common answer on the Endless Road: not enough to slay the foe. */
+  const weak = (v: Verdict) => endless && v.tier === 1;
+
+  /**
+   * The foe's blow lands. Only a real loss (the last flask spent) is a
+   * death; otherwise the knight drinks a flask and stands firm. Resolves
+   * false if the screen was left meanwhile.
+   */
+  async function struck(fatal: boolean): Promise<boolean> {
+    await app.scene.enemyStrike(fatal);
+    if (!alive) return false;
+    if (fatal) {
+      sfx.death();
+      died.hidden = false;
+      died.classList.remove('show');
+      void died.offsetWidth;
+      died.classList.add('show');
+      await wait(app.scene.motion ? 2300 : 900);
+      if (!alive) return false;
+      died.hidden = true;
+    } else {
+      await wait(app.scene.motion ? 350 : 0);
+      if (!alive) return false;
+      await app.scene.drinkEstus();
+    }
+    return alive;
   }
 
   function showReveal(v: Verdict, reason: string | null, tries: string[]) {
     const acceptedAs = v.answer?.[lang] ?? null;
     const cont = h('button', { class: 'btn primary' }, v.finished ? t.finish : t.next);
     const verdict = v.tier
-      ? h('div', { class: `verdict stamp t${v.tier}` }, tierBadge(v.tier), h('span', { class: 'gain' }, `+${v.points} ${t.points}`))
+      ? h('div', { class: `verdict stamp t${v.tier}` }, tierBadge(v.tier), h('span', { class: 'gain' }, `+${v.points} ${t.points}`), weak(v) ? h('p', { class: 'struck' }, t.struckBack) : null)
       : v.skipped
         ? h('div', { class: 'verdict skipped' }, h('span', { class: 'dead-reason' }, t.skipped))
         : h('div', { class: 'verdict dead' }, h('span', { class: 'dead-reason' }, reason ?? (tries.length ? t.noneHeld : t.timeUp)));

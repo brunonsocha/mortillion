@@ -765,6 +765,27 @@ export class Scene {
     if (this.enemy === e) this.enemy = null;
   }
 
+  /** A blow too weak to kill: the knight strikes, the foe flinches and stands. */
+  async clash(): Promise<void> {
+    const e = this.enemy;
+    if (!e || !this.motion) return;
+    this.pose = 'windup';
+    await wait(140);
+    this.lungeTarget = Math.max(0, e.x - (this.knightX + 14) - 2);
+    await wait(110);
+    this.pose = 'strike';
+    const c = this.enemyCentre();
+    this.arcs.push({ x: c.x - 2, y: c.y, r: 9, a0: -2.4, a1: 0.9, w: 1, color: '#8a857b', life: 0, max: 0.25 });
+    e.flash = 0.6;
+    sfx.slash(false);
+    sfx.miss();
+    this.shake = 0.12;
+    await wait(180);
+    this.pose = 'none';
+    this.lungeTarget = 0;
+    await wait(250);
+  }
+
   /** No answer held: the foe strikes, wounding the knight, or (fatal) ending the run. */
   async enemyStrike(fatal = false): Promise<void> {
     const e = this.enemy;
