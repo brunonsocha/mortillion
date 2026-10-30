@@ -1326,7 +1326,7 @@ body:not(:has(.home)) .brand {
 
 .soapstone {
   position: absolute;
-  left: calc(50% + 48px);
+  left: calc(50% + (13 + 15) * var(--ps, 4) * 1px);
   bottom: 2px;
   display: flex;
   flex-direction: column;
@@ -1908,4 +1908,112 @@ body:not(:has(.home)) .brand {
 
 .note.warn {
   color: #e06a6a;
+}
+
+/* ───────────── Liora's dialogue ───────────── */
+
+.maiden-box {
+  position: fixed;
+  left: 50%;
+  z-index: 40;
+  width: min(600px, calc(100% - 24px));
+  transform: translateX(-50%);
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  background: rgba(8, 6, 10, 0.94);
+  box-shadow:
+    0 -3px 0 0 #4a3d5c, 0 3px 0 0 #4a3d5c, -3px 0 0 0 #4a3d5c, 3px 0 0 0 #4a3d5c,
+    0 0 24px rgba(255, 140, 60, 0.12);
+  cursor: pointer;
+  animation: maiden-in 0.3s steps(4) both;
+}
+
+.maiden-box.bottom {
+  bottom: 14px;
+}
+
+.maiden-box.top {
+  top: 62px;
+}
+
+.maiden-box.leaving {
+  animation: maiden-in 0.25s steps(3) reverse forwards;
+}
+
+@keyframes maiden-in {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+}
+
+.maiden-frame {
+  flex-shrink: 0;
+  padding: 3px;
+  background: #120e16;
+  box-shadow: 0 0 0 2px #c79a3e, 0 0 12px rgba(255, 140, 60, 0.25);
+}
+
+.maiden-portrait {
+  display: block;
+  width: 96px;
+  height: 120px;
+  image-rendering: pixelated;
+}
+
+.maiden-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.maiden-name {
+  color: #e8b45a;
+  font-weight: 400;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+}
+
+.maiden-line {
+  margin: 0;
+  color: #efe6d6;
+  font-size: 17px;
+  line-height: 1.45;
+  min-height: 3em;
+}
+
+.maiden-more {
+  align-self: flex-end;
+  color: #e8b45a;
+  font-size: 12px;
+  animation: pulse 0.9s steps(2) infinite;
+}
+
+/* Tap Liora beside the bonfire to hear her. */
+.maiden-hit {
+  position: absolute;
+  bottom: 0;
+  left: calc(50% + 13 * var(--ps, 4) * 1px);
+  width: calc(13 * var(--ps, 4) * 1px);
+  height: calc(26 * var(--ps, 4) * 1px);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.maiden-hit:focus-visible {
+  outline-offset: 0;
+}
+
+@media (max-width: 520px) {
+  .maiden-portrait {
+    width: 64px;
+    height: 80px;
+  }
+
+  .maiden-line {
+    font-size: 15px;
+  }
 }

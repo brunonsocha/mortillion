@@ -3,6 +3,7 @@
 
 import { ZONES, zoneAt } from '../eggs.ts';
 import { setAmbience } from './sfx.ts';
+import { MAIDEN, MAIDEN_PALETTE } from './maiden.ts';
 import { BONES, BONFIRE, CHAIN, HOLLOW_PALETTE, KNIGHT, KNIGHT_PRAISE, KNIGHT_SIT, SKULL, TORCH, bake } from './sprites.ts';
 
 export type Mode = 'bonfire' | 'descent';
@@ -14,6 +15,9 @@ const DEEP = 2100;
 
 // Validated for adjacent-pair separation (normal + CVD) and 3:1 contrast on the
 // dark panels; the pale tiers are always shown with a text label.
+/** Liora's offset from the bonfire's centre, in scene pixels. */
+export const MAIDEN_X = 13;
+
 /** Seconds the death animation lasts (topple, lie, respawn). */
 const DEATH_TIME = 1.6;
 
@@ -132,6 +136,8 @@ export class Scene {
   private resize() {
     this.scale = Math.max(2, Math.round(innerHeight / 180));
     this.W = Math.ceil(innerWidth / this.scale);
+    // Lets the DOM line things up with sprites (e.g. tapping the maiden).
+    document.documentElement.style.setProperty('--ps', String(this.scale));
     this.H = Math.ceil(innerHeight / this.scale);
     for (const c of [this.canvas, this.light, this.vignette]) {
       c.width = this.W;
@@ -438,6 +444,10 @@ export class Scene {
       this.drawParticles(cam, 'flame');
       const bf = bake(BONFIRE);
       g.drawImage(bf, Math.round(W / 2 - bf.width / 2), fy - bf.height + 1);
+      // Liora keeps the fire on the far side, facing the knight.
+      const maiden = bake(MAIDEN, undefined, MAIDEN_PALETTE);
+      const sway = this.motion && Math.sin(this.t * 1.3) > 0.97 ? 1 : 0;
+      g.drawImage(maiden, Math.round(W / 2 + MAIDEN_X), fy - maiden.height + 1 - sway);
       g.globalAlpha = 1;
     }
 

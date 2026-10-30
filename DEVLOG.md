@@ -749,6 +749,45 @@ enforcement on the server.
 
 ---
 
+## 28. Liora, the Ember Maiden (mascot NPC)
+
+**What**
+- **Who she is:** a new guide character in the spirit of the series' maidens (Fire Keeper, Emerald
+  Herald, Maiden in Black), but original. She has silver hair, a dark hood, a gold circlet with an
+  ember gem, amber anime eyes, and an ember brooch at a V-neckline. She's attractive in a tasteful way,
+  in keeping with those characters.
+- **Art** (`src/render/maiden.ts`), all pixel art as character maps with her own palette:
+  - a 32×40 dialogue portrait in three frames (neutral, blink, talking)
+  - a 13×26 full-body sprite standing on the far side of the bonfire, facing the knight
+  - the generator script used to draft the art lives outside the repo (`shots/`).
+- **Dialogue box** (`src/ui/maiden.ts`), styled after the series:
+  - an animated portrait: blinks every few seconds, and her mouth moves while the line types out
+    at about 28 characters/s
+  - a name plate, "Liora, the Ember Maiden"
+  - the first tap finishes the line and the second dismisses it; otherwise it leaves after a reading delay
+  - a soft chime when she speaks
+  - it sits at the bottom on menus and at the top during a descent, so it never covers the
+    answer controls
+- **When she speaks** (`src/maiden-lines.ts`, about 60 lines in EN/PL/UK):
+  - **at the bonfire:** a greeting once per visit (a "back so soon?" variant after today's
+    daily), and a remark whenever she's tapped
+  - **during a descent:** always for One-in-a-Mortillion answers ("One in a mortillion…! I felt
+    that one in my very soul."), sometimes for Lord of Cinder answers, and sometimes after
+    back-to-back deaths ("Don't you dare go Hollow on me.")
+  - **at milestones:** reaching the Abyss, and starting the Endless Abyss
+  - **results:** a verdict by final score, from shallow to victory
+  - **paywall:** the Covenant pitch
+- **Gender-neutral lines:** Polish and Ukrainian lines address the player as "duszo" / "душе" (soul)
+  and avoid gendered past tenses, so every line fits every player.
+- **Settings:** a "Liora speaks" toggle (on by default). She clears away on navigation.
+
+**Verified:** screenshots on desktop and mobile of the home greeting with her beside the bonfire,
+and her reaction to a tier-6 answer (box above the knight, Continue still reachable).
+`tsc` and the build are clean, and 12/12 tests pass.
+
+
+---
+
 ## What I need from you
 
 ### Decisions (confirmed on 2026-10-30 / still open)

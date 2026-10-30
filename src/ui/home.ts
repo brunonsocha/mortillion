@@ -10,6 +10,8 @@ import { app, banner, go, modal, onLeave, route, showHelp } from './app.ts';
 import { fmt, h } from './dom.ts';
 import { icon } from './icons.ts';
 import { quotaLabel } from './account.ts';
+import { say } from './maiden.ts';
+import { MAIDEN_NAME } from '../maiden-lines.ts';
 import { achievementsSection } from './leaderboard.ts';
 import { ACCOUNTS_ENABLED } from '../account/config.ts';
 
@@ -30,6 +32,8 @@ function dateLabel(day: number): string {
   return dateOfDay(day).toLocaleDateString(app.lang, { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
+let greeted = false;
+
 route('', () => {
   const t = app.t;
   const s = load();
@@ -39,6 +43,11 @@ route('', () => {
   app.scene.setMode('bonfire');
 
   if (!s.seenHelp) setTimeout(showHelp, 600);
+  // Liora greets the player once per visit (after the first-time help).
+  else if (!greeted) {
+    greeted = true;
+    setTimeout(() => location.hash.replace(/^#\/?/, '') === '' && say(done ? 'greetBack' : 'greet'), 900);
+  }
 
   const dailyCard = done
     ? h(
@@ -67,7 +76,12 @@ route('', () => {
       h('p', { class: 'tagline' }, `— ${t.tagline} —`),
       h('p', { class: 'blurb' }, t.blurb),
     ),
-    h('div', { class: 'anchor fire-gap' }, soapstone()),
+    h(
+      'div',
+      { class: 'anchor fire-gap' },
+      soapstone(),
+      h('button', { class: 'maiden-hit', 'aria-label': MAIDEN_NAME[app.lang], title: MAIDEN_NAME[app.lang], onclick: () => say('idle') }),
+    ),
     h(
       'section',
       { class: 'menu' },

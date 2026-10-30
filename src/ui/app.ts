@@ -9,6 +9,7 @@ import { TIER_POINTS } from '../engine/game.ts';
 import { h } from './dom.ts';
 import { icon } from './icons.ts';
 import { accountSection } from './account.ts';
+import { dismissMaiden } from './maiden.ts';
 import { REMOTE } from '../account/config.ts';
 
 export interface App {
@@ -46,6 +47,7 @@ let renderId = 0;
 
 export async function render() {
   const id = ++renderId;
+  dismissMaiden();
   cleanup?.();
   cleanup = null;
   const [name, ...params] = location.hash.replace(/^#\/?/, '').split('/');
@@ -215,6 +217,10 @@ export function showSettings() {
       'div',
       { class: 'settings' },
       toggle(t.sound, s.sound, (v) => (save({ sound: v }), setSound(v))),
+      toggle(t.maidenToggle, s.maiden, (v) => {
+        save({ maiden: v });
+        if (!v) dismissMaiden();
+      }),
       toggle(t.motion, s.motion, (v) => {
         save({ motion: v });
         app.scene.motion = v;

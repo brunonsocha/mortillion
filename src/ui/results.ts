@@ -11,6 +11,8 @@ import { TIER_COLORS } from '../render/scene.ts';
 import { sfx } from '../render/sfx.ts';
 import { app, banner, go, route, tierBadge } from './app.ts';
 import { countdown } from './home.ts';
+import { say } from './maiden.ts';
+import { resultEvent } from '../maiden-lines.ts';
 import { countUp, fmt, h } from './dom.ts';
 import { lastRun, type RunKind } from './game.ts';
 
@@ -66,7 +68,9 @@ route('results', async ([kind, id]) => {
     return h('main', { class: 'screen' });
   }
   const turns: Turn[] = views.map(turnOf);
-  // Achievements earned by this run, announced one after another.
+  // Achievements earned by this run, announced one after another, then
+  // Liora's verdict on the descent (only right after playing it).
+  const fresh = lastRun?.kind === kind && lastRun.id === id;
   void (async () => {
     await new Promise((r) => setTimeout(r, 2000));
     for (const key of unlocked) {
@@ -75,6 +79,7 @@ route('results', async ([kind, id]) => {
       sfx.reward(6);
       await banner(`${t.achievementUnlocked}: ${a.name[lang]}`, 'victory', 2600);
     }
+    if (fresh && kind !== 'party' && location.hash.startsWith('#/results')) say(resultEvent(turns.reduce((n, x) => n + x.points, 0)));
   })();
 
   const pts = totalPoints(turns);

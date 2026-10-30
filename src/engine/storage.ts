@@ -21,6 +21,8 @@ export interface Save {
   lang: Lang | null;
   sound: boolean;
   motion: boolean;
+  /** Whether Liora speaks. */
+  maiden: boolean;
   seenHelp: boolean;
   days: DayRecord[];
   /** Daily run in progress so a reload can't grant a fresh attempt. */
@@ -35,6 +37,7 @@ const fresh = (): Save => ({
   lang: null,
   sound: true,
   motion: true,
+  maiden: true,
   seenHelp: false,
   days: [],
   pending: null,

@@ -14,6 +14,7 @@ import { TIER_COLORS } from '../render/scene.ts';
 import { sfx } from '../render/sfx.ts';
 import { BONFIRE_LIT, PATCHES, SECRET_TEXT, quipFor, secretOf, zoneAt } from '../eggs.ts';
 import { gateRun, showPaywall } from './account.ts';
+import { say } from './maiden.ts';
 import { app, banner, go, onLeave, route, tierBadge } from './app.ts';
 import { countUp, fmt, h, wait } from './dom.ts';
 import { icon } from './icons.ts';
@@ -351,6 +352,11 @@ function play(src: Source): HTMLElement {
     paintPips();
 
     let reason: string | null = null;
+    // Liora reacts to the remarkable (and to the hopeless).
+    const prevDead = src.turns.length > 1 && !src.turns[src.turns.length - 2].tier;
+    if (v.tier === 6) setTimeout(() => alive && say('rare', 'top'), 900);
+    else if (v.tier === 5 && Math.random() < 0.5) setTimeout(() => alive && say('lord', 'top'), 900);
+    else if (!v.tier && prevDead && Math.random() < 0.5) setTimeout(() => alive && say('deaths', 'top'), 2500);
     if (v.tier) {
       sfx.reward(v.tier);
       app.scene.reward(v.tier);
@@ -359,6 +365,7 @@ function play(src: Source): HTMLElement {
       const from = zoneAt(before * METRES_PER_POINT);
       const to = zoneAt(points() * METRES_PER_POINT);
       if (to !== from) void wait(700).then(() => { if (alive) void banner(to.name[lang], 'zone', 3000); });
+      if (to !== from && to.name.en === 'The Abyss' && v.tier < 6) setTimeout(() => alive && say('abyss', 'top'), 3800);
     } else {
       reason = guess ? quipFor(guess, lang) ?? (Math.random() < 0.04 ? PATCHES[lang] : null) : null;
       app.scene.setHollow(deaths() >= 3);
@@ -434,6 +441,7 @@ function play(src: Source): HTMLElement {
   }
 
   app.scene.setHollow(deaths() >= 3);
+  if (endless && src.turns.length === 0) setTimeout(() => alive && say('endless', 'top'), 500);
   if (src.kind === 'daily' && src.turns.length === 0) {
     sfx.kindle();
     void banner(BONFIRE_LIT[lang], 'lit', 2000).then(() => alive && void next());

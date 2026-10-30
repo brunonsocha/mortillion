@@ -10,6 +10,7 @@ import {
 import { sfx } from '../render/sfx.ts';
 import { app, modal } from './app.ts';
 import { h } from './dom.ts';
+import { say } from './maiden.ts';
 
 /**
  * Local and mock builds only: spends a free run and returns true, or shows
@@ -90,6 +91,7 @@ function buyButtons(): HTMLElement {
 
 export function showPaywall() {
   const t = app.t;
+  say('paywall');
   modal(
     t.embersSpent,
     h(
