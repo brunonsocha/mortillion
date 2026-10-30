@@ -91,15 +91,24 @@ function publicRun(run: Run, freeLeft: number | null) {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** Free runs on each themed path (one taste of every theme). */
+const FREE_PER_THEME = Number(Deno.env.get('FREE_PER_THEME') ?? 1);
+
+/** Which allowance a run spends: each theme its own, everything else shared. */
+function bucketOf(mode: string, pack: string | null | undefined): string {
+  return mode === 'pack' ? `pack:${pack}` : 'other';
+}
+
 /**
- * The free-run quota: FREE_RUNS runs, which come back 24 hours after the run
+ * A free-run allowance: `limit` runs, which come back 24 hours after the run
  * that used the last of them. A partly used allowance also lapses 24 hours
  * after its first run, so old runs never linger.
  */
-async function quotaState(userId: string): Promise<{ used: number; resetAt: number | null }> {
+async function quotaState(userId: string, bucket: string): Promise<{ used: number; limit: number; resetAt: number | null }> {
+  const limit = bucket === 'other' ? FREE_RUNS : FREE_PER_THEME;
   const { data } = await admin
     .from('runs')
-    .select('created_at')
+    .select('created_at, mode, pack')
     .eq('user_id', userId)
     .eq('free', true)
     .gte('created_at', new Date(Date.now() - 3 * DAY_MS).toISOString())
@@ -114,15 +123,15 @@ async function quotaState(userId: string): Promise<{ used: number; resetAt: numb
       lockedUntil = null;
     }
   };
-  for (const r of data ?? []) {
+  for (const r of (data ?? []).filter((r) => bucketOf(r.mode, r.pack) === bucket)) {
     const t = Date.parse(r.created_at);
     lapse(t);
     windowStart ??= t;
     used++;
-    if (used >= FREE_RUNS) lockedUntil = t + DAY_MS;
+    if (used >= limit) lockedUntil = t + DAY_MS;
   }
   lapse(Date.now());
-  return { used, resetAt: lockedUntil ?? (windowStart !== null ? windowStart + DAY_MS : null) };
+  return { used, limit, resetAt: lockedUntil ?? (windowStart !== null ? windowStart + DAY_MS : null) };
 }
 
 async function start(user: User, body: { mode?: Mode; pack?: string; day?: number; seats?: number }) {
@@ -142,13 +151,14 @@ async function start(user: User, body: { mode?: Mode; pack?: string; day?: numbe
     return publicRun(data as Run, null);
   }
 
-  // Everything except the Daily Descent spends a free run.
+  // Everything except the Daily Pilgrimage spends a free run: one per themed
+  // path, and a shared allowance for Endless, Summon Signs and Archive.
   const paid = await hasFullAccess(user.id);
-  const quota = paid ? { used: 0, resetAt: null } : await quotaState(user.id);
-  if (!paid && quota.used >= FREE_RUNS) {
-    throw new HttpError(402, 'quota', { resetAt: new Date(quota.resetAt!).toISOString() });
+  const bucket = bucketOf(mode, body.pack);
+  const quota = paid ? { used: 0, limit: 0, resetAt: null } : await quotaState(user.id, bucket);
+  if (!paid && quota.used >= quota.limit) {
+    throw new HttpError(402, 'quota', { resetAt: new Date(quota.resetAt!).toISOString(), bucket });
   }
-  const used = quota.used;
 
   let ids: string[];
   let day = today;
@@ -178,7 +188,7 @@ async function start(user: User, body: { mode?: Mode; pack?: string; day?: numbe
     .select('*')
     .single();
   if (error) throw new HttpError(500, 'insert_failed');
-  return publicRun(data as Run, paid ? null : FREE_RUNS - used - 1);
+  return publicRun(data as Run, paid ? null : quota.limit - quota.used - 1);
 }
 
 /** Reveals the current prompt and starts its clock (once: reloads don't reset it). */

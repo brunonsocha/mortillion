@@ -128,19 +128,26 @@ test('the server never sends answers before they are guessed', async (t) => {
   assert.equal(JSON.stringify(p).includes('"tier"'), false);
 });
 
-test('three free runs, back 24 h after the third; full access lifts the limit', async (t) => {
+test('one free journey per themed path, three for the rest; back 24 h later; paid lifts it', async (t) => {
   if (!up) return t.skip('local Supabase stack is not running');
   const { token, id } = await userToken();
-  for (let i = 0; i < 3; i++) assert.equal((await game(token, { action: 'start', mode: 'pack', pack: 'sports' })).status, 200);
+  // Every theme can be tried once.
+  for (const pack of ['sports', 'movies', 'geography', 'music']) assert.equal((await game(token, { action: 'start', mode: 'pack', pack })).status, 200, pack);
+  const again = await game(token, { action: 'start', mode: 'pack', pack: 'sports' });
+  assert.equal(again.status, 402, 'the same path twice');
+  assert.equal(again.body.bucket, 'pack:sports');
+  const wait = Date.parse(again.body.resetAt) - Date.now();
+  assert.ok(wait > 23.9 * 3600e3 && wait <= 24 * 3600e3, `resets ~24 h after it was used (${wait} ms)`);
+  // Endless / party / archive share three, independent of the themes.
+  for (let i = 0; i < 3; i++) assert.equal((await game(token, { action: 'start', mode: 'endless' })).status, 200);
   const fourth = await game(token, { action: 'start', mode: 'endless' });
   assert.equal(fourth.status, 402);
-  assert.equal(fourth.body.error, 'quota');
-  const wait = Date.parse(fourth.body.resetAt) - Date.now();
-  assert.ok(wait > 23.9 * 3600e3 && wait <= 24 * 3600e3, `resets ~24 h after the third run (${wait} ms)`);
+  assert.equal(fourth.body.bucket, 'other');
   // The daily is never limited.
   assert.equal((await game(token, { action: 'start', mode: 'daily', day: dayNumber() })).status, 200);
-  // 24 h after the third run, the embers return.
+  // 24 h later, the embers return.
   await sql(`update public.runs set created_at = created_at - interval '24 hours 1 minute' where user_id = '${id}' and free`);
+  assert.equal((await game(token, { action: 'start', mode: 'pack', pack: 'sports' })).status, 200);
   assert.equal((await game(token, { action: 'start', mode: 'endless' })).status, 200);
   await sql(`update public.profiles set full_access = true where id = '${id}'`);
   for (let i = 0; i < 4; i++) assert.equal((await game(token, { action: 'start', mode: 'pack', pack: 'movies' })).status, 200);
@@ -149,10 +156,10 @@ test('three free runs, back 24 h after the third; full access lifts the limit', 
 test('a partly used allowance lapses 24 h after its first run', async (t) => {
   if (!up) return t.skip('local Supabase stack is not running');
   const { token, id } = await userToken();
-  for (let i = 0; i < 2; i++) assert.equal((await game(token, { action: 'start', mode: 'pack', pack: 'music' })).status, 200);
+  for (let i = 0; i < 2; i++) assert.equal((await game(token, { action: 'start', mode: 'endless' })).status, 200);
   await sql(`update public.runs set created_at = created_at - interval '25 hours' where user_id = '${id}'`);
-  for (let i = 0; i < 3; i++) assert.equal((await game(token, { action: 'start', mode: 'pack', pack: 'music' })).status, 200, `run ${i + 1} after the lapse`);
-  assert.equal((await game(token, { action: 'start', mode: 'pack', pack: 'music' })).status, 402);
+  for (let i = 0; i < 3; i++) assert.equal((await game(token, { action: 'start', mode: 'endless' })).status, 200, `run ${i + 1} after the lapse`);
+  assert.equal((await game(token, { action: 'start', mode: 'endless' })).status, 402);
 });
 
 test('answers after 25 s (+grace) are refused, double submits rejected', async (t) => {
@@ -270,7 +277,7 @@ test('a monthly subscription grants access while active and loses it when cancel
   const customer = `cus_sub_${id.slice(0, 8)}`;
   await sql(`update public.profiles set stripe_customer_id = '${customer}' where id = '${id}'`);
   const sub = (status: string) => ({ id: 'sub_test_1', object: 'subscription', status, customer, items: { data: [{ current_period_end: Math.floor(Date.now() / 1000) + 30 * 86400 }] } });
-  for (let i = 0; i < 3; i++) await game(token, { action: 'start', mode: 'pack', pack: 'geography' });
+  await game(token, { action: 'start', mode: 'pack', pack: 'geography' });
   assert.equal((await game(token, { action: 'start', mode: 'pack', pack: 'geography' })).status, 402);
   assert.equal(await webhook({ id: 'evt_s1', object: 'event', type: 'customer.subscription.created', data: { object: sub('active') } }), 200);
   assert.equal((await game(token, { action: 'start', mode: 'pack', pack: 'geography' })).status, 200, 'active subscriber plays on');

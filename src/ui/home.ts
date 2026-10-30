@@ -10,6 +10,7 @@ import { app, banner, go, modal, onLeave, route, showHelp } from './app.ts';
 import { fmt, h } from './dom.ts';
 import { icon } from './icons.ts';
 import { quotaLabel } from './account.ts';
+import { unlimited } from '../account/gate.ts';
 import { say } from './maiden.ts';
 import { MAIDEN_NAME } from '../maiden-lines.ts';
 import { achievementsSection } from './leaderboard.ts';
@@ -229,6 +230,7 @@ route('themes', async () => {
     'main',
     { class: 'screen themes' },
     h('h2', { class: 'screen-title' }, t.themes),
+    unlimited() ? null : h('p', { class: 'note' }, t.themeFreeNote),
     h(
       'div',
       { class: 'grid' },

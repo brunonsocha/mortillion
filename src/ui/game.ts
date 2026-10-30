@@ -1,5 +1,5 @@
 import { REMOTE } from '../account/config.ts';
-import { syncFreeRuns } from '../account/gate.ts';
+import { syncFreeRuns, type Bucket } from '../account/gate.ts';
 import { THEMES, loadAll, loadPack } from '../data/packs/index.ts';
 import type { Prompt } from '../data/types.ts';
 import {
@@ -48,8 +48,8 @@ function empty(): HTMLElement {
 }
 
 /** Sends the player home (with the paywall) if today's free runs are spent. */
-function blocked(): HTMLElement | null {
-  if (gateRun()) return null;
+function blocked(bucket: Bucket): HTMLElement | null {
+  if (gateRun(bucket)) return null;
   queueMicrotask(() => go(''));
   return loading();
 }
@@ -61,7 +61,7 @@ function blocked(): HTMLElement | null {
 async function remote(kind: RunKind, id: string, start: Record<string, unknown>): Promise<HTMLElement> {
   try {
     const src = await remoteSource(kind, id, start);
-    syncFreeRuns(src.freeLeft);
+    syncFreeRuns(src.freeLeft, kind === 'pack' ? `pack:${id}` : 'other');
     if (src.finished) {
       // A daily already finished elsewhere (another tab or device).
       finishRun(src, []);
@@ -70,9 +70,10 @@ async function remote(kind: RunKind, id: string, start: Record<string, unknown>)
     return play(src);
   } catch (e) {
     if (e instanceof ApiError && e.status === 402) {
-      syncFreeRuns(0);
+      const bucket = (e.data.bucket as Bucket | undefined) ?? 'other';
+      syncFreeRuns(0, bucket);
       queueMicrotask(() => go(''));
-      setTimeout(() => showPaywall(e.data.resetAt as string | undefined), 80);
+      setTimeout(() => showPaywall(e.data.resetAt as string | undefined, bucket), 80);
       return loading();
     }
     throw e;
@@ -101,7 +102,7 @@ route('archive-run', async ([d]) => {
   const day = Number(d);
   if (!(day >= 1 && day < dayNumber())) return empty();
   if (REMOTE) return remote('archive', String(day), { day });
-  const stop = blocked();
+  const stop = blocked('other');
   if (stop) return stop;
   const pool = await loadAll();
   if (!pool.length) return empty();
@@ -110,7 +111,7 @@ route('archive-run', async ([d]) => {
 
 route('endless', async () => {
   if (REMOTE) return remote('endless', 'endless', {});
-  const stop = blocked();
+  const stop = blocked('other');
   if (stop) return stop;
   const pool = await loadAll();
   if (!pool.length) return empty();
@@ -120,7 +121,7 @@ route('endless', async () => {
 route('pack', async ([id]) => {
   if (REMOTE) return remote('pack', id, { pack: id });
   if (!THEMES.includes(id)) return empty();
-  const stop = blocked();
+  const stop = blocked(`pack:${id}`);
   if (stop) return stop;
   const prompts = await loadPack(id);
   if (!prompts.length) return empty();

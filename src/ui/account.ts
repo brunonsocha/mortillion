@@ -3,7 +3,8 @@
 
 import { ApiError, callGame } from '../account/api.ts';
 import { ACCOUNTS_ENABLED, FREE_RUNS_PER_DAY, GOOGLE_ENABLED, PRICE_LABEL, PURCHASE, REMOTE } from '../account/config.ts';
-import { canStartRun, freeRunsLeft, spendRun, unlimited } from '../account/gate.ts';
+import { canStartRun, freeRunsLeft, spendRun, unlimited, type Bucket } from '../account/gate.ts';
+import { PACK_NAMES } from '../i18n/strings.ts';
 import {
   authNotice, currentAccount, openPortal, sendMagicLink, setDisplayName, signInWithGoogle, signOut, signedIn, startCheckout, type Currency,
 } from '../account/session.ts';
@@ -16,12 +17,12 @@ import { say } from './maiden.ts';
  * Local and mock builds only: spends a free run and returns true, or shows
  * the paywall and returns false. With the game server, the server decides.
  */
-export function gateRun(): boolean {
-  if (canStartRun()) {
-    spendRun();
+export function gateRun(bucket: Bucket): boolean {
+  if (canStartRun(bucket)) {
+    spendRun(bucket);
     return true;
   }
-  setTimeout(showPaywall, 60);
+  setTimeout(() => showPaywall(undefined, bucket), 60);
   return false;
 }
 
@@ -97,7 +98,7 @@ function untilLabel(at: number): string {
   return hrs ? `${hrs} ${app.t.hoursShort} ${mins % 60} ${app.t.minutesShort}` : `${mins} ${app.t.minutesShort}`;
 }
 
-export function showPaywall(resetAt?: string) {
+export function showPaywall(resetAt?: string, bucket: string = 'other') {
   const t = app.t;
   say('paywall');
   const back = resetAt ? Date.parse(resetAt) : NaN;
@@ -110,7 +111,13 @@ export function showPaywall(resetAt?: string) {
     h(
       'div',
       { class: 'account' },
-      h('p', null, t.embersBody.replace('{n}', String(FREE_RUNS_PER_DAY))),
+      h(
+        'p',
+        null,
+        bucket.startsWith('pack:')
+          ? t.embersTheme.replace('{path}', PACK_NAMES[bucket.slice(5)]?.[app.lang] ?? bucket.slice(5))
+          : t.embersBody.replace('{n}', String(FREE_RUNS_PER_DAY)),
+      ),
       returns,
       h('p', { class: 'note' }, t.dailyStillFree),
       h('p', { class: 'covenant' }, PURCHASE === 'subscription' ? t.covenantPitchSub : t.covenantPitch),

@@ -995,6 +995,39 @@ to be HOT and anime-style, but still pixel art."
 
 ---
 
+## 35. One free journey on every themed path
+
+Your request (2026-10-30): "let the player play a game of each thematic pack before blocking.
+Daily descent should have a limit of 3."
+
+**What**
+- **Free allowances** (server: `bucketOf` and `quotaState` in `supabase/functions/game`):
+  - **each themed path:** 1 free journey (`FREE_PER_THEME`), so all 7 themes can be tried, each
+    renewing 24 h after use
+  - **Endless Road, Summon Signs and Archive:** share **3** free journeys (`FREE_PER_DAY_RUNS` is still
+    `FREE_RUNS_PER_DAY`), renewing 24 h after the limit is reached
+  - the **Daily Pilgrimage** stays free, once a day
+- The 402 response names the allowance that ran out (`bucket`). The paywall says "You have walked
+  *Arena of Champions* once already." with a countdown, or the Endless/party/archive message.
+- The themed paths screen shows "Each path: one free journey, renewed 24 h later." for free players.
+  The free-tier description in Settings is updated (EN/PL/UK).
+- The local and mock builds mirror the same per-bucket allowances in the browser.
+
+**Interpretation to confirm:** I read "daily descent should have a limit of 3" as the shared
+allowance of 3 for the non-themed modes. The Daily Pilgrimage itself stays **once per day** (the
+same seven prompts for everyone, which the leaderboard relies on). Tell me if you meant something else.
+
+**Verified:**
+- `npm run test:server` → **14/14**:
+  - four different paths start, then the same path twice → 402 `pack:sports` with `resetAt` about 24 h away
+  - 3 Endless runs, then 402 `other`
+  - the daily still starts
+  - after 24 h both allowances return, and paid access lifts both
+- Browser, on the local online build: Sports and Movies start, then Sports again → the paywall names the path.
+
+
+---
+
 ## What I need from you
 
 ### Decisions (confirmed on 2026-10-30 / still open)

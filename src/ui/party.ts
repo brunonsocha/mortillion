@@ -106,11 +106,11 @@ function setup(themes: string[]): HTMLElement {
         syncFreeRuns(src.freeLeft);
       } catch (err) {
         start.disabled = false;
-        if (err instanceof ApiError && err.status === 402) showPaywall(err.data.resetAt as string | undefined);
+        if (err instanceof ApiError && err.status === 402) showPaywall(err.data.resetAt as string | undefined, 'other');
         return;
       }
     } else {
-      if (!gateRun()) return;
+      if (!gateRun('other')) return;
       const pool = pack === 'all' ? await loadAll() : await loadPack(pack);
       if (!pool.length) return;
       src = localSource({ kind: 'party', id: 'party', prompts: byDifficulty(shuffle(pool).slice(0, ROUNDS)), seats: clean.length });
