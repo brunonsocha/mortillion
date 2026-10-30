@@ -1391,7 +1391,7 @@ the whole game?"
   option), so the amber eyes, the pendant and the hood's ember trim don't go muddy at the lower
   resolution.
 - **Sizes compared:** 72×90 and 48×60. 48×60 lost the face, so 72×90 it is.
-- **Sheet size:** the portrait sheet is now 6 KB (was 52 KB).
+- **Sheet size:** the portrait sheet is now 15 KB (was 52 KB).
 
 ```sh
 python3 scripts/pixelize-portrait.py art/liora/maiden-cutout.png --size 72x90 --colors 32 --saturation 1.3 --contrast 1.15
