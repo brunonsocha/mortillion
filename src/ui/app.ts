@@ -221,7 +221,9 @@ export function showSettings() {
       toggle(t.maidenToggle, s.maiden, (v) => {
         save({ maiden: v });
         if (!v) dismissMaiden();
+        document.querySelector<HTMLElement>('.maiden-hit')?.toggleAttribute('hidden', !v);
       }),
+      h('p', { class: 'note setting-note' }, t.maidenHint),
       toggle(t.motion, s.motion, (v) => {
         save({ motion: v });
         app.scene.motion = v;

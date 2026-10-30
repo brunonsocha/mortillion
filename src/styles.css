@@ -2155,3 +2155,8 @@ body:not(:has(.home)) .brand {
 .tier.skipped {
   color: var(--ink-dim);
 }
+
+.setting-note {
+  margin: -6px 0 4px;
+  font-size: 13px;
+}

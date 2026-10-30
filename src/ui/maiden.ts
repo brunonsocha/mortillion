@@ -77,10 +77,7 @@ export function say(event: MaidenEvent, place: 'top' | 'bottom' = 'bottom') {
   let shown = still ? text.length : 0;
   let typing = !still;
   let blinkAt = performance.now() + 1800 + Math.random() * 2500;
-  let leaveAt = 0;
   let raf = 0;
-  const readTime = () => Math.max(3800, text.length * 55);
-  if (still) leaveAt = performance.now() + readTime();
   line.textContent = still ? text : '';
 
   // One loop: types ~28 characters a second, moves her mouth while she
@@ -91,15 +88,11 @@ export function say(event: MaidenEvent, place: 'top' | 'bottom' = 'bottom') {
       lastStep = now;
       shown = Math.min(text.length, shown + 1);
       line.textContent = text.slice(0, shown);
-      if (shown >= text.length) {
-        typing = false;
-        leaveAt = now + readTime();
-      }
+      if (shown >= text.length) typing = false;
     }
     const blinking = now >= blinkAt && now < blinkAt + 140;
     if (now >= blinkAt + 140) blinkAt = now + 2200 + Math.random() * 3000;
     paint(blinking ? 1 : typing && Math.floor(now / 110) % 2 ? 2 : 0);
-    if (leaveAt && now >= leaveAt) return stop();
     raf = requestAnimationFrame(tick);
   };
   raf = requestAnimationFrame(tick);
@@ -112,11 +105,11 @@ export function say(event: MaidenEvent, place: 'top' | 'bottom' = 'bottom') {
   };
   el.onclick = () => {
     if (typing) {
-      // First tap finishes the line, the second dismisses it.
+      // First tap finishes the line, the second dismisses it. She never
+      // leaves on her own.
       typing = false;
       shown = text.length;
       line.textContent = text;
-      leaveAt = performance.now() + readTime();
     } else stop();
   };
   current = { el, stop };

@@ -1295,6 +1295,24 @@ supposed to be pixel art!!!!!! and use a proper color palette".
   the scene, instead of the far screen edge. It still never covers the panels or buttons. On
   narrower screens it's the compact strip under the header, with no tail.
 
+## 46. Liora's lines stay until clicked; her dialogue can be switched off
+
+Your request (2026-10-30): "make it so that the dialogues don't disappear unless clicked. make
+liora's dialogue toggleable in the settings - if the player doesnt want to interact with her at
+all, he doesnt have to."
+
+**What**
+- **No auto-dismiss.** A line stays on screen until the player clicks it. The first click
+  finishes the typing; the second closes it. A new line from her replaces the old one.
+- **She no longer steps aside before rare kills:** her dialogue now sits beside the column, so it
+  doesn't hide the fight.
+- **Settings → "Liora's dialogue" On/Off** (renamed from "Liora speaks", EN/PL/UK), with a note:
+  "Off: Liora stays silent by the fire and never interrupts."
+  - When off, no dialogue ever opens: no greetings, praise, result comments or paywall lines.
+  - The tap-to-talk spot on her bonfire sprite is removed too.
+  - Switching it off also closes any open line.
+  - She still stands by the fire as part of the scenery.
+
 ---
 
 ## What I need from you

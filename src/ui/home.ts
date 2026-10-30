@@ -81,7 +81,8 @@ route('', () => {
       'div',
       { class: 'anchor fire-gap' },
       soapstone(),
-      h('button', { class: 'maiden-hit', 'aria-label': MAIDEN_NAME[app.lang], title: MAIDEN_NAME[app.lang], onclick: () => say('idle') }),
+      // Tap Liora to hear her (unless her dialogue is switched off).
+      load().maiden ? h('button', { class: 'maiden-hit', 'aria-label': MAIDEN_NAME[app.lang], title: MAIDEN_NAME[app.lang], onclick: () => say('idle') }) : null,
     ),
     h(
       'section',

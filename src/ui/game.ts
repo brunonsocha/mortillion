@@ -14,7 +14,7 @@ import { SKIP_COLOR, TIER_COLORS } from '../render/scene.ts';
 import { sfx } from '../render/sfx.ts';
 import { BONFIRE_LIT, PATCHES, VICTORY_POINTS, SECRET_TEXT, quipFor, secretOf, zoneAt } from '../eggs.ts';
 import { gateRun, showPaywall } from './account.ts';
-import { dismissMaiden, say } from './maiden.ts';
+import { say } from './maiden.ts';
 import { app, banner, go, onLeave, route, tierBadge } from './app.ts';
 import { countUp, fmt, h, wait } from './dom.ts';
 import { icon } from './icons.ts';
@@ -443,8 +443,7 @@ function play(src: Source): HTMLElement {
         app.scene.enemyFlee();
       } else {
         // The kill: the rarer the answer, the grander the blow.
-        if (v.tier >= 4) dismissMaiden();
-        if (v.tier >= 5 && app.scene.motion) setTimeout(() => alive && void banner(t.critical, 'crit', 1500), v.tier === 6 ? 700 : 450);
+          if (v.tier >= 5 && app.scene.motion) setTimeout(() => alive && void banner(t.critical, 'crit', 1500), v.tier === 6 ? 700 : 450);
         await app.scene.kill(v.tier);
         if (!alive) return;
       }
