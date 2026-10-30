@@ -11,11 +11,11 @@ Overnight session started 2026-10-29 22:15 CET.
 (sometime before 02:30, when the limit reset), and resumed around 09:20. Every change is a separate
 commit with an entry below.
 
-**Content: 237 prompts, 18,973 answers, every prompt tagged with a difficulty**
+**Content: 255 prompts, 20,728 answers, every prompt tagged with a difficulty (82 easy / 118 medium / 55 hard)**
 
 | Pack | Prompts | Easy / Medium / Hard | Answers | Status |
 |---|---:|---|---:|---|
-| general (daily mix) | 34 | 15 / 16 / 3 | 3,164 | from yesterday, now difficulty-tagged |
+| general (daily mix) | 52 | 20 / 21 / 11 | 4,919 | **+18 prompts, gap fixes** (entry 25) |
 | geography | 32 | 10 / 19 / 3 | 1,523 | tagged |
 | movies | 26 | 9 / 11 / 6 | 1,493 | tagged |
 | sports | 26 | 6 / 14 / 6 | 1,170 | tagged |
@@ -603,6 +603,36 @@ and Food remain sealed.
 **Verified:** a full Daily Descent on mobile in Ukrainian (tiers 1, 2, 4, 5, 6 plus two
 deaths) → results (day #2, rank, share and image buttons) → home (streak 1, best depth)
 works. BONFIRE LIT renders cleanly in Ukrainian.
+
+
+---
+
+## 25. Content: General pack extended (+18 prompts) and gaps filled (agent-written)
+
+**What**
+- **General** went from 34 prompts / 3,164 answers to **52 prompts / 4,919 answers**. Difficulty split: 20 easy, 21 medium, 11 hard.
+  It feeds the Daily Descent, which was short on hard prompts.
+  - **Hard:** Slavic deities, Nobel Literature laureates (1901–2025), chess openings, tarot
+    cards (major + all 56 minor arcana in three languages), typefaces, knots, wine grapes,
+    poisonous plants.
+  - **Medium:** Norse deities, Egyptian deities, cat breeds, cocktails, books of the Bible.
+  - **Easy:** furniture, vehicles, school subjects, emotions, pizza toppings.
+- **Gap fixes in existing prompts** (a rejected common answer is the worst experience):
+  - **mammal:** about 40 more answers (dzik / wild boar, sarna, sea lion, chamois, manul…), plus
+    bull/ox/calf, lamb/ram and mare/stallion.
+  - **bird:** bielik, беркут, rook, jackdaw, coot… "parakeet" now matches budgie, and "Phoenix" is rejected.
+  - **profession / clothing / tree / flower:** many common answers added, including
+    informatyk/айтішник, dresy, majtki, пуховик, choinka/смерека → spruce, мальва and барвінок.
+  - Smaller additions to colour, kitchen, tool, language, instrument, fish, fruit, vegetable and
+    insect.
+
+**Please review:** the agent left unsure Polish/Ukrainian forms empty or transliterated
+on typeface, knot, wine-grape and rarer deities. Those are worth a quick native check.
+
+**Verified:**
+- All packs validate with 0 errors, 12/12 tests pass, and the build is clean.
+- Spot checks: dzik → Wild boar, кіт → Cat, кит → Whale, dresy → Tracksuit, dress → Dress, choinka →
+  Spruce, informatyk → Programmer, Śmierć → Death (tarot), and Phoenix is rejected.
 
 
 ---
