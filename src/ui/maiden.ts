@@ -4,7 +4,7 @@
 
 import { load } from '../engine/storage.ts';
 import { LINES, MAIDEN_NAME, type MaidenEvent } from '../maiden-lines.ts';
-import { MAIDEN_PALETTE, PORTRAIT, PORTRAIT_BLINK, PORTRAIT_TALK } from '../render/maiden.ts';
+import { PORTRAIT, PORTRAIT_BLINK, PORTRAIT_PALETTE, PORTRAIT_TALK } from '../render/maiden.ts';
 import { bake } from '../render/sprites.ts';
 import { sfx } from '../render/sfx.ts';
 import { app } from './app.ts';
@@ -38,11 +38,11 @@ export function say(event: MaidenEvent, place: 'top' | 'bottom' = 'bottom') {
   const text = pick(event);
   const still = !app.scene.motion;
 
-  const frames = [PORTRAIT, PORTRAIT_BLINK, PORTRAIT_TALK].map((s) => bake(s, undefined, MAIDEN_PALETTE));
-  const portrait = h('canvas', { class: 'maiden-portrait', width: 44, height: 52, 'aria-hidden': 'true' });
+  const frames = [PORTRAIT, PORTRAIT_BLINK, PORTRAIT_TALK].map((s) => bake(s, undefined, PORTRAIT_PALETTE));
+  const portrait = h('canvas', { class: 'maiden-portrait', width: 80, height: 100, 'aria-hidden': 'true' });
   const pg = portrait.getContext('2d')!;
   const paint = (f: number) => {
-    pg.clearRect(0, 0, 44, 52);
+    pg.clearRect(0, 0, 80, 100);
     pg.drawImage(frames[f], 0, 0);
   };
   paint(0);

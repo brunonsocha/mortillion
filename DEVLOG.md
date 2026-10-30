@@ -967,6 +967,34 @@ the build are clean, and 12/12 engine tests pass.
 
 ---
 
+## 34. Liora's portrait, redone at 80×100
+
+Your feedback (2026-10-30): "she looks horrible… expand pixel art for her portrait… she needs
+to be HOT and anime-style, but still pixel art."
+
+**What**
+- **A new 80×100 portrait** (about 3.5× the pixels of the old one), drawn with a small shading engine
+  (`shots/liora3/draw.py`, outside the repo). Each form gets banded 4-tone pixel lighting from the
+  upper left, plus a warm firelight rim on her right from the bonfire.
+- **The look:**
+  - **Face:** big heavy-lidded amber "bedroom eyes" with thick winged lashes, sparkles, vertical
+    pupils and a lower lash line; thin relaxed brows; hatched anime blush; glossy lips in a knowing
+    smile; a beauty mark.
+  - **Hair:** silky silver-lavender with a crown ring highlight, radiating strands, side-swept bangs,
+    and long side locks falling over the shoulders.
+  - **Jewellery:** a gold tiara with an ember gem, gold earrings, a black choker with an ember drop.
+  - **Figure and outfit:** bare sloping shoulders and collarbones, a full bust with contour lines and
+    cleavage, and a plum off-shoulder gown with a sweetheart neckline and gold trim. Alluring but
+    clothed and non-explicit.
+- **Frames:** neutral, a contented closed-eye blink, and talking (lips parted).
+- **Display:** the portrait is shown at 144×180 px on desktop and 88×110 on phones. It has its own
+  palette (`PORTRAIT_PALETTE`), separate from the full-body sprite.
+
+**Verified:** frame previews at 5×, plus the dialogue box on desktop and mobile. `tsc` and the build are clean.
+
+
+---
+
 ## What I need from you
 
 ### Decisions (confirmed on 2026-10-30 / still open)
