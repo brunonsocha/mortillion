@@ -827,6 +827,36 @@ Your decisions (2026-10-30): a **monthly subscription**, and free runs that come
 
 ---
 
+## 30. Wrong answers say "try again"; death only when time runs out
+
+Your request (2026-10-30): "NIE ŻYJESZ only on actual death; a bad answer should tell the
+player and let them keep guessing."
+
+**What**
+- **A wrong guess no longer ends the prompt.** The input shakes, a dull thud plays, and a line
+  appears under the input: "Not inscribed in the tome. Try another." (EN/PL/UK).
+  - Famous Dark Souls names get their quip instead ("If only you could be so grossly incandescent").
+  - Repeating the same guess says "Already offered" and costs nothing.
+  - Recent tries are listed, crossed out.
+- **YOU DIED / NIE ŻYJESZ / ВИ ЗАГИНУЛИ only on a real death:** the 25 s run out (whatever is
+  typed gets one last check) or the player gives up. The death reveal says "None of your
+  offerings held." and lists them.
+- **Endless:** Estus flasks are only lost on real deaths.
+- **Summon Signs:** each phantom keeps guessing until a valid answer or the timer, too.
+- **Server:**
+  - `answer` returns `{ retry: true, misses }` for a wrong guess within time, and the prompt stays open.
+  - `giveUp: true` (or an empty guess) ends it as a death.
+  - Wrong guesses are **capped at 25 per prompt** (429), so answer banks can't be brute-forced through the API.
+  - Misses are stored per prompt and per turn (migration `0005_guesses.sql`).
+
+**Verified:**
+- Browser: two wrong guesses → "try another" with no death → a valid answer scores
+  Pretender. On the next prompt a wrong guess then Give up → YOU DIED and the reveal lists the tries.
+- `npm run test:server` → 13/13, with a new test covering retry, same prompt, cap, and give-up moving on.
+
+
+---
+
 ## What I need from you
 
 ### Decisions (confirmed on 2026-10-30 / still open)

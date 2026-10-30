@@ -28,6 +28,8 @@ const GRACE_MS = 3000;
 const ENDLESS_LIVES = 3;
 const ENDLESS_DECK = 300;
 const PARTY_ROUNDS = 5;
+/** Wrong guesses allowed per prompt: plenty for a person, too few to brute-force. */
+const MAX_MISSES = 25;
 const NAME_RE = /^[\p{L}\p{N} _.'-]{2,24}$/u;
 
 type Mode = 'daily' | 'pack' | 'endless' | 'archive' | 'party';
@@ -44,6 +46,7 @@ interface Run {
   cursor: number;
   seat: number;
   served_at: string | null;
+  misses: number;
   points: number;
   finished_at: string | null;
 }
@@ -197,19 +200,31 @@ async function prompt(user: User, body: { runId?: string }) {
   };
 }
 
-async function answer(user: User, body: { runId?: string; guess?: string }) {
+/**
+ * A guess for the current prompt. A wrong guess in time just says "try
+ * again" (`retry`); the prompt ends with a valid answer, when time runs out,
+ * or when the player gives up (`giveUp`, or an empty guess).
+ */
+async function answer(user: User, body: { runId?: string; guess?: string; giveUp?: boolean }) {
   const run = await loadRun(String(body.runId), user);
   if (run.finished_at) throw new HttpError(409, 'finished');
   if (!run.served_at) throw new HttpError(409, 'not_served');
   const p = BY_ID.get(run.prompt_ids[run.cursor])!;
-  const guess = String(body.guess ?? '').slice(0, 80).trim();
+  const guess = body.giveUp ? '' : String(body.guess ?? '').slice(0, 80).trim();
   const timedOut = Date.now() - Date.parse(run.served_at) > SECONDS_PER_PROMPT * 1000 + GRACE_MS;
   const match = !timedOut && guess ? findAnswer(p, guess) : null;
+
+  if (guess && !match && !timedOut) {
+    if (run.misses >= MAX_MISSES) throw new HttpError(429, 'too_many_guesses');
+    // Only bump if the prompt hasn't moved on meanwhile (double submits).
+    await admin.from('runs').update({ misses: run.misses + 1 }).eq('id', run.id).eq('cursor', run.cursor).eq('seat', run.seat);
+    return { retry: true, misses: run.misses + 1 };
+  }
   const tier = (match?.answer.tier ?? 0) as Tier | 0;
   const points = tier ? TIER_POINTS[tier as Tier] : 0;
 
   const { error } = await admin.from('turns').insert({
-    run_id: run.id, idx: run.cursor, seat: run.seat, prompt_id: p.id, guess, answer: match?.answer.names.en ?? null, tier, points,
+    run_id: run.id, idx: run.cursor, seat: run.seat, prompt_id: p.id, guess, answer: match?.answer.names.en ?? null, tier, points, misses: run.misses,
   });
   // A duplicate means this turn was already answered (double submit).
   if (error) throw new HttpError(409, 'answered');
@@ -229,11 +244,12 @@ async function answer(user: User, body: { runId?: string; guess?: string }) {
 
   await admin
     .from('runs')
-    .update({ cursor, seat, lives, points: total, served_at: null, finished_at: finished ? new Date().toISOString() : null })
+    .update({ cursor, seat, lives, points: total, served_at: null, misses: 0, finished_at: finished ? new Date().toISOString() : null })
     .eq('id', run.id);
 
   const unlocked = finished && !user.is_anonymous ? await awardAchievements(user.id) : [];
   return {
+    retry: false,
     tier,
     points,
     total,

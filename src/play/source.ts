@@ -41,6 +41,18 @@ export interface Verdict extends TurnView {
   unlocked: string[];
 }
 
+/** A wrong guess in time: the prompt stays open. */
+export interface Retry {
+  retry: true;
+  misses: number;
+  /** The server stopped accepting guesses for this prompt. */
+  capped?: boolean;
+}
+
+export type Outcome = Verdict | Retry;
+
+export const isRetry = (o: Outcome): o is Retry => 'retry' in o && o.retry === true;
+
 export interface Source {
   kind: RunKind;
   id: string;
@@ -52,7 +64,11 @@ export interface Source {
   /** Free runs left today after this one (null = unlimited / not counted). */
   freeLeft: number | null;
   next(): Promise<PromptView | null>;
-  answer(guess: string | null): Promise<Verdict>;
+  /**
+   * A guess for the current prompt. A wrong one returns a Retry and the
+   * prompt stays open; `null` gives up (a death).
+   */
+  answer(guess: string | null): Promise<Outcome>;
   /** Local runs only: whether a guess is a real answer (protects easter eggs). */
   accepts(guess: string): boolean;
   /** Prompt ids dealt so far (local daily runs persist these). */
@@ -95,6 +111,7 @@ export function localSource(o: LocalOptions): Source {
   const seats = o.seats ?? 1;
   const byId = new Map(prompts.map((p) => [p.id, p]));
   let lives = o.lives ?? null;
+  let misses = 0;
   const turns: TurnView[] = (o.turns ?? []).map((t, i) => viewOf(byId.get(t.promptId) ?? prompts[Math.floor(i / seats)], t, i % seats));
   const position = () => ({ idx: Math.floor(turns.length / seats), seat: turns.length % seats });
   const done = () => (lives !== null && lives <= 0) || (!o.draw && position().idx >= prompts.length);
@@ -120,6 +137,8 @@ export function localSource(o: LocalOptions): Source {
       const { idx, seat } = position();
       const p = prompts[idx];
       const m = guess ? findAnswer(p, guess) : null;
+      if (guess && !m) return { retry: true, misses: ++misses };
+      misses = 0;
       const tier = (m?.answer.tier ?? 0) as Tier | 0;
       const view: TurnView = {
         promptId: p.id, q: p.q, d: p.d, seat, guess: guess ?? '', answer: m?.answer.names ?? null,
@@ -177,10 +196,17 @@ export async function remoteSource(kind: RunKind, id: string, start: Record<stri
       return current;
     },
     async answer(guess) {
-      const v = await callGame<Omit<Verdict, 'promptId' | 'q' | 'd' | 'guess' | 'seat'> & { seat: number; cursor: number }>('answer', {
-        runId: run.runId,
-        guess: guess ?? '',
-      });
+      let v;
+      try {
+        v = await callGame<(Omit<Verdict, 'promptId' | 'q' | 'd' | 'guess' | 'seat'> & { seat: number; cursor: number; retry: false }) | Retry>('answer', {
+          runId: run.runId,
+          ...(guess ? { guess } : { giveUp: true }),
+        });
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 429) return { retry: true, misses: 0, capped: true };
+        throw e;
+      }
+      if (v.retry) return v;
       const view: TurnView = {
         promptId: '', q: current!.q, d: current!.d, seat: current!.seat, guess: guess ?? '', answer: v.answer,
         tier: v.tier, points: v.points, common: v.common, rare: v.rare,

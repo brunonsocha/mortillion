@@ -8,7 +8,7 @@ import {
 import { load, recordDay, recordPack, save } from '../engine/storage.ts';
 import { PACK_NAMES } from '../i18n/strings.ts';
 import {
-  ApiError, localSource, remoteSource, turnOf, type PromptView, type RunKind, type Source, type TurnView, type Verdict,
+  ApiError, isRetry, localSource, remoteSource, turnOf, type PromptView, type RunKind, type Source, type TurnView, type Verdict,
 } from '../play/source.ts';
 import { TIER_COLORS } from '../render/scene.ts';
 import { sfx } from '../render/sfx.ts';
@@ -194,12 +194,16 @@ function play(src: Source): HTMLElement {
   const bar = h('div', { class: 'stamina-fill' });
   const secs = h('span', { class: 'stamina-secs' });
   const giveUp = h('button', { class: 'linkbtn', type: 'button' }, t.skip);
+  const missEl = h('p', { class: 'miss', role: 'status', 'aria-live': 'polite' });
+  const triedEl = h('p', { class: 'tried', 'aria-label': t.tried });
   const ask = h(
     'section',
     { class: 'ask panel', hidden: true },
     kicker,
     question,
     form,
+    missEl,
+    triedEl,
     h('div', { class: 'stamina', role: 'timer' }, h('div', { class: 'stamina-track' }, bar), secs),
     giveUp,
   );
@@ -268,16 +272,38 @@ function play(src: Source): HTMLElement {
     paintPips();
     input.focus();
 
-    const guess = await countdown(pv);
-    if (!alive) return;
-    await answer(guess);
+    const { verdict, tries } = await countdown(pv);
+    if (!alive || !verdict) return;
+    await answer(verdict, tries);
   }
 
-  function countdown(pv: PromptView): Promise<string | null> {
+  /** Shows why a guess didn't count, and keeps the prompt open. */
+  function miss(text: string, tries: string[]) {
+    input.classList.remove('shake');
+    void input.offsetWidth;
+    input.classList.add('shake');
+    input.value = '';
+    missEl.textContent = text;
+    missEl.classList.remove('flash');
+    void missEl.offsetWidth;
+    missEl.classList.add('flash');
+    triedEl.replaceChildren(...tries.slice(-6).map((g) => h('s', null, g)));
+    sfx.miss();
+  }
+
+  /**
+   * Runs the prompt until a valid answer, the end of the timer, or giving up.
+   * Wrong guesses only say "try again"; death comes from time or surrender.
+   */
+  function countdown(pv: PromptView): Promise<{ verdict: Verdict | null; tries: string[] }> {
+    missEl.textContent = '';
+    triedEl.replaceChildren();
     return new Promise((resolve) => {
       // A resumed remote prompt keeps the time already spent on it.
       let start = performance.now() - pv.elapsedMs;
       let lastSec = SECONDS_PER_PROMPT;
+      const tries: string[] = [];
+      let busy = false;
       // Local practice runs pause while the tab is hidden. The daily, and
       // every server-judged run, keep running.
       let hiddenAt = 0;
@@ -291,13 +317,34 @@ function play(src: Source): HTMLElement {
       };
       document.addEventListener('visibilitychange', onVisibility);
       let done = false;
-      const end = (v: string | null) => {
-        if (done) return;
+      const finish = (v: Verdict | null) => {
         done = true;
         document.removeEventListener('visibilitychange', onVisibility);
         form.onsubmit = null;
         giveUp.onclick = null;
-        resolve(v);
+        input.disabled = true;
+        submit.disabled = true;
+        resolve({ verdict: v, tries });
+      };
+      /** Offers a guess (null gives up). Resolves the prompt unless it's a miss. */
+      const offer = async (g: string | null, final = false) => {
+        if (done || busy) return;
+        busy = true;
+        try {
+          const o = await src.answer(g);
+          if (!alive) return finish(null);
+          if (isRetry(o)) {
+            tries.push(g!);
+            // Out of time (or guesses): the prompt ends in death.
+            if (final || o.capped) {
+              const v = await src.answer(null);
+              if (!isRetry(v)) return finish(v);
+            }
+            miss(o.capped ? t.tooManyGuesses : quipFor(g!, lang) ?? t.tryAgain, tries);
+          } else finish(o);
+        } finally {
+          busy = false;
+        }
       };
       form.onsubmit = (e) => {
         e.preventDefault();
@@ -320,9 +367,11 @@ function play(src: Source): HTMLElement {
           void banner(SECRET_TEXT[secret][lang], secret === 'sun' ? 'sun' : 'quote', 2400);
           return;
         }
-        end(v);
+        // The same wrong guess twice costs nothing and tells you so.
+        if (tries.some((x) => x.toLowerCase() === v.toLowerCase())) return miss(t.alreadyTried, tries);
+        void offer(v);
       };
-      giveUp.onclick = () => end(null);
+      giveUp.onclick = () => void offer(null);
       const tick = (now: number) => {
         if (done || !alive) return;
         if (hiddenAt) return void requestAnimationFrame(tick);
@@ -335,19 +384,20 @@ function play(src: Source): HTMLElement {
           lastSec = sec;
           if (sec <= 5 && sec > 0) sfx.tick();
         }
-        if (left <= 0) return end(input.value.trim() || null);
+        if (left <= 0) {
+          // Whatever is typed gets one last look; otherwise the flame is out.
+          const last = input.value.trim();
+          void offer(last || null, true);
+          return;
+        }
         requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
     });
   }
 
-  async function answer(guess: string | null) {
-    input.disabled = true;
-    submit.disabled = true;
-    const before = points();
-    const v = await src.answer(guess);
-    if (!alive) return;
+  async function answer(v: Verdict, tries: string[]) {
+    const before = points() - v.points;
     persistPending(false);
     paintPips();
 
@@ -365,9 +415,9 @@ function play(src: Source): HTMLElement {
       const from = zoneAt(before * METRES_PER_POINT);
       const to = zoneAt(points() * METRES_PER_POINT);
       if (to !== from) void wait(700).then(() => { if (alive) void banner(to.name[lang], 'zone', 3000); });
-      if (to !== from && to.name.en === 'The Abyss' && v.tier < 6) setTimeout(() => alive && say('abyss', 'top'), 3800);
+      if (to !== from && to.final && v.tier < 6) setTimeout(() => alive && say('abyss', 'top'), 3800);
     } else {
-      reason = guess ? quipFor(guess, lang) ?? (Math.random() < 0.04 ? PATCHES[lang] : null) : null;
+      reason = Math.random() < 0.04 ? PATCHES[lang] : null;
       app.scene.setHollow(deaths() >= 3);
       sfx.death();
       app.scene.die();
@@ -380,15 +430,15 @@ function play(src: Source): HTMLElement {
       died.hidden = true;
     }
 
-    showReveal(v, reason);
+    showReveal(v, reason, tries);
   }
 
-  function showReveal(v: Verdict, reason: string | null) {
+  function showReveal(v: Verdict, reason: string | null, tries: string[]) {
     const acceptedAs = v.answer?.[lang] ?? null;
     const cont = h('button', { class: 'btn primary' }, v.finished ? t.finish : t.next);
     const verdict = v.tier
       ? h('div', { class: `verdict stamp t${v.tier}` }, tierBadge(v.tier), h('span', { class: 'gain' }, `+${v.points} ${t.points}`))
-      : h('div', { class: 'verdict dead' }, h('span', { class: 'dead-reason' }, reason ?? (v.guess ? t.notFound : t.timeUp)));
+      : h('div', { class: 'verdict dead' }, h('span', { class: 'dead-reason' }, reason ?? (tries.length ? t.noneHeld : t.timeUp)));
 
     reveal.replaceChildren(
       h('p', { class: 'prompt-kicker' }, v.q[lang]),
@@ -396,7 +446,7 @@ function play(src: Source): HTMLElement {
       h(
         'p',
         { class: 'offered' },
-        v.guess ? [t.youSaid, ': ', h('q', null, v.guess)] : t.nothing,
+        v.tier ? [t.youSaid, ': ', h('q', null, v.guess)] : tries.length ? [t.tried, ': ', tries.map((g, i) => [i ? ', ' : '', h('s', null, g)])] : t.nothing,
         acceptedAs && acceptedAs.toLowerCase() !== v.guess.toLowerCase() ? [' → ', h('b', null, acceptedAs)] : null,
       ),
       h(

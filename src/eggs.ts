@@ -12,6 +12,8 @@ export interface Zone {
   tint: [number, number, number];
   dark: number;
   motes: string[];
+  /** The last zone of a normal run (Liora remarks on reaching it). */
+  final?: boolean;
   /** Colour wash (r, g, b, strength) blended over the walls in 'color' mode. */
   wash: [number, number, number, number];
 }

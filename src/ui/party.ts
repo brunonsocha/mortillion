@@ -10,7 +10,7 @@ import type { L10n, Tier } from '../data/types.ts';
 import { METRES_PER_POINT, SECONDS_PER_PROMPT, byDifficulty, shuffle } from '../engine/game.ts';
 import { PACK_NAMES } from '../i18n/strings.ts';
 import { themeList } from '../play/catalog.ts';
-import { ApiError, localSource, remoteSource, type PromptView, type Source } from '../play/source.ts';
+import { ApiError, isRetry, localSource, remoteSource, type PromptView, type Source, type Verdict } from '../play/source.ts';
 import { TIER_COLORS } from '../render/scene.ts';
 import { sfx } from '../render/sfx.ts';
 import { app, banner, go, onLeave, route, tierBadge } from './app.ts';
@@ -188,25 +188,45 @@ function play(players: Player[], src: Source): HTMLElement {
       onLeave(() => removeEventListener('keydown', onKey));
     });
 
+  /** One phantom's turn: keep guessing until a valid answer or the timer ends. */
   const ask = (pv: PromptView, player: Player) =>
-    new Promise<string | null>((resolve) => {
+    new Promise<Verdict | null>((resolve) => {
       const input = h('input', { class: 'answer', type: 'text', autocomplete: 'off', spellcheck: false, maxlength: 80, placeholder: t.placeholder, 'aria-label': t.placeholder });
       const bar = h('div', { class: 'stamina-fill' });
+      const missEl = h('p', { class: 'miss', role: 'status' });
       const form = h('form', { class: 'answer-row' }, input, h('button', { class: 'btn primary', type: 'submit' }, t.submit));
       let done = false;
-      const end = (v: string | null) => {
-        if (done) return;
-        done = true;
-        resolve(v);
+      let busy = false;
+      const offer = async (g: string | null, final = false) => {
+        if (done || busy) return;
+        busy = true;
+        const o = await src.answer(g);
+        busy = false;
+        if (!isRetry(o)) {
+          done = true;
+          return resolve(o);
+        }
+        if (final || o.capped) {
+          const v = await src.answer(null);
+          done = true;
+          return resolve(isRetry(v) ? null : v);
+        }
+        input.value = '';
+        input.classList.remove('shake');
+        void input.offsetWidth;
+        input.classList.add('shake');
+        missEl.textContent = t.tryAgain;
+        sfx.miss();
       };
       form.onsubmit = (e) => {
         e.preventDefault();
-        if (input.value.trim()) end(input.value.trim());
+        if (input.value.trim()) void offer(input.value.trim());
       };
       show(
         h('p', { class: 'prompt-kicker' }, h('span', { style: { color: player.color } }, player.name)),
         h('h2', { class: 'question' }, pv.q[lang]),
         form,
+        missEl,
         h('div', { class: 'stamina' }, h('div', { class: 'stamina-track' }, bar)),
       );
       input.focus();
@@ -216,7 +236,7 @@ function play(players: Player[], src: Source): HTMLElement {
         const left = Math.max(0, SECONDS_PER_PROMPT - (now - start) / 1000);
         bar.style.width = `${(left / SECONDS_PER_PROMPT) * 100}%`;
         bar.classList.toggle('low', left < 6);
-        if (left <= 0) return end(input.value.trim() || null);
+        if (left <= 0) return void offer(input.value.trim() || null, true);
         requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
@@ -233,9 +253,8 @@ function play(players: Player[], src: Source): HTMLElement {
         const pv = await src.next();
         if (!alive || !pv) return;
         q = pv.q;
-        const guess = await ask(pv, player);
-        if (!alive) return;
-        const v = await src.answer(guess);
+        const v = await ask(pv, player);
+        if (!alive || !v) return;
         offerings.push({ guess: v.guess, answer: v.answer?.en ?? null, names: v.answer, tier: v.tier, points: v.points, echo: false });
       }
 

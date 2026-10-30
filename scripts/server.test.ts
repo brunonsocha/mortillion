@@ -53,7 +53,8 @@ async function playOut(token: string, runId: string, guesses: string[]) {
   for (let i = 0; i < 400; i++) {
     const p = await game(token, { action: 'prompt', runId });
     if (p.status !== 200) break;
-    last = (await game(token, { action: 'answer', runId, guess: guesses[i % guesses.length] })).body;
+    const guess = guesses[i % guesses.length];
+    last = (await game(token, { action: 'answer', runId, ...(guess ? { guess } : { giveUp: true }) })).body;
     if (last.finished) break;
   }
   return last;
@@ -68,12 +69,35 @@ test('anonymous players can play the daily, once per day', async (t) => {
   assert.equal(a.body.total, 7);
   const again = await game(token, { action: 'start', mode: 'daily', day });
   assert.equal(again.body.runId, a.body.runId, 'restarting resumes the same run');
-  const last = await playOut(token, a.body.runId, ['zzz']);
+  const last = await playOut(token, a.body.runId, ['']);
   assert.equal(last.finished, true);
   const third = await game(token, { action: 'start', mode: 'daily', day });
   assert.equal(third.body.finished, true, 'a finished daily cannot be replayed');
   const far = await game(token, { action: 'start', mode: 'daily', day: day + 5 });
   assert.equal(far.status, 400, 'future days are refused');
+});
+
+test('a wrong guess asks for another; a right one scores; guesses are capped', async (t) => {
+  if (!up) return t.skip('local Supabase stack is not running');
+  const token = await anonToken();
+  const run = (await game(token, { action: 'start', mode: 'pack', pack: 'geography' })).body;
+  const p = (await game(token, { action: 'prompt', runId: run.runId })).body;
+  const wrong = (await game(token, { action: 'answer', runId: run.runId, guess: 'qqqq' })).body;
+  assert.equal(wrong.retry, true);
+  assert.equal(wrong.misses, 1);
+  const again = (await game(token, { action: 'prompt', runId: run.runId })).body;
+  assert.equal(again.idx, p.idx, 'still the same prompt');
+  // Spam until the cap.
+  let capped = 0;
+  for (let i = 0; i < 30 && !capped; i++) {
+    const r = await game(token, { action: 'answer', runId: run.runId, guess: `nope${i}` });
+    if (r.status === 429) capped = i;
+  }
+  assert.ok(capped > 0, 'guessing is capped per prompt');
+  const done = (await game(token, { action: 'answer', runId: run.runId, giveUp: true })).body;
+  assert.equal(done.retry, false);
+  assert.equal(done.tier, 0);
+  assert.equal(done.cursor, 1, 'giving up moves on');
 });
 
 test('the server never sends answers before they are guessed', async (t) => {
@@ -141,7 +165,7 @@ test('endless ends when three flasks are spent', async (t) => {
   const token = await anonToken();
   const run = (await game(token, { action: 'start', mode: 'endless' })).body;
   assert.equal(run.lives, 3);
-  const last = await playOut(token, run.runId, ['zzz']);
+  const last = await playOut(token, run.runId, ['']);
   assert.equal(last.finished, true);
   assert.equal(last.lives, 0);
   const st = (await game(token, { action: 'state', runId: run.runId })).body;
@@ -164,7 +188,7 @@ test('signed-in players earn achievements and reach the leaderboard; anonymous o
   const name = `Solaire ${Date.now() % 1e6}`;
   await game(token, { action: 'profile', displayName: name });
   const run = (await game(token, { action: 'start', mode: 'daily', day })).body;
-  const last = await playOut(token, run.runId, ['zzz']);
+  const last = await playOut(token, run.runId, ['']);
   assert.ok(last.unlocked.includes('first_descent'));
   assert.ok(last.unlocked.includes('hollowed'), 'seven deaths');
   const stats = (await game(token, { action: 'stats' })).body;
@@ -172,7 +196,7 @@ test('signed-in players earn achievements and reach the leaderboard; anonymous o
   assert.ok(stats.achievements.some((a: { key: string }) => a.key === 'first_descent'));
 
   const anonRun = (await game(anon, { action: 'start', mode: 'daily', day })).body;
-  await playOut(anon, anonRun.runId, ['zzz']);
+  await playOut(anon, anonRun.runId, ['']);
   const board = (await game(token, { action: 'leaderboard', board: 'daily', day })).body;
   assert.ok(board.top.some((r: { name: string; me: boolean }) => r.name === name && r.me));
   const anonProfile = await game(anon, { action: 'profile', displayName: 'Patches' });

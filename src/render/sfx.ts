@@ -114,6 +114,10 @@ export const sfx = {
     for (let i = 0; i < n; i++) tone(notes[i % notes.length] * (i >= notes.length ? 2 : 1), i * 0.07, 0.35, 'triangle', 0.07);
     if (tier >= 5) tone(1046.5, n * 0.07, 0.9, 'sine', 0.06);
   },
+  /** A dull thud: that guess didn't hold, keep trying. */
+  miss() {
+    tone(160, 0, 0.18, 'square', 0.03, 110);
+  },
   /** A soft, low chime when Liora begins to speak. */
   voice() {
     tone(523.3, 0, 0.5, 'sine', 0.025);
